@@ -106,7 +106,7 @@
   const AIW = 13, AIH = 82;
   const BR = 7;          // ball radius
   const PUR = 13;        // power-up radius
-  const BASE_SPD = 5.2;
+  const BASE_SPD = 7.5;
   const PU_INTERVAL = 9; // seconds between power-up spawns
 
   // ── Objects ───────────────────────────────────────────────────
@@ -198,7 +198,7 @@
     ai.trackedY = H/2;
     ball     = makeBall(1);
     particles = []; powerUps = []; floats = [];
-    score = 0; lives = 3; rally = 0; mult = 1;
+    score = 0; lives = 5; rally = 0; mult = 1;
     state = 'playing'; flash = 0; flashColor = '#f44';
     puTimer  = PU_INTERVAL;
     lastT    = performance.now();
@@ -333,7 +333,7 @@
       ball.vy =  spd * Math.sin(ang);
       ball.x  = pl.x + pl.w + BR;
       rally++;
-      mult = 1 + Math.floor(rally / 4);
+      mult = 1 + Math.floor(rally / 2);
       burst(ball.x, ball.y, '#0df', 10);
     }
 
@@ -507,7 +507,7 @@
     // Lives
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = '13px Barlow';
-    const hearts = '\u2665'.repeat(Math.max(0, lives)) + '\u2661'.repeat(Math.max(0, 3 - lives));
+    const hearts = '\u2665'.repeat(Math.max(0, lives)) + '\u2661'.repeat(Math.max(0, 5 - lives));
     ctx.fillText(hearts, W / 4, 52);
 
     // Combo multiplier
