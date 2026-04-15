@@ -38,6 +38,38 @@
     margin-top: 8px; color: rgba(255,255,255,0.18); font-size: 0.68rem;
     letter-spacing: 0.08em; text-transform: uppercase;
   }
+
+  /* VERTICAL JOYSTICK */
+  #stick-zone {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    width: 52px;
+    height: 140px;
+    border-radius: 26px;
+    background: rgba(0,220,255,0.05);
+    border: 2px solid rgba(0,220,255,0.28);
+    touch-action: none;
+    z-index: 10;
+  }
+  #stick-track {
+    position: absolute;
+    left: 50%; top: 10px; bottom: 10px;
+    width: 2px;
+    margin-left: -1px;
+    background: rgba(0,220,255,0.15);
+    border-radius: 1px;
+  }
+  #stick-knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 40px; height: 40px;
+    margin-left: -20px; margin-top: -20px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #6ef, #007899);
+    box-shadow: 0 0 16px rgba(0,220,255,0.65), inset 0 0 8px rgba(255,255,255,0.25);
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -48,7 +80,13 @@
   <div id="top-spacer"></div>
 </div>
 <canvas id="gameCanvas" width="620" height="400"></canvas>
-<p id="hint">Mouse / drag to move &nbsp;·&nbsp; catch power-ups &nbsp;·&nbsp; build combos</p>
+
+<div id="stick-zone">
+  <div id="stick-track"></div>
+  <div id="stick-knob"></div>
+</div>
+
+<p id="hint">Joystick / mouse / arrows &nbsp;·&nbsp; catch power-ups &nbsp;·&nbsp; build combos</p>
 
 <script>
 (() => {
@@ -85,26 +123,62 @@
   let targetY = H / 2;
   const keys  = {};
 
+  // Mouse: absolute paddle position from cursor
   cvs.addEventListener('mousemove', e => {
     const r = cvs.getBoundingClientRect();
     targetY = (e.clientY - r.top) * (H / r.height) - pl.h / 2;
   });
-  function touchMove(e) {
-    e.preventDefault();
-    const r = cvs.getBoundingClientRect();
-    targetY = (e.touches[0].clientY - r.top) * (H / r.height) - pl.h / 2;
-  }
-  cvs.addEventListener('touchstart', touchMove, { passive: false });
-  cvs.addEventListener('touchmove',  touchMove, { passive: false });
+
+  // Keyboard
   window.addEventListener('keydown', e => { keys[e.key] = true; });
   window.addEventListener('keyup',   e => { keys[e.key] = false; });
 
-  // Start / restart on tap or click
+  // Start / restart on click or canvas tap
   cvs.addEventListener('click', () => { if (state !== 'playing') startGame(); });
   cvs.addEventListener('touchend', e => {
     e.preventDefault();
     if (state !== 'playing') startGame();
   }, { passive: false });
+
+  // ── Vertical joystick ─────────────────────────────────────────
+  const stickZone = document.getElementById('stick-zone');
+  const stickKnob = document.getElementById('stick-knob');
+  const STICK_MAX = 46; // max px travel up or down
+  let stickVecY = 0;
+  let stickTouchId = null;
+  let stickMouseDown = false;
+
+  function setStickY(clientY) {
+    const r = stickZone.getBoundingClientRect();
+    const dy = Math.max(-STICK_MAX, Math.min(STICK_MAX, clientY - (r.top + r.height / 2)));
+    stickKnob.style.transform = `translateY(${dy}px)`;
+    stickVecY = dy / STICK_MAX;
+  }
+  function resetStick() {
+    stickKnob.style.transform = '';
+    stickVecY = 0;
+    stickTouchId = null;
+  }
+
+  stickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (stickTouchId !== null) return;
+    const t = e.changedTouches[0]; stickTouchId = t.identifier;
+    setStickY(t.clientY);
+  }, { passive: false });
+  stickZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) if (t.identifier === stickTouchId) { setStickY(t.clientY); break; }
+  }, { passive: false });
+  function onStickEnd(e) {
+    for (const t of e.changedTouches) if (t.identifier === stickTouchId) { resetStick(); break; }
+  }
+  stickZone.addEventListener('touchend',   onStickEnd, { passive: false });
+  stickZone.addEventListener('touchcancel',onStickEnd, { passive: false });
+
+  stickZone.addEventListener('mousedown', e => { e.preventDefault(); stickMouseDown = true; setStickY(e.clientY); });
+  window.addEventListener('mousemove', e => { if (stickMouseDown) setStickY(e.clientY); });
+  window.addEventListener('mouseup',   ()  => { if (stickMouseDown) { stickMouseDown = false; resetStick(); } });
 
   // ── Init ──────────────────────────────────────────────────────
   function makeBall(dir) {
@@ -218,6 +292,7 @@
     // Player paddle
     if (keys['ArrowUp']   || keys['w']) targetY -= 7;
     if (keys['ArrowDown'] || keys['s']) targetY += 7;
+    if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 7;
     pl.y += (targetY - pl.y) * 0.22;
     pl.y  = Math.max(0, Math.min(H - pl.h, pl.y));
 
