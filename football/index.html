@@ -371,13 +371,14 @@
       ball.vy += (footY - ball.y) * SPRING_K * dt;
     }
 
-    // Hard collision: push ball out if it overlaps player body
+    // Positional separation: slide ball to player edge with no velocity spike
     if (rectCircle(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
       const dx = ball.x - playerCx;
       const dy = ball.y - playerCy;
       const len = Math.hypot(dx, dy) || 1;
-      ball.vx = (dx / len) * 7;
-      ball.vy = (dy / len) * 7;
+      const pushDist = player.w / 2 + ball.r + 2;
+      ball.x = playerCx + (dx / len) * pushDist;
+      ball.y = playerCy + (dy / len) * pushDist;
     }
 
     // --- Ball physics ---
