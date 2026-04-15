@@ -167,6 +167,22 @@
   .card-football .play-btn     { color: #c8f03c; background: rgba(200,240,60,0.08); }
   .card-football:hover .play-btn { background: rgba(200,240,60,0.2); }
 
+  /* ── Cyber Pong theme ── */
+  .card-pong {
+    background: #020c18;
+    border: 1px solid rgba(0,220,255,0.25);
+    box-shadow: 0 2px 24px rgba(0,220,255,0.05);
+  }
+  .card-pong:hover {
+    box-shadow: 0 10px 44px rgba(0,220,255,0.22);
+    border-color: rgba(0,220,255,0.55);
+  }
+  .card-pong .card-preview { background: linear-gradient(160deg, #020c18 0%, #010610 100%); }
+  .card-pong .card-genre   { color: rgba(0,220,255,0.65); }
+  .card-pong .card-name    { color: #0df; }
+  .card-pong .play-btn     { color: #0df; background: rgba(0,220,255,0.08); border-color: rgba(0,220,255,0.4); }
+  .card-pong:hover .play-btn { background: rgba(0,220,255,0.2); }
+
   footer {
     margin-top: 60px;
     text-align: center;
@@ -208,7 +224,19 @@
       <div class="card-info">
         <div class="card-genre">Sports &middot; Casual</div>
         <div class="card-name">FOOTBALL</div>
-        <div class="card-desc">Control your player and score goals. Use the d-pad or arrow keys to move. How many goals can you score?</div>
+        <div class="card-desc">Control your player and score goals. Use the joystick to move, shoot with the button.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-pong" href="/cyber-pong/">
+      <div class="card-preview">
+        <canvas id="cv-pong"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Arcade &middot; Action</div>
+        <div class="card-name">CYBER PONG</div>
+        <div class="card-desc">1-player pong vs a relentless AI. Catch power-ups mid-rally, chain combos, and keep the ball alive.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -429,6 +457,73 @@
     }
   }
 
+  // ── Cyber Pong card preview ───────────────────────────────────
+  const pongCvs = document.getElementById('cv-pong');
+  const pCtx = pongCvs.getContext('2d');
+
+  function resizePong() {
+    const r = pongCvs.parentElement.getBoundingClientRect();
+    pongCvs.width  = r.width  || 320;
+    pongCvs.height = r.height || 190;
+  }
+  resizePong();
+  window.addEventListener('resize', resizePong);
+
+  // Simple pong preview state
+  const pBall = { x: 0, y: 0, vx: 90, vy: 55 };
+  let pBallInit = false;
+
+  function drawPongPreview(dt, t) {
+    const W = pongCvs.width, H = pongCvs.height;
+    if (!pBallInit) { pBall.x = W/2; pBall.y = H/2; pBallInit = true; }
+
+    pCtx.fillStyle = '#020812';
+    pCtx.fillRect(0, 0, W, H);
+
+    // Centre dashes
+    pCtx.setLineDash([5, 8]);
+    pCtx.strokeStyle = 'rgba(255,255,255,0.07)';
+    pCtx.lineWidth = 1.5;
+    pCtx.beginPath(); pCtx.moveTo(W/2, 0); pCtx.lineTo(W/2, H); pCtx.stroke();
+    pCtx.setLineDash([]);
+
+    // Move ball
+    pBall.x += pBall.vx * dt;
+    pBall.y += pBall.vy * dt;
+    if (pBall.x < 18)      { pBall.x = 18;    pBall.vx =  Math.abs(pBall.vx); }
+    if (pBall.x > W - 18)  { pBall.x = W-18;  pBall.vx = -Math.abs(pBall.vx); }
+    if (pBall.y < 6)       { pBall.y = 6;     pBall.vy =  Math.abs(pBall.vy); }
+    if (pBall.y > H - 6)   { pBall.y = H-6;   pBall.vy = -Math.abs(pBall.vy); }
+
+    // Paddles
+    const phH = H * 0.35;
+    const lY = pBall.y - phH/2;
+    const rY = H/2 - phH/2 + Math.sin(t * 0.0009) * 20;
+
+    pCtx.shadowColor = '#0df'; pCtx.shadowBlur = 14;
+    pCtx.fillStyle = '#fff';
+    pCtx.beginPath(); pCtx.roundRect(8,  Math.max(0,Math.min(H-phH,lY)), 9, phH, 3); pCtx.fill();
+    pCtx.shadowColor = '#f06';
+    pCtx.fillStyle = '#f06';
+    pCtx.beginPath(); pCtx.roundRect(W-17, Math.max(0,Math.min(H-phH,rY)), 9, phH, 3); pCtx.fill();
+    pCtx.shadowBlur = 0;
+
+    // Power-up orb (pulsing)
+    const pulse = Math.sin(t * 0.003) * 0.25 + 0.75;
+    pCtx.globalAlpha = pulse;
+    pCtx.shadowColor = '#0f8'; pCtx.shadowBlur = 12;
+    pCtx.fillStyle = '#0f8';
+    pCtx.beginPath(); pCtx.arc(W*0.38, H*0.35, 7, 0, Math.PI*2); pCtx.fill();
+    pCtx.shadowBlur = 0;
+    pCtx.globalAlpha = 1;
+
+    // Ball + glow
+    pCtx.shadowColor = '#0df'; pCtx.shadowBlur = 18;
+    pCtx.fillStyle = '#fff';
+    pCtx.beginPath(); pCtx.arc(pBall.x, pBall.y, 5, 0, Math.PI*2); pCtx.fill();
+    pCtx.shadowBlur = 0;
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -439,6 +534,7 @@
     updateVoid(dt, t);
     drawVoid(t);
     drawFootball(t);
+    drawPongPreview(dt, t);
 
     requestAnimationFrame(loop);
   }
