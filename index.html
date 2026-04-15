@@ -2,505 +2,446 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>VOID DANCER</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCADE HUB</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-  body { display: flex; align-items: center; justify-content: center; }
-  #wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
-  canvas { background: radial-gradient(ellipse at center, #0a0520 0%, #000 80%); box-shadow: 0 0 60px rgba(140,80,255,0.4); image-rendering: pixelated; display: block; }
-  #hud { position: absolute; top: 10px; left: 0; right: 0; text-align: center; color: #fff; text-shadow: 0 0 8px #a0f; font-size: 14px; pointer-events: none; letter-spacing: 2px; z-index: 5; }
-  #hud b { color: #ff4; }
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap');
 
-  #stick-zone {
-    position: absolute;
-    left: 20px;
-    bottom: 20px;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    background: rgba(160, 80, 255, 0.08);
-    border: 2px solid rgba(160, 80, 255, 0.35);
-    touch-action: none;
-    z-index: 10;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #05050f;
+    font-family: 'Barlow', 'Courier New', sans-serif;
+    color: #fff;
+    overflow-x: hidden;
   }
-  #stick-base {
-    position: absolute;
-    left: 50%; top: 50%;
-    width: 90px; height: 90px;
-    margin-left: -45px; margin-top: -45px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    border: 2px dashed rgba(255,255,255,0.2);
-  }
-  #stick-knob {
-    position: absolute;
-    left: 50%; top: 50%;
-    width: 60px; height: 60px;
-    margin-left: -30px; margin-top: -30px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #f4f, #70a);
-    box-shadow: 0 0 20px rgba(240, 100, 255, 0.7), inset 0 0 10px rgba(255,255,255,0.3);
+
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
     pointer-events: none;
   }
-  #stick-knob.focus { background: radial-gradient(circle at 30% 30%, #4ff, #078); box-shadow: 0 0 20px rgba(100,255,255,0.8); }
 
-  #focus-btn {
-    position: absolute;
-    right: 30px;
-    bottom: 40px;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: rgba(255,255,100,0.12);
-    border: 2px solid rgba(255,255,100,0.5);
-    color: #ff4;
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 2px;
-    text-align: center;
-    line-height: 86px;
-    z-index: 10;
-    text-shadow: 0 0 8px #ff4;
+  .content {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 50px 20px 70px;
   }
-  #focus-btn.active { background: rgba(100,255,255,0.25); border-color: #4ff; color: #4ff; text-shadow: 0 0 10px #4ff; }
 
-  #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; background: rgba(0,0,0,0.85); padding: 20px; z-index: 20; }
-  #overlay h1 { font-size: 28px; color: #f0f; text-shadow: 0 0 12px #f0f; margin-bottom: 8px; letter-spacing: 4px; }
-  #overlay p { margin: 6px 0; font-size: 13px; max-width: 340px; line-height: 1.5; color: #ccc; }
-  #overlay button { margin-top: 18px; background: #f0f; color: #000; border: none; padding: 12px 28px; font-size: 16px; font-weight: bold; letter-spacing: 3px; cursor: pointer; font-family: inherit; box-shadow: 0 0 20px #f0f; }
-  #overlay button:active { transform: scale(0.95); }
-  .hide { display: none !important; }
-  .stat { color: #4ff; }
+  header {
+    text-align: center;
+    margin-bottom: 54px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', 'Courier New', cursive;
+    font-size: clamp(52px, 12vw, 100px);
+    letter-spacing: 14px;
+    color: #fff;
+    line-height: 1;
+    text-shadow:
+      0 0 18px rgba(190, 80, 255, 0.9),
+      0 0 50px rgba(190, 80, 255, 0.4),
+      0 0 90px rgba(190, 80, 255, 0.2);
+  }
+
+  .logo em {
+    font-style: normal;
+    color: #c864ff;
+  }
+
+  .subtitle {
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 28px;
+  }
+
+  /* ── Card base ── */
+  .game-card {
+    display: block;
+    text-decoration: none;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.2s cubic-bezier(.22,.68,0,1.2), box-shadow 0.2s;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .game-card:hover  { transform: translateY(-6px); }
+  .game-card:active { transform: scale(0.97); }
+
+  /* ── Preview pane ── */
+  .card-preview {
+    height: 190px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-preview canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Info pane ── */
+  .card-info {
+    padding: 18px 22px 22px;
+  }
+
+  .card-genre {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .card-name {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 30px;
+    letter-spacing: 3px;
+    margin-bottom: 9px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 18px;
+  }
+
+  .play-btn {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border-radius: 5px;
+    border: 1px solid currentColor;
+    transition: background 0.15s;
+  }
+
+  /* ── Void Dancer theme ── */
+  .card-void {
+    background: #0d0520;
+    border: 1px solid rgba(190, 80, 255, 0.28);
+    box-shadow: 0 2px 24px rgba(190, 80, 255, 0.08);
+  }
+  .card-void:hover {
+    box-shadow: 0 10px 44px rgba(190, 80, 255, 0.28);
+    border-color: rgba(190, 80, 255, 0.55);
+  }
+  .card-void .card-preview { background: radial-gradient(ellipse at 50% 40%, #130530 0%, #04000e 100%); }
+  .card-void .card-genre   { color: rgba(190, 80, 255, 0.7); }
+  .card-void .card-name    { color: #d870ff; }
+  .card-void .play-btn     { color: #d870ff; background: rgba(190,80,255,0.1); }
+  .card-void:hover .play-btn { background: rgba(190,80,255,0.22); }
+
+  /* ── Football theme ── */
+  .card-football {
+    background: #0a180a;
+    border: 1px solid rgba(200, 240, 60, 0.25);
+    box-shadow: 0 2px 24px rgba(200, 240, 60, 0.04);
+  }
+  .card-football:hover {
+    box-shadow: 0 10px 44px rgba(200, 240, 60, 0.2);
+    border-color: rgba(200, 240, 60, 0.55);
+  }
+  .card-football .card-preview { background: linear-gradient(160deg, #0c200c 0%, #071407 100%); }
+  .card-football .card-genre   { color: rgba(200, 240, 60, 0.65); }
+  .card-football .card-name    { color: #c8f03c; }
+  .card-football .play-btn     { color: #c8f03c; background: rgba(200,240,60,0.08); }
+  .card-football:hover .play-btn { background: rgba(200,240,60,0.2); }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.15);
+    text-transform: uppercase;
+  }
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game"></canvas>
-  <div id="hud">
-    LEVEL <b id="level">1</b> &nbsp; TIME <b id="time">0.0</b> &nbsp; LIVES <b id="lives">♥♥♥♥♥</b> &nbsp; BEST <b id="best">0.0</b>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="content">
+  <header>
+    <div class="logo">ARCADE<em>HUB</em></div>
+    <div class="subtitle">Choose your game</div>
+  </header>
+
+  <div class="games-grid">
+
+    <a class="game-card card-void" href="/void-dancer/">
+      <div class="card-preview">
+        <canvas id="cv-void"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Bullet Hell &middot; Arcade</div>
+        <div class="card-name">VOID DANCER</div>
+        <div class="card-desc">Dodge relentless bullet patterns across 7+ escalating levels. Tiny hitbox. Hold FOCUS for precision mode.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-football" href="/football/">
+      <div class="card-preview">
+        <canvas id="cv-football"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Sports &middot; Casual</div>
+        <div class="card-name">FOOTBALL</div>
+        <div class="card-desc">Control your player and score goals. Use the d-pad or arrow keys to move. How many goals can you score?</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
   </div>
 
-  <div id="stick-zone">
-    <div id="stick-base"></div>
-    <div id="stick-knob"></div>
-  </div>
-  <div id="focus-btn">FOCUS</div>
-
-  <div id="overlay">
-    <h1>VOID DANCER</h1>
-    <p><span class="stat">JOYSTICK</span> (bottom-left): drag to fly.</p>
-    <p><span class="stat">FOCUS</span> (bottom-right): hold for slow, precise movement with a visible hitbox.</p>
-    <p><span class="stat">DESKTOP</span>: arrows/WASD + SHIFT also work.</p>
-    <p>Tiny hitbox at your core. Patterns escalate every 15 seconds.</p>
-    <button id="start">BEGIN</button>
-  </div>
+  <footer>More games coming soon</footer>
 </div>
+
 <script>
 (() => {
-  const cvs = document.getElementById('game');
-  const ctx = cvs.getContext('2d');
-  const W = 400, H = 600;
-  cvs.width = W; cvs.height = H;
+  // ── Background starfield ──────────────────────────────────────
+  const bgCvs = document.getElementById('bg-canvas');
+  const bgCtx = bgCvs.getContext('2d');
+  const stars = [];
 
-  function fit() {
-    const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.98;
-    cvs.style.width = (W * s) + 'px';
-    cvs.style.height = (H * s) + 'px';
+  function resizeBg() {
+    bgCvs.width  = window.innerWidth;
+    bgCvs.height = window.innerHeight;
   }
-  fit(); window.addEventListener('resize', fit);
+  resizeBg();
+  window.addEventListener('resize', resizeBg);
 
-  const overlay = document.getElementById('overlay');
-  const startBtn = document.getElementById('start');
-  const timeEl = document.getElementById('time');
-  const livesEl = document.getElementById('lives');
-  const levelEl = document.getElementById('level');
-  const bestEl = document.getElementById('best');
-
-  let best = parseFloat(localStorage.getItem('vd_best') || '0');
-  bestEl.textContent = best.toFixed(1);
-
-  const keys = {};
-  window.addEventListener('keydown', e => {
-    keys[e.key.toLowerCase()] = true;
-    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
-  }, {passive:false});
-  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-
-  const stickZone = document.getElementById('stick-zone');
-  const stickKnob = document.getElementById('stick-knob');
-  const focusBtn = document.getElementById('focus-btn');
-  let stickId = null;
-  let stickVec = { x: 0, y: 0 };
-  const STICK_MAX = 45;
-
-  function setStickFromPoint(clientX, clientY) {
-    const r = stickZone.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    let dx = clientX - cx;
-    let dy = clientY - cy;
-    const knobX = Math.max(-STICK_MAX, Math.min(STICK_MAX, dx));
-    const knobY = Math.max(-STICK_MAX, Math.min(STICK_MAX, dy));
-    stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-    stickVec.x = knobX / STICK_MAX;
-    stickVec.y = knobY / STICK_MAX;
-  }
-  function resetStick() {
-    stickKnob.style.transform = '';
-    stickVec.x = 0; stickVec.y = 0;
-    stickId = null;
+  for (let i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      s: Math.random() * 1.4 + 0.2,
+      v: Math.random() * 12 + 4,
+      a: Math.random()
+    });
   }
 
-  stickZone.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (stickId !== null) return;
-    const t = e.changedTouches[0];
-    stickId = t.identifier;
-    setStickFromPoint(t.clientX, t.clientY);
-  }, {passive:false});
-  stickZone.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for (const t of e.changedTouches) {
-      if (t.identifier === stickId) { setStickFromPoint(t.clientX, t.clientY); break; }
+  function drawBg(t) {
+    const W = bgCvs.width, H = bgCvs.height;
+    bgCtx.clearRect(0, 0, W, H);
+    for (const st of stars) {
+      bgCtx.globalAlpha = (Math.sin(t * 0.001 + st.a * 10) * 0.3 + 0.4) * (st.s / 1.6);
+      bgCtx.fillStyle = '#fff';
+      bgCtx.fillRect(st.x * W, st.y * H, st.s, st.s);
     }
-  }, {passive:false});
-  function stickEnd(e) {
-    for (const t of e.changedTouches) {
-      if (t.identifier === stickId) { resetStick(); break; }
-    }
-  }
-  stickZone.addEventListener('touchend', stickEnd, {passive:false});
-  stickZone.addEventListener('touchcancel', stickEnd, {passive:false});
-
-  let mouseDownStick = false;
-  stickZone.addEventListener('mousedown', e => {
-    e.preventDefault();
-    mouseDownStick = true;
-    setStickFromPoint(e.clientX, e.clientY);
-  });
-  window.addEventListener('mousemove', e => {
-    if (mouseDownStick) setStickFromPoint(e.clientX, e.clientY);
-  });
-  window.addEventListener('mouseup', () => {
-    if (mouseDownStick) { mouseDownStick = false; resetStick(); }
-  });
-
-  let focusTouch = false;
-  focusBtn.addEventListener('touchstart', e => {
-    e.preventDefault();
-    focusTouch = true;
-    focusBtn.classList.add('active');
-  }, {passive:false});
-  const endFocus = e => {
-    if (e) e.preventDefault();
-    focusTouch = false;
-    focusBtn.classList.remove('active');
-  };
-  focusBtn.addEventListener('touchend', endFocus, {passive:false});
-  focusBtn.addEventListener('touchcancel', endFocus, {passive:false});
-  focusBtn.addEventListener('mousedown', e => {
-    e.preventDefault();
-    focusTouch = true;
-    focusBtn.classList.add('active');
-  });
-  window.addEventListener('mouseup', () => {
-    if (focusTouch) { focusTouch = false; focusBtn.classList.remove('active'); }
-  });
-
-  let player, bullets, particles, time, lives, iframes, running, lastT, phase, spawnTimers, stars, level, levelTime, banner;
-
-  const LEVEL_DURATION = 60;
-  const STAGE_INTERVALS = [10, 7, 5, 4, 3, 2.5, 2];
-
-  function init() {
-    player = { x: W/2, y: H - 80, r: 10, focus: false };
-    bullets = [];
-    particles = [];
-    time = 0;
-    lives = 5;
-    iframes = 0;
-    level = 1;
-    levelTime = 0;
-    phase = 0;
-    banner = { text: 'LEVEL 1', timer: 2.5 };
-    spawnTimers = { ring: 0, aim: 0, spiral: 0, wall: 0, laser: 0, spiralAngle: 0 };
-    stars = [];
-    for (let i = 0; i < 60; i++) stars.push({x: Math.random()*W, y: Math.random()*H, s: Math.random()*1.5+0.3, v: Math.random()*30+10});
-    running = true;
-    lastT = performance.now();
+    bgCtx.globalAlpha = 1;
   }
 
-  function stageInterval() {
-    return STAGE_INTERVALS[Math.min(level - 1, STAGE_INTERVALS.length - 1)];
+  // ── Void Dancer card preview ──────────────────────────────────
+  const voidCvs = document.getElementById('cv-void');
+  const vCtx = voidCvs.getContext('2d');
+
+  function resizeVoid() {
+    const r = voidCvs.parentElement.getBoundingClientRect();
+    voidCvs.width  = r.width  || 320;
+    voidCvs.height = r.height || 190;
   }
+  resizeVoid();
+  window.addEventListener('resize', resizeVoid);
 
-  function levelUp() {
-    level++;
-    levelTime = 0;
-    phase = 0;
-    lives = Math.min(lives + 1, 9);
-    iframes = Math.max(iframes, 2.5);
-    for (const b of bullets) explode(b.x, b.y, b.color);
-    bullets.length = 0;
-    banner = { text: 'LEVEL ' + level, timer: 2.5 };
-    spawnTimers = { ring: 0.8, aim: 0.8, spiral: 0, wall: 0, laser: 0, spiralAngle: 0 };
-  }
+  const vBullets = [];
+  let vSpiral = 0;
+  let vRingTimer = 0;
 
-  function spawnBullet(x, y, vx, vy, color, r) {
-    bullets.push({ x, y, vx, vy, color: color || '#f0f', r: r || 5, life: 0 });
-  }
+  function updateVoid(dt, t) {
+    vSpiral += dt * 1.2;
+    vRingTimer -= dt;
+    const W = voidCvs.width, H = voidCvs.height;
 
-  function explode(x, y, color) {
-    for (let i = 0; i < 20; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const s = Math.random() * 150 + 50;
-      particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 0.6, color });
-    }
-  }
-
-  function updateSpawns(dt) {
-    phase = Math.floor(levelTime / stageInterval());
-    const diff = phase + (level - 1) * 2;
-
-    spawnTimers.ring -= dt;
-    if (spawnTimers.ring <= 0) {
-      spawnTimers.ring = Math.max(3.2 - diff * 0.2, 1.0);
-      const cx = Math.random() * (W - 100) + 50;
-      const cy = Math.random() * 150 + 40;
-      const n = 8 + diff;
-      const speed = 55 + diff * 6;
-      const offset = Math.random() * Math.PI * 2;
-      for (let i = 0; i < n; i++) {
-        const a = offset + (i / n) * Math.PI * 2;
-        spawnBullet(cx, cy, Math.cos(a)*speed, Math.sin(a)*speed, '#f44', 5);
-      }
-      explode(cx, cy, '#f44');
-    }
-
-    spawnTimers.aim -= dt;
-    if (spawnTimers.aim <= 0) {
-      spawnTimers.aim = Math.max(2.0 - diff * 0.1, 0.6);
-      const sx = Math.random() * W;
-      const sy = -10;
-      const dx = player.x - sx, dy = player.y - sy;
-      const speed = 100 + diff * 8;
-      const spread = diff >= 3 ? 3 : 1;
-      for (let k = -Math.floor(spread/2); k <= Math.floor(spread/2); k++) {
-        const a = Math.atan2(dy, dx) + k * 0.15;
-        spawnBullet(sx, sy, Math.cos(a)*speed, Math.sin(a)*speed, '#4ff', 4);
+    // spawn spiral bullets
+    if (vBullets.length < 80) {
+      for (let i = 0; i < 3; i++) {
+        const a = vSpiral + (i / 3) * Math.PI * 2;
+        vBullets.push({
+          x: W / 2, y: H * 0.3,
+          vx: Math.cos(a) * 55, vy: Math.sin(a) * 55,
+          color: ['#f44','#4ff','#fa0','#c6f','#f0f'][Math.floor(Math.random()*5)],
+          r: 3 + Math.random() * 2, life: 0
+        });
       }
     }
 
-    if (diff >= 1) {
-      spawnTimers.spiral -= dt;
-      if (spawnTimers.spiral <= 0) {
-        spawnTimers.spiral = Math.max(0.14 - diff * 0.005, 0.07);
-        spawnTimers.spiralAngle += 0.28;
-        const arms = 2 + Math.min(Math.floor(diff / 2), 3);
-        for (let i = 0; i < arms; i++) {
-          const a = spawnTimers.spiralAngle + (i / arms) * Math.PI * 2;
-          spawnBullet(W/2, 60, Math.cos(a)*75, Math.sin(a)*75, '#fa0', 4);
-        }
+    // spawn ring burst
+    if (vRingTimer <= 0) {
+      vRingTimer = 1.8;
+      const cx = W * (0.2 + Math.random() * 0.6);
+      const cy = H * (0.1 + Math.random() * 0.4);
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        vBullets.push({ x: cx, y: cy, vx: Math.cos(a)*45, vy: Math.sin(a)*45, color: '#f44', r: 4, life: 0 });
       }
     }
 
-    if (diff >= 2) {
-      spawnTimers.wall -= dt;
-      if (spawnTimers.wall <= 0) {
-        spawnTimers.wall = Math.max(5 - diff * 0.2, 2.4);
-        const gap = Math.max(110 - diff * 3, 70);
-        const gapX = Math.random() * (W - gap - 40) + 20;
-        const speed = 75 + diff * 4;
-        for (let x = 0; x < W; x += 22) {
-          if (x > gapX && x < gapX + gap) continue;
-          spawnBullet(x, -10, 0, speed, '#c6f', 6);
-        }
-      }
-    }
-
-    if (diff >= 3) {
-      spawnTimers.laser -= dt;
-      if (spawnTimers.laser <= 0) {
-        spawnTimers.laser = Math.max(0.12 - diff * 0.003, 0.05);
-        const y = (Math.sin(time * 1.2) * 0.5 + 0.5) * (H * 0.5) + 100;
-        const ls = 140 + diff * 6;
-        spawnBullet(-10, y, ls, 0, '#fff', 3);
-        spawnBullet(W+10, y + 30, -ls, 0, '#fff', 3);
+    for (let i = vBullets.length - 1; i >= 0; i--) {
+      const b = vBullets[i];
+      b.x += b.vx * dt; b.y += b.vy * dt; b.life += dt;
+      if (b.life > 2.2 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) {
+        vBullets.splice(i, 1);
       }
     }
   }
 
-  function update(dt) {
-    time += dt;
-    levelTime += dt;
-    if (iframes > 0) iframes -= dt;
-    if (banner.timer > 0) banner.timer -= dt;
+  function drawVoid(t) {
+    const W = voidCvs.width, H = voidCvs.height;
+    vCtx.clearRect(0, 0, W, H);
 
-    if (levelTime >= LEVEL_DURATION) {
-      levelUp();
+    // tiny stars
+    vCtx.fillStyle = '#fff';
+    for (let i = 0; i < 30; i++) {
+      const sx = ((i * 137 + 11) % W);
+      const sy = ((i * 97  + 7 + t * 0.005 * (i % 3 + 1)) % H);
+      vCtx.globalAlpha = 0.25 + (i % 3) * 0.12;
+      vCtx.fillRect(sx, sy, 1, 1);
     }
+    vCtx.globalAlpha = 1;
 
-    let dx = 0, dy = 0;
-    if (keys['arrowleft'] || keys['a']) dx -= 1;
-    if (keys['arrowright'] || keys['d']) dx += 1;
-    if (keys['arrowup'] || keys['w']) dy -= 1;
-    if (keys['arrowdown'] || keys['s']) dy += 1;
-    let mag;
-    if (dx || dy) {
-      const m = Math.hypot(dx, dy);
-      dx /= m; dy /= m;
-      mag = 1;
-    } else {
-      dx = stickVec.x;
-      dy = stickVec.y;
-      mag = Math.min(1, Math.hypot(dx, dy));
+    for (const b of vBullets) {
+      const fade = Math.min(1, (2.2 - b.life) / 0.4);
+      vCtx.globalAlpha = fade * 0.85;
+      vCtx.fillStyle = b.color;
+      vCtx.shadowColor = b.color;
+      vCtx.shadowBlur = 8;
+      vCtx.beginPath();
+      vCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      vCtx.fill();
     }
+    vCtx.shadowBlur = 0;
+    vCtx.globalAlpha = 1;
 
-    player.focus = !!keys['shift'] || focusTouch;
-    stickKnob.classList.toggle('focus', player.focus);
+    // player ship (animated hover)
+    const shipX = W / 2 + Math.sin(t * 0.0012) * 18;
+    const shipY = H * 0.72 + Math.sin(t * 0.0008) * 6;
+    vCtx.fillStyle = '#fff';
+    vCtx.shadowColor = '#8af';
+    vCtx.shadowBlur = 14;
+    vCtx.beginPath();
+    vCtx.moveTo(shipX, shipY - 11);
+    vCtx.lineTo(shipX - 8, shipY + 9);
+    vCtx.lineTo(shipX + 8, shipY + 9);
+    vCtx.closePath();
+    vCtx.fill();
+    vCtx.shadowBlur = 0;
+  }
 
-    const baseSpeed = player.focus ? 130 : 260;
-    if (mag > 0.05) {
-      player.x += dx * baseSpeed * dt;
-      player.y += dy * baseSpeed * dt;
-    }
-    player.x = Math.max(10, Math.min(W-10, player.x));
-    player.y = Math.max(10, Math.min(H-10, player.y));
+  // ── Football card preview ─────────────────────────────────────
+  const fbCvs = document.getElementById('cv-football');
+  const fCtx = fbCvs.getContext('2d');
 
-    for (const s of stars) {
-      s.y += s.v * dt;
-      if (s.y > H) { s.y = 0; s.x = Math.random()*W; }
-    }
+  function resizeFb() {
+    const r = fbCvs.parentElement.getBoundingClientRect();
+    fbCvs.width  = r.width  || 320;
+    fbCvs.height = r.height || 190;
+  }
+  resizeFb();
+  window.addEventListener('resize', resizeFb);
 
-    updateSpawns(dt);
+  function drawFootball(t) {
+    const W = fbCvs.width, H = fbCvs.height;
+    fCtx.clearRect(0, 0, W, H);
 
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      const b = bullets[i];
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-      b.life += dt;
-      if (b.x < -30 || b.x > W+30 || b.y < -30 || b.y > H+30) {
-        bullets.splice(i, 1); continue;
+    // pitch
+    fCtx.fillStyle = '#1a7a1a';
+    fCtx.fillRect(0, 0, W, H);
+
+    // stripes
+    for (let i = 0; i < Math.ceil(W / 80); i++) {
+      if (i % 2 === 0) {
+        fCtx.fillStyle = 'rgba(0,0,0,0.07)';
+        fCtx.fillRect(i * 80, 0, 80, H);
       }
-      const hitR = 2;
-      const d = Math.hypot(b.x - player.x, b.y - player.y);
-      if (d < b.r + hitR && iframes <= 0) {
-        lives--;
-        iframes = 2.5;
-        explode(player.x, player.y, '#fff');
-        if (lives <= 0) gameOver();
-        break;
-      }
     }
 
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vx *= 0.94; p.vy *= 0.94;
-      p.life -= dt;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-  }
+    // centre line + circle
+    fCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+    fCtx.lineWidth = 1.5;
+    fCtx.beginPath(); fCtx.moveTo(W/2, 0); fCtx.lineTo(W/2, H); fCtx.stroke();
+    fCtx.beginPath(); fCtx.arc(W/2, H/2, Math.min(W, H) * 0.18, 0, Math.PI * 2); fCtx.stroke();
 
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
+    // mini goal (right)
+    const gH = H * 0.4, gW = 16;
+    const gY = (H - gH) / 2;
+    fCtx.fillStyle = 'rgba(255,255,255,0.12)';
+    fCtx.fillRect(W - gW, gY, gW, gH);
+    fCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+    fCtx.lineWidth = 2;
+    fCtx.strokeRect(W - gW, gY, gW, gH);
 
-    ctx.fillStyle = '#fff';
-    for (const s of stars) {
-      ctx.globalAlpha = s.s / 1.8;
-      ctx.fillRect(s.x, s.y, s.s, s.s);
-    }
-    ctx.globalAlpha = 1;
+    // animated player
+    const px = W * 0.2 + Math.sin(t * 0.0007) * W * 0.06;
+    const py = H / 2 + Math.cos(t * 0.0009) * H * 0.2;
+    const pw = 16, ph = 16;
+    const grad = fCtx.createLinearGradient(px, py, px + pw, py + ph);
+    grad.addColorStop(0, '#ff3a3a'); grad.addColorStop(1, '#991111');
+    fCtx.fillStyle = grad;
+    fCtx.beginPath();
+    fCtx.roundRect(px, py, pw, ph, 3);
+    fCtx.fill();
 
-    for (const b of bullets) {
-      ctx.fillStyle = b.color;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
+    // animated ball
+    const bx = px + pw + 14 + Math.sin(t * 0.001 + 0.5) * 12;
+    const by = py + ph / 2 + Math.cos(t * 0.0013) * 10;
+    const br = 7;
 
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life / 0.6);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
-    }
-    ctx.globalAlpha = 1;
+    fCtx.fillStyle = 'rgba(0,0,0,0.2)';
+    fCtx.beginPath();
+    fCtx.ellipse(bx, by + br + 2, br * 0.85, 3, 0, 0, Math.PI * 2);
+    fCtx.fill();
 
-    const flicker = iframes > 0 && Math.floor(iframes * 20) % 2 === 0;
-    if (!flicker) {
-      ctx.fillStyle = player.focus ? '#aaf' : '#fff';
-      ctx.shadowColor = '#8af';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.moveTo(player.x, player.y - 10);
-      ctx.lineTo(player.x - 8, player.y + 8);
-      ctx.lineTo(player.x + 8, player.y + 8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-    if (player.focus) {
-      ctx.fillStyle = '#f0f';
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 2.5, 0, Math.PI*2);
-      ctx.fill();
-    }
+    fCtx.fillStyle = 'white';
+    fCtx.beginPath(); fCtx.arc(bx, by, br, 0, Math.PI * 2); fCtx.fill();
+    fCtx.fillStyle = '#222';
+    fCtx.beginPath(); fCtx.arc(bx, by, br * 0.36, 0, Math.PI * 2); fCtx.fill();
 
-    timeEl.textContent = time.toFixed(1);
-    livesEl.textContent = '♥'.repeat(Math.max(0,lives)) || '—';
-    levelEl.textContent = level;
-
-    if (banner.timer > 0) {
-      const alpha = Math.min(1, banner.timer < 0.5 ? banner.timer * 2 : (banner.timer > 2 ? (2.5 - banner.timer) * 2 : 1));
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, H/2 - 50, W, 100);
-      ctx.fillStyle = '#f0f';
-      ctx.shadowColor = '#f0f';
-      ctx.shadowBlur = 20;
-      ctx.font = 'bold 42px "Courier New", monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(banner.text, W/2, H/2);
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
+    fCtx.strokeStyle = '#333';
+    fCtx.lineWidth = 0.8;
+    const spin = t * 0.003;
+    for (let i = 0; i < 5; i++) {
+      const a = spin + (i / 5) * Math.PI * 2;
+      fCtx.beginPath();
+      fCtx.arc(bx + Math.cos(a)*br*0.52, by + Math.sin(a)*br*0.52, br*0.26, a+0.5, a+1.8);
+      fCtx.stroke();
     }
   }
 
-  function gameOver() {
-    running = false;
-    if (time > best) {
-      best = time;
-      localStorage.setItem('vd_best', best.toString());
-      bestEl.textContent = best.toFixed(1);
-    }
-    overlay.classList.remove('hide');
-    overlay.querySelector('h1').textContent = 'YOU DIED';
-    const ps = overlay.querySelectorAll('p');
-    ps[0].innerHTML = `<span class="stat">SURVIVED</span> ${time.toFixed(1)}s &nbsp; <span class="stat">BEST</span> ${best.toFixed(1)}s`;
-    ps[1].textContent = `Fell on Level ${level}. ${level >= 4 ? 'You were deep in the void.' : level >= 3 ? 'Impressive run.' : level >= 2 ? 'Solid effort.' : 'Stay focused, try again.'}`;
-    ps[2].textContent = '';
-    ps[3].textContent = '';
-    startBtn.textContent = 'RETRY';
-  }
-
+  // ── Main animation loop ───────────────────────────────────────
+  let lastT = 0;
   function loop(t) {
     const dt = Math.min((t - lastT) / 1000, 1/30);
     lastT = t;
-    if (running) { update(dt); draw(); }
+
+    drawBg(t);
+    updateVoid(dt, t);
+    drawVoid(t);
+    drawFootball(t);
+
     requestAnimationFrame(loop);
   }
-
-  startBtn.addEventListener('click', () => {
-    overlay.classList.add('hide');
-    init();
-  });
 
   requestAnimationFrame(loop);
 })();

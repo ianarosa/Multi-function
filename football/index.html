@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Football Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a1a0a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+  }
+
+  #top-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    padding: 0 4px 6px;
+    gap: 12px;
+  }
+
+  #back-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(200,240,60,0.3);
+    color: rgba(200,240,60,0.7);
+    font-family: 'Barlow', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  #back-btn:hover { background: rgba(200,240,60,0.15); color: #c8f03c; }
+
+  h1 {
+    font-family: 'Bebas Neue', cursive;
+    color: #c8f03c;
+    font-size: 2rem;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 20px #c8f03c66;
+    flex: 1;
+    text-align: center;
+  }
+
+  /* spacer to balance the back button */
+  #top-spacer { width: 70px; flex-shrink: 0; }
+
+  #gameCanvas {
+    border: 3px solid #c8f03c44;
+    border-radius: 6px;
+    display: block;
+    box-shadow: 0 0 40px #00000088, 0 0 0 1px #c8f03c22;
+    max-width: 100%;
+  }
+
+  /* D-PAD */
+  #dpad {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin-top: 18px;
+    flex-shrink: 0;
+  }
+
+  .dpad-btn {
+    position: absolute;
+    width: 46px;
+    height: 46px;
+    background: rgba(200, 240, 60, 0.12);
+    border: 2px solid rgba(200, 240, 60, 0.35);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.08s, transform 0.08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dpad-btn.pressed {
+    background: rgba(200, 240, 60, 0.35);
+    transform: scale(0.92);
+  }
+
+  .dpad-btn svg {
+    fill: #c8f03c;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+  }
+
+  #btn-up    { top: 4px;    left: 52px; }
+  #btn-down  { bottom: 4px; left: 52px; }
+  #btn-left  { top: 52px;   left: 4px;  }
+  #btn-right { top: 52px;   right: 4px; }
+
+  #dpad-center {
+    position: absolute;
+    top: 52px; left: 52px;
+    width: 46px; height: 46px;
+    background: rgba(200,240,60,0.06);
+    border-radius: 50%;
+    border: 2px solid rgba(200,240,60,0.15);
+  }
+
+  #kb-hint {
+    margin-top: 10px;
+    color: #4a7a2a;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <a id="back-btn" href="/">&#9664; HUB</a>
+  <h1>&#9917; Football Game</h1>
+  <div id="top-spacer"></div>
+</div>
+<canvas id="gameCanvas" width="800" height="500"></canvas>
+
+<div id="dpad">
+  <div id="dpad-center"></div>
+  <div class="dpad-btn" id="btn-up"    data-dir="up">
+    <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+  </div>
+  <div class="dpad-btn" id="btn-down"  data-dir="down">
+    <svg viewBox="0 0 24 24"><path d="M12 20l8-8h-5V4H9v8H4z"/></svg>
+  </div>
+  <div class="dpad-btn" id="btn-left"  data-dir="left">
+    <svg viewBox="0 0 24 24"><path d="M4 12l8-8v5h8v6h-8v5z"/></svg>
+  </div>
+  <div class="dpad-btn" id="btn-right" data-dir="right">
+    <svg viewBox="0 0 24 24"><path d="M20 12l-8 8v-5H4v-6h8V4z"/></svg>
+  </div>
+</div>
+
+<p id="kb-hint">Keyboard arrows also work</p>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const WIDTH = 800, HEIGHT = 500;
+
+  function resizeCanvas() {
+    const maxW = Math.min(window.innerWidth - 16, 800);
+    canvas.style.width  = maxW + 'px';
+    canvas.style.height = (maxW * 500 / 800) + 'px';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  const player = { x: 100, y: 200, w: 30, h: 30, speed: 5 };
+  const ball    = { x: 300, y: 220, r: 10, vx: 0, vy: 0 };
+  const BALL_START = { x: 300, y: 220 };
+  const goal    = { x: 750, y: 180, w: 50, h: 140 };
+  let score = 0;
+
+  const keys = { up: false, down: false, left: false, right: false };
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp')    { keys.up    = true; e.preventDefault(); }
+    if (e.key === 'ArrowDown')  { keys.down  = true; e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { keys.left  = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowUp')    keys.up    = false;
+    if (e.key === 'ArrowDown')  keys.down  = false;
+    if (e.key === 'ArrowLeft')  keys.left  = false;
+    if (e.key === 'ArrowRight') keys.right = false;
+  });
+
+  function pressBtn(dir) {
+    keys[dir] = true;
+    document.getElementById('btn-' + dir).classList.add('pressed');
+  }
+  function releaseBtn(dir) {
+    keys[dir] = false;
+    document.getElementById('btn-' + dir).classList.remove('pressed');
+  }
+
+  document.querySelectorAll('.dpad-btn').forEach(btn => {
+    const dir = btn.dataset.dir;
+    btn.addEventListener('mousedown',  e => { e.preventDefault(); pressBtn(dir); });
+    btn.addEventListener('mouseup',    e => { e.preventDefault(); releaseBtn(dir); });
+    btn.addEventListener('mouseleave', ()  => releaseBtn(dir));
+    btn.addEventListener('touchstart',  e => { e.preventDefault(); pressBtn(dir); },  { passive: false });
+    btn.addEventListener('touchend',    e => { e.preventDefault(); releaseBtn(dir); }, { passive: false });
+    btn.addEventListener('touchcancel', e => { e.preventDefault(); releaseBtn(dir); }, { passive: false });
+  });
+
+  function drawPitch() {
+    ctx.fillStyle = '#1a7a1a';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    for (let i = 0; i < 8; i++) {
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.fillRect(i * 100, 0, 100, HEIGHT);
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(WIDTH / 2, HEIGHT / 2, 70, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(WIDTH / 2, 0);
+    ctx.lineTo(WIDTH / 2, HEIGHT);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(WIDTH / 2, HEIGHT / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawGoal() {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    for (let y = goal.y; y <= goal.y + goal.h; y += 14) {
+      ctx.beginPath(); ctx.moveTo(goal.x, y); ctx.lineTo(goal.x + goal.w, y); ctx.stroke();
+    }
+    for (let x = goal.x; x <= goal.x + goal.w; x += 14) {
+      ctx.beginPath(); ctx.moveTo(x, goal.y); ctx.lineTo(x, goal.y + goal.h); ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(goal.x, goal.y, goal.w, goal.h);
+  }
+
+  function drawPlayer() {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(player.x + player.w / 2, player.y + player.h + 4, player.w / 2, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const grad = ctx.createLinearGradient(player.x, player.y, player.x + player.w, player.y + player.h);
+    grad.addColorStop(0, '#ff3a3a');
+    grad.addColorStop(1, '#991111');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(player.x, player.y, player.w, player.h, 5);
+    ctx.fill();
+
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 12px Barlow';
+    ctx.textAlign = 'center';
+    ctx.fillText('7', player.x + player.w / 2, player.y + player.h / 2 + 4);
+  }
+
+  function drawBall() {
+    const cx = ball.x, cy = ball.y, r = ball.r;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + r + 3, r * 0.9, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(angle) * r * 0.55, cy + Math.sin(angle) * r * 0.55, r * 0.28, angle + 0.5, angle + 1.8);
+      ctx.stroke();
+    }
+  }
+
+  function drawHUD() {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 140, 44, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#c8f03c';
+    ctx.font = 'bold 26px "Bebas Neue", cursive';
+    ctx.textAlign = 'left';
+    ctx.fillText(`SCORE  ${score}`, 22, 42);
+  }
+
+  function rectCollides(rx, ry, rw, rh, cx, cy, cr) {
+    const nearX = Math.max(rx, Math.min(cx, rx + rw));
+    const nearY = Math.max(ry, Math.min(cy, ry + rh));
+    const dx = cx - nearX, dy = cy - nearY;
+    return dx * dx + dy * dy < cr * cr;
+  }
+
+  function update() {
+    if (keys.up)    player.y -= player.speed;
+    if (keys.down)  player.y += player.speed;
+    if (keys.left)  player.x -= player.speed;
+    if (keys.right) player.x += player.speed;
+
+    player.x = Math.max(0, Math.min(WIDTH - player.w, player.x));
+    player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+
+    if (rectCollides(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
+      const dx = ball.x - (player.x + player.w / 2);
+      const dy = ball.y - (player.y + player.h / 2);
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      ball.vx = (dx / len) * 8;
+      ball.vy = (dy / len) * 8;
+    }
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.vx *= 0.98;
+    ball.vy *= 0.98;
+
+    if (ball.x - ball.r < 0)      { ball.x = ball.r;         ball.vx *= -0.6; }
+    if (ball.x + ball.r > WIDTH)   { ball.x = WIDTH - ball.r; ball.vx *= -0.6; }
+    if (ball.y - ball.r < 0)       { ball.y = ball.r;         ball.vy *= -0.6; }
+    if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.6; }
+
+    if (rectCollides(goal.x, goal.y, goal.w, goal.h, ball.x, ball.y, ball.r)) {
+      score++;
+      ball.x = BALL_START.x; ball.y = BALL_START.y;
+      ball.vx = 0; ball.vy = 0;
+    }
+  }
+
+  function loop() {
+    update();
+    drawPitch();
+    drawGoal();
+    drawPlayer();
+    drawBall();
+    drawHUD();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>VOID DANCER</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  canvas { background: radial-gradient(ellipse at center, #0a0520 0%, #000 80%); box-shadow: 0 0 60px rgba(140,80,255,0.4); image-rendering: pixelated; display: block; }
+  #hud { position: absolute; top: 10px; left: 0; right: 0; text-align: center; color: #fff; text-shadow: 0 0 8px #a0f; font-size: 14px; pointer-events: none; letter-spacing: 2px; z-index: 5; }
+  #hud b { color: #ff4; }
+
+  #back-btn {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    z-index: 15;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(200,80,255,0.35);
+    color: rgba(200,80,255,0.8);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+  }
+  #back-btn:hover { background: rgba(200,80,255,0.2); color: #e080ff; }
+
+  #stick-zone {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(160, 80, 255, 0.08);
+    border: 2px solid rgba(160, 80, 255, 0.35);
+    touch-action: none;
+    z-index: 10;
+  }
+  #stick-base {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 90px; height: 90px;
+    margin-left: -45px; margin-top: -45px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 2px dashed rgba(255,255,255,0.2);
+  }
+  #stick-knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 60px; height: 60px;
+    margin-left: -30px; margin-top: -30px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #f4f, #70a);
+    box-shadow: 0 0 20px rgba(240, 100, 255, 0.7), inset 0 0 10px rgba(255,255,255,0.3);
+    pointer-events: none;
+  }
+  #stick-knob.focus { background: radial-gradient(circle at 30% 30%, #4ff, #078); box-shadow: 0 0 20px rgba(100,255,255,0.8); }
+
+  #focus-btn {
+    position: absolute;
+    right: 30px;
+    bottom: 40px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,100,0.12);
+    border: 2px solid rgba(255,255,100,0.5);
+    color: #ff4;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 86px;
+    z-index: 10;
+    text-shadow: 0 0 8px #ff4;
+  }
+  #focus-btn.active { background: rgba(100,255,255,0.25); border-color: #4ff; color: #4ff; text-shadow: 0 0 10px #4ff; }
+
+  #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; background: rgba(0,0,0,0.85); padding: 20px; z-index: 20; }
+  #overlay h1 { font-size: 28px; color: #f0f; text-shadow: 0 0 12px #f0f; margin-bottom: 8px; letter-spacing: 4px; }
+  #overlay p { margin: 6px 0; font-size: 13px; max-width: 340px; line-height: 1.5; color: #ccc; }
+  #overlay button { margin-top: 18px; background: #f0f; color: #000; border: none; padding: 12px 28px; font-size: 16px; font-weight: bold; letter-spacing: 3px; cursor: pointer; font-family: inherit; box-shadow: 0 0 20px #f0f; }
+  #overlay button:active { transform: scale(0.95); }
+  #hub-link { margin-top: 12px; color: rgba(200,80,255,0.6); font-size: 12px; letter-spacing: 2px; text-decoration: none; }
+  #hub-link:hover { color: #e080ff; }
+  .hide { display: none !important; }
+  .stat { color: #4ff; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <a id="back-btn" href="/">&#9664; HUB</a>
+  <div id="hud">
+    LEVEL <b id="level">1</b> &nbsp; TIME <b id="time">0.0</b> &nbsp; LIVES <b id="lives">&#9829;&#9829;&#9829;&#9829;&#9829;</b> &nbsp; BEST <b id="best">0.0</b>
+  </div>
+
+  <div id="stick-zone">
+    <div id="stick-base"></div>
+    <div id="stick-knob"></div>
+  </div>
+  <div id="focus-btn">FOCUS</div>
+
+  <div id="overlay">
+    <h1>VOID DANCER</h1>
+    <p><span class="stat">JOYSTICK</span> (bottom-left): drag to fly.</p>
+    <p><span class="stat">FOCUS</span> (bottom-right): hold for slow, precise movement with a visible hitbox.</p>
+    <p><span class="stat">DESKTOP</span>: arrows/WASD + SHIFT also work.</p>
+    <p>Tiny hitbox at your core. Patterns escalate every 15 seconds.</p>
+    <button id="start">BEGIN</button>
+    <a id="hub-link" href="/">&#9664; Back to Hub</a>
+  </div>
+</div>
+<script>
+(() => {
+  const cvs = document.getElementById('game');
+  const ctx = cvs.getContext('2d');
+  const W = 400, H = 600;
+  cvs.width = W; cvs.height = H;
+
+  function fit() {
+    const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.98;
+    cvs.style.width = (W * s) + 'px';
+    cvs.style.height = (H * s) + 'px';
+  }
+  fit(); window.addEventListener('resize', fit);
+
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('start');
+  const timeEl = document.getElementById('time');
+  const livesEl = document.getElementById('lives');
+  const levelEl = document.getElementById('level');
+  const bestEl = document.getElementById('best');
+
+  let best = parseFloat(localStorage.getItem('vd_best') || '0');
+  bestEl.textContent = best.toFixed(1);
+
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+  }, {passive:false});
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+  const stickZone = document.getElementById('stick-zone');
+  const stickKnob = document.getElementById('stick-knob');
+  const focusBtn = document.getElementById('focus-btn');
+  let stickId = null;
+  let stickVec = { x: 0, y: 0 };
+  const STICK_MAX = 45;
+
+  function setStickFromPoint(clientX, clientY) {
+    const r = stickZone.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    let dx = clientX - cx;
+    let dy = clientY - cy;
+    const knobX = Math.max(-STICK_MAX, Math.min(STICK_MAX, dx));
+    const knobY = Math.max(-STICK_MAX, Math.min(STICK_MAX, dy));
+    stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+    stickVec.x = knobX / STICK_MAX;
+    stickVec.y = knobY / STICK_MAX;
+  }
+  function resetStick() {
+    stickKnob.style.transform = '';
+    stickVec.x = 0; stickVec.y = 0;
+    stickId = null;
+  }
+
+  stickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (stickId !== null) return;
+    const t = e.changedTouches[0];
+    stickId = t.identifier;
+    setStickFromPoint(t.clientX, t.clientY);
+  }, {passive:false});
+  stickZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) { setStickFromPoint(t.clientX, t.clientY); break; }
+    }
+  }, {passive:false});
+  function stickEnd(e) {
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) { resetStick(); break; }
+    }
+  }
+  stickZone.addEventListener('touchend', stickEnd, {passive:false});
+  stickZone.addEventListener('touchcancel', stickEnd, {passive:false});
+
+  let mouseDownStick = false;
+  stickZone.addEventListener('mousedown', e => {
+    e.preventDefault();
+    mouseDownStick = true;
+    setStickFromPoint(e.clientX, e.clientY);
+  });
+  window.addEventListener('mousemove', e => {
+    if (mouseDownStick) setStickFromPoint(e.clientX, e.clientY);
+  });
+  window.addEventListener('mouseup', () => {
+    if (mouseDownStick) { mouseDownStick = false; resetStick(); }
+  });
+
+  let focusTouch = false;
+  focusBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    focusTouch = true;
+    focusBtn.classList.add('active');
+  }, {passive:false});
+  const endFocus = e => {
+    if (e) e.preventDefault();
+    focusTouch = false;
+    focusBtn.classList.remove('active');
+  };
+  focusBtn.addEventListener('touchend', endFocus, {passive:false});
+  focusBtn.addEventListener('touchcancel', endFocus, {passive:false});
+  focusBtn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    focusTouch = true;
+    focusBtn.classList.add('active');
+  });
+  window.addEventListener('mouseup', () => {
+    if (focusTouch) { focusTouch = false; focusBtn.classList.remove('active'); }
+  });
+
+  let player, bullets, particles, time, lives, iframes, running, lastT, phase, spawnTimers, stars, level, levelTime, banner;
+
+  const LEVEL_DURATION = 60;
+  const STAGE_INTERVALS = [10, 7, 5, 4, 3, 2.5, 2];
+
+  function init() {
+    player = { x: W/2, y: H - 80, r: 10, focus: false };
+    bullets = [];
+    particles = [];
+    time = 0;
+    lives = 5;
+    iframes = 0;
+    level = 1;
+    levelTime = 0;
+    phase = 0;
+    banner = { text: 'LEVEL 1', timer: 2.5 };
+    spawnTimers = { ring: 0, aim: 0, spiral: 0, wall: 0, laser: 0, spiralAngle: 0 };
+    stars = [];
+    for (let i = 0; i < 60; i++) stars.push({x: Math.random()*W, y: Math.random()*H, s: Math.random()*1.5+0.3, v: Math.random()*30+10});
+    running = true;
+    lastT = performance.now();
+  }
+
+  function stageInterval() {
+    return STAGE_INTERVALS[Math.min(level - 1, STAGE_INTERVALS.length - 1)];
+  }
+
+  function levelUp() {
+    level++;
+    levelTime = 0;
+    phase = 0;
+    lives = Math.min(lives + 1, 9);
+    iframes = Math.max(iframes, 2.5);
+    for (const b of bullets) explode(b.x, b.y, b.color);
+    bullets.length = 0;
+    banner = { text: 'LEVEL ' + level, timer: 2.5 };
+    spawnTimers = { ring: 0.8, aim: 0.8, spiral: 0, wall: 0, laser: 0, spiralAngle: 0 };
+  }
+
+  function spawnBullet(x, y, vx, vy, color, r) {
+    bullets.push({ x, y, vx, vy, color: color || '#f0f', r: r || 5, life: 0 });
+  }
+
+  function explode(x, y, color) {
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = Math.random() * 150 + 50;
+      particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 0.6, color });
+    }
+  }
+
+  function updateSpawns(dt) {
+    phase = Math.floor(levelTime / stageInterval());
+    const diff = phase + (level - 1) * 2;
+
+    spawnTimers.ring -= dt;
+    if (spawnTimers.ring <= 0) {
+      spawnTimers.ring = Math.max(3.2 - diff * 0.2, 1.0);
+      const cx = Math.random() * (W - 100) + 50;
+      const cy = Math.random() * 150 + 40;
+      const n = 8 + diff;
+      const speed = 55 + diff * 6;
+      const offset = Math.random() * Math.PI * 2;
+      for (let i = 0; i < n; i++) {
+        const a = offset + (i / n) * Math.PI * 2;
+        spawnBullet(cx, cy, Math.cos(a)*speed, Math.sin(a)*speed, '#f44', 5);
+      }
+      explode(cx, cy, '#f44');
+    }
+
+    spawnTimers.aim -= dt;
+    if (spawnTimers.aim <= 0) {
+      spawnTimers.aim = Math.max(2.0 - diff * 0.1, 0.6);
+      const sx = Math.random() * W;
+      const sy = -10;
+      const dx = player.x - sx, dy = player.y - sy;
+      const speed = 100 + diff * 8;
+      const spread = diff >= 3 ? 3 : 1;
+      for (let k = -Math.floor(spread/2); k <= Math.floor(spread/2); k++) {
+        const a = Math.atan2(dy, dx) + k * 0.15;
+        spawnBullet(sx, sy, Math.cos(a)*speed, Math.sin(a)*speed, '#4ff', 4);
+      }
+    }
+
+    if (diff >= 1) {
+      spawnTimers.spiral -= dt;
+      if (spawnTimers.spiral <= 0) {
+        spawnTimers.spiral = Math.max(0.14 - diff * 0.005, 0.07);
+        spawnTimers.spiralAngle += 0.28;
+        const arms = 2 + Math.min(Math.floor(diff / 2), 3);
+        for (let i = 0; i < arms; i++) {
+          const a = spawnTimers.spiralAngle + (i / arms) * Math.PI * 2;
+          spawnBullet(W/2, 60, Math.cos(a)*75, Math.sin(a)*75, '#fa0', 4);
+        }
+      }
+    }
+
+    if (diff >= 2) {
+      spawnTimers.wall -= dt;
+      if (spawnTimers.wall <= 0) {
+        spawnTimers.wall = Math.max(5 - diff * 0.2, 2.4);
+        const gap = Math.max(110 - diff * 3, 70);
+        const gapX = Math.random() * (W - gap - 40) + 20;
+        const speed = 75 + diff * 4;
+        for (let x = 0; x < W; x += 22) {
+          if (x > gapX && x < gapX + gap) continue;
+          spawnBullet(x, -10, 0, speed, '#c6f', 6);
+        }
+      }
+    }
+
+    if (diff >= 3) {
+      spawnTimers.laser -= dt;
+      if (spawnTimers.laser <= 0) {
+        spawnTimers.laser = Math.max(0.12 - diff * 0.003, 0.05);
+        const y = (Math.sin(time * 1.2) * 0.5 + 0.5) * (H * 0.5) + 100;
+        const ls = 140 + diff * 6;
+        spawnBullet(-10, y, ls, 0, '#fff', 3);
+        spawnBullet(W+10, y + 30, -ls, 0, '#fff', 3);
+      }
+    }
+  }
+
+  function update(dt) {
+    time += dt;
+    levelTime += dt;
+    if (iframes > 0) iframes -= dt;
+    if (banner.timer > 0) banner.timer -= dt;
+
+    if (levelTime >= LEVEL_DURATION) {
+      levelUp();
+    }
+
+    let dx = 0, dy = 0;
+    if (keys['arrowleft'] || keys['a']) dx -= 1;
+    if (keys['arrowright'] || keys['d']) dx += 1;
+    if (keys['arrowup'] || keys['w']) dy -= 1;
+    if (keys['arrowdown'] || keys['s']) dy += 1;
+    let mag;
+    if (dx || dy) {
+      const m = Math.hypot(dx, dy);
+      dx /= m; dy /= m;
+      mag = 1;
+    } else {
+      dx = stickVec.x;
+      dy = stickVec.y;
+      mag = Math.min(1, Math.hypot(dx, dy));
+    }
+
+    player.focus = !!keys['shift'] || focusTouch;
+    stickKnob.classList.toggle('focus', player.focus);
+
+    const baseSpeed = player.focus ? 130 : 260;
+    if (mag > 0.05) {
+      player.x += dx * baseSpeed * dt;
+      player.y += dy * baseSpeed * dt;
+    }
+    player.x = Math.max(10, Math.min(W-10, player.x));
+    player.y = Math.max(10, Math.min(H-10, player.y));
+
+    for (const s of stars) {
+      s.y += s.v * dt;
+      if (s.y > H) { s.y = 0; s.x = Math.random()*W; }
+    }
+
+    updateSpawns(dt);
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life += dt;
+      if (b.x < -30 || b.x > W+30 || b.y < -30 || b.y > H+30) {
+        bullets.splice(i, 1); continue;
+      }
+      const hitR = 2;
+      const d = Math.hypot(b.x - player.x, b.y - player.y);
+      if (d < b.r + hitR && iframes <= 0) {
+        lives--;
+        iframes = 2.5;
+        explode(player.x, player.y, '#fff');
+        if (lives <= 0) gameOver();
+        break;
+      }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.94; p.vy *= 0.94;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#fff';
+    for (const s of stars) {
+      ctx.globalAlpha = s.s / 1.8;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
+    }
+    ctx.globalAlpha = 1;
+
+    for (const b of bullets) {
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life / 0.6);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+
+    const flicker = iframes > 0 && Math.floor(iframes * 20) % 2 === 0;
+    if (!flicker) {
+      ctx.fillStyle = player.focus ? '#aaf' : '#fff';
+      ctx.shadowColor = '#8af';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.moveTo(player.x, player.y - 10);
+      ctx.lineTo(player.x - 8, player.y + 8);
+      ctx.lineTo(player.x + 8, player.y + 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    if (player.focus) {
+      ctx.fillStyle = '#f0f';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    timeEl.textContent = time.toFixed(1);
+    livesEl.textContent = '\u2665'.repeat(Math.max(0,lives)) || '\u2014';
+    levelEl.textContent = level;
+
+    if (banner.timer > 0) {
+      const alpha = Math.min(1, banner.timer < 0.5 ? banner.timer * 2 : (banner.timer > 2 ? (2.5 - banner.timer) * 2 : 1));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, H/2 - 50, W, 100);
+      ctx.fillStyle = '#f0f';
+      ctx.shadowColor = '#f0f';
+      ctx.shadowBlur = 20;
+      ctx.font = 'bold 42px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(banner.text, W/2, H/2);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function gameOver() {
+    running = false;
+    if (time > best) {
+      best = time;
+      localStorage.setItem('vd_best', best.toString());
+      bestEl.textContent = best.toFixed(1);
+    }
+    overlay.classList.remove('hide');
+    overlay.querySelector('h1').textContent = 'YOU DIED';
+    const ps = overlay.querySelectorAll('p');
+    ps[0].innerHTML = `<span class="stat">SURVIVED</span> ${time.toFixed(1)}s &nbsp; <span class="stat">BEST</span> ${best.toFixed(1)}s`;
+    ps[1].textContent = `Fell on Level ${level}. ${level >= 4 ? 'You were deep in the void.' : level >= 3 ? 'Impressive run.' : level >= 2 ? 'Solid effort.' : 'Stay focused, try again.'}`;
+    ps[2].textContent = '';
+    ps[3].textContent = '';
+    startBtn.textContent = 'RETRY';
+  }
+
+  function loop(t) {
+    const dt = Math.min((t - lastT) / 1000, 1/30);
+    lastT = t;
+    if (running) { update(dt); draw(); }
+    requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener('click', () => {
+    overlay.classList.add('hide');
+    init();
+  });
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
