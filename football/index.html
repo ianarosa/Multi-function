@@ -273,8 +273,9 @@
   const goal   = { x: 755, y: HEIGHT / 2 - 70, w: 45, h: 140 };
 
   // Goalkeeper
+  const GK_REACTION_DELAY = 0.65; // seconds between target updates
   const gk = { x: goal.x - 12, y: HEIGHT / 2 - 14, w: 28, h: 28,
-               vy: 0, speed: 3.5, reaction: 0 };
+               speed: 2.2, reactionTimer: 0, trackedY: HEIGHT / 2 };
 
   let score = 0;
   let goalFlash = 0;   // seconds remaining for goal flash effect
@@ -395,8 +396,13 @@
     if (ball.y - ball.r < 0)       { ball.y = ball.r;          ball.vy *= -0.55; }
     if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.55; }
 
-    // --- Goalkeeper AI ---
-    const gkTargetY = Math.max(goal.y, Math.min(goal.y + goal.h - gk.h, ball.y - gk.h / 2));
+    // --- Goalkeeper AI (delayed reaction) ---
+    gk.reactionTimer -= dt;
+    if (gk.reactionTimer <= 0) {
+      gk.reactionTimer = GK_REACTION_DELAY;
+      gk.trackedY = ball.y; // only update target after delay
+    }
+    const gkTargetY = Math.max(goal.y, Math.min(goal.y + goal.h - gk.h, gk.trackedY - gk.h / 2));
     const gkDy = gkTargetY - gk.y;
     gk.y += Math.sign(gkDy) * Math.min(Math.abs(gkDy), gk.speed);
     gk.x = goal.x - gk.w - 4;
