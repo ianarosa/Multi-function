@@ -407,8 +407,10 @@
       ball.vy = (dy / (gk.h / 2)) * 5;
     }
 
-    // --- Goal check ---
-    if (rectCircle(goal.x, goal.y, goal.w, goal.h, ball.x, ball.y, ball.r)) {
+    // --- Goal check: ball must cross the mouth AND be clear of both posts ---
+    if (ball.x + ball.r >= goal.x &&
+        ball.y >= goal.y + ball.r &&
+        ball.y <= goal.y + goal.h - ball.r) {
       score++;
       goalFlash = 1.2;
       resetBall();
