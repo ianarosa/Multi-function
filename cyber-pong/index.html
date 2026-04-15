@@ -290,10 +290,10 @@
     }
 
     // Player paddle
-    if (keys['ArrowUp']   || keys['w']) targetY -= 7;
-    if (keys['ArrowDown'] || keys['s']) targetY += 7;
-    if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 7;
-    pl.y += (targetY - pl.y) * 0.22;
+    if (keys['ArrowUp']   || keys['w']) targetY -= 7 * dt * 60;
+    if (keys['ArrowDown'] || keys['s']) targetY += 7 * dt * 60;
+    if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 7 * dt * 60;
+    pl.y += (targetY - pl.y) * Math.min(1, 0.22 * dt * 60);
     pl.y  = Math.max(0, Math.min(H - pl.h, pl.y));
 
     // AI paddle — delayed reaction + small error offset
@@ -309,15 +309,15 @@
     }
     const aiTarget = ai.trackedY + ai.errorOffset - ai.h / 2;
     const aiDy = aiTarget - ai.y;
-    ai.y += Math.sign(aiDy) * Math.min(Math.abs(aiDy), aiSpeed());
+    ai.y += Math.sign(aiDy) * Math.min(Math.abs(aiDy), aiSpeed() * dt * 60);
     ai.y  = Math.max(0, Math.min(H - ai.h, ai.y));
 
     // Ball trail
     ball.trail.push({ x: ball.x, y: ball.y });
     if (ball.trail.length > 14) ball.trail.shift();
 
-    ball.x += ball.vx;
-    ball.y += ball.vy;
+    ball.x += ball.vx * dt * 60;
+    ball.y += ball.vy * dt * 60;
 
     // Wall bounce
     if (ball.y - BR < 0)  { ball.y = BR;    ball.vy =  Math.abs(ball.vy); burst(ball.x, 0,   '#0df', 5); }
