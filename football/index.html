@@ -268,8 +268,8 @@
 
   const player = { x: 100, y: 230, w: 28, h: 28, facing: { x: 1, y: 0 },
                    shootCooldown: 0 };
-  const ball   = { x: 280, y: 230, r: 10, vx: 0, vy: 0, spin: 0 };
   const BALL_START = { x: WIDTH / 2, y: HEIGHT / 2 };
+  const ball   = { x: BALL_START.x, y: BALL_START.y, r: 10, vx: 0, vy: 0, spin: 0 };
 
   const goal   = { x: 755, y: HEIGHT / 2 - 70, w: 45, h: 140 };
 
