@@ -119,19 +119,17 @@
   }
 
   .action-btn {
-    width: 72px;
-    height: 72px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
     border: none;
     font-family: 'Bebas Neue', cursive;
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 2px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
-    gap: 2px;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
     transition: transform 0.08s, opacity 0.08s;
@@ -140,25 +138,13 @@
   .action-btn:active, .action-btn.pressed { transform: scale(0.9); }
 
   #shoot-btn {
-    width: 84px;
-    height: 84px;
     background: radial-gradient(circle at 35% 30%, #ff7744, #cc2200);
     box-shadow: 0 0 22px rgba(255,80,30,0.6), inset 0 0 10px rgba(255,200,150,0.2);
     color: #fff;
-    font-size: 14px;
     text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
   #shoot-btn.pressed  { box-shadow: 0 0 12px rgba(255,80,30,0.3); }
   #shoot-btn.cooldown { opacity: 0.45; }
-
-  #dribble-btn {
-    background: radial-gradient(circle at 35% 30%, #ffe044, #a87800);
-    box-shadow: 0 0 18px rgba(220,180,0,0.55), inset 0 0 8px rgba(255,255,200,0.2);
-    color: #1a1000;
-    font-size: 11px;
-  }
-  #dribble-btn.pressed { box-shadow: 0 0 8px rgba(220,180,0,0.3); }
-  #dribble-btn.cooldown { opacity: 0.45; }
 
   #kb-hint {
     position: fixed;
@@ -189,10 +175,9 @@
 
 <div id="action-btns">
   <div class="action-btn" id="shoot-btn">SHOOT</div>
-  <div class="action-btn" id="dribble-btn">DRIBBLE</div>
 </div>
 
-<p id="kb-hint">WASD/Arrows · Space=Dribble · F=Shoot</p>
+<p id="kb-hint">WASD / Arrows · F = Shoot</p>
 
 <script>
   const canvas = document.getElementById('gameCanvas');
@@ -251,10 +236,8 @@
   window.addEventListener('mouseup',      ()  => { if (mouseDownStick) { mouseDownStick = false; resetStick(); } });
 
   // ── Action buttons (touch/mouse) ─────────────────────────────
-  const shootBtn   = document.getElementById('shoot-btn');
-  const dribbleBtn = document.getElementById('dribble-btn');
-  let touchShoot   = false;
-  let touchDribble = false;
+  const shootBtn = document.getElementById('shoot-btn');
+  let touchShoot = false;
 
   function bindActionBtn(el, setFn) {
     const press   = e => { e.preventDefault(); el.classList.add('pressed');    setFn(true);  };
@@ -266,27 +249,25 @@
     el.addEventListener('mouseup',     release);
     el.addEventListener('mouseleave',  release);
   }
-  bindActionBtn(shootBtn,   v => { touchShoot   = v; });
-  bindActionBtn(dribbleBtn, v => { touchDribble = v; });
+  bindActionBtn(shootBtn, v => { touchShoot = v; });
 
   // ── Keyboard ──────────────────────────────────────────────────
   const keys = {};
   window.addEventListener('keydown', e => {
     keys[e.key] = true;
-    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','f'].includes(e.key.toLowerCase())) e.preventDefault();
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','f'].includes(e.key.toLowerCase())) e.preventDefault();
   });
   window.addEventListener('keyup', e => { keys[e.key] = false; });
 
   // ── Game state ────────────────────────────────────────────────
   const PLAYER_BASE_SPEED = 5;
-  const DRIBBLE_SPEED     = 9;
-  const DRIBBLE_DURATION  = 0.5;   // seconds of burst
-  const DRIBBLE_COOLDOWN  = 2.5;   // seconds before reuse
   const SHOOT_COOLDOWN    = 1.2;   // seconds between shots
-  const SHOOT_RANGE       = 80;    // max distance from ball to trigger shot
+  const SHOOT_RANGE       = 90;    // max dist from ball centre to trigger shot
+  const CONTROL_RANGE     = 42;    // passive dribble spring engages within this distance
+  const SPRING_K          = 22;    // spring stiffness pulling ball to foot position
 
   const player = { x: 100, y: 230, w: 28, h: 28, facing: { x: 1, y: 0 },
-                   dribbling: 0, cooldown: 0, shootCooldown: 0 };
+                   shootCooldown: 0 };
   const ball   = { x: 280, y: 230, r: 10, vx: 0, vy: 0, spin: 0 };
   const BALL_START = { x: WIDTH / 2, y: HEIGHT / 2 };
 
@@ -315,9 +296,6 @@
     return { x: stickVec.x, y: stickVec.y, mag };
   }
 
-  function dribblePressed() {
-    return keys[' '] || keys['x'] || keys['z'] || touchDribble;
-  }
   function shootPressed() {
     return keys['f'] || keys['F'] || touchShoot;
   }
@@ -349,36 +327,27 @@
       player.facing.y = inp.y;
     }
 
-    player.dribbling    = Math.max(0, player.dribbling    - dt);
-    player.cooldown     = Math.max(0, player.cooldown     - dt);
     player.shootCooldown = Math.max(0, player.shootCooldown - dt);
+    shootBtn.classList.toggle('cooldown', player.shootCooldown > 0);
 
-    // Update button visual cooldown states
-    dribbleBtn.classList.toggle('cooldown', player.cooldown > 0);
-    shootBtn.classList.toggle('cooldown',   player.shootCooldown > 0);
-
-    if (dribblePressed() && player.cooldown <= 0 && inp.mag > 0.08) {
-      player.dribbling = DRIBBLE_DURATION;
-      player.cooldown  = DRIBBLE_COOLDOWN;
-    }
+    player.x += inp.x * inp.mag * PLAYER_BASE_SPEED;
+    player.y += inp.y * inp.mag * PLAYER_BASE_SPEED;
+    player.x = Math.max(0, Math.min(WIDTH  - player.w, player.x));
+    player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
 
     // --- Shoot ---
     if (shootPressed() && player.shootCooldown <= 0) {
-      const distToBall = Math.hypot(
-        ball.x - (player.x + player.w / 2),
-        ball.y - (player.y + player.h / 2)
-      );
-      if (distToBall < SHOOT_RANGE) {
+      const playerCx = player.x + player.w / 2;
+      const playerCy = player.y + player.h / 2;
+      if (Math.hypot(ball.x - playerCx, ball.y - playerCy) < SHOOT_RANGE) {
         player.shootCooldown = SHOOT_COOLDOWN;
-        // Aim toward goal with slight bias from facing direction
         const goalCx = goal.x + goal.w / 2;
         const goalCy = goal.y + goal.h / 2;
-        const toGoalX = goalCx - ball.x;
-        const toGoalY = goalCy - ball.y;
-        const len = Math.hypot(toGoalX, toGoalY) || 1;
-        // Blend 70% toward goal, 30% facing
-        const sx = (toGoalX / len) * 0.7 + player.facing.x * 0.3;
-        const sy = (toGoalY / len) * 0.7 + player.facing.y * 0.3;
+        const tx = goalCx - ball.x, ty = goalCy - ball.y;
+        const tlen = Math.hypot(tx, ty) || 1;
+        // 70% toward goal, 30% in facing direction
+        const sx = (tx / tlen) * 0.7 + player.facing.x * 0.3;
+        const sy = (ty / tlen) * 0.7 + player.facing.y * 0.3;
         const slen = Math.hypot(sx, sy) || 1;
         const power = 16 + Math.random() * 3;
         ball.vx = (sx / slen) * power;
@@ -387,25 +356,28 @@
       }
     }
 
-    const speed = player.dribbling > 0 ? DRIBBLE_SPEED : PLAYER_BASE_SPEED;
-    player.x += inp.x * inp.mag * speed;
-    player.y += inp.y * inp.mag * speed;
-    player.x = Math.max(0, Math.min(WIDTH  - player.w, player.x));
-    player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+    // --- Passive dribble: spring ball to foot position when player is moving ---
+    const playerCx = player.x + player.w / 2;
+    const playerCy = player.y + player.h / 2;
+    const distToBall = Math.hypot(ball.x - playerCx, ball.y - playerCy);
 
-    // --- Player-ball collision ---
+    if (inp.mag > 0.08 && distToBall < CONTROL_RANGE && player.shootCooldown <= 0) {
+      // Foot position: just ahead of player centre in movement direction
+      const footDist = player.w / 2 + ball.r + 3;
+      const footX = playerCx + inp.x * footDist;
+      const footY = playerCy + inp.y * footDist;
+      // Spring force pulls ball toward foot
+      ball.vx += (footX - ball.x) * SPRING_K * dt;
+      ball.vy += (footY - ball.y) * SPRING_K * dt;
+    }
+
+    // Hard collision: push ball out if it overlaps player body
     if (rectCircle(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
-      const dx = ball.x - (player.x + player.w / 2);
-      const dy = ball.y - (player.y + player.h / 2);
+      const dx = ball.x - playerCx;
+      const dy = ball.y - playerCy;
       const len = Math.hypot(dx, dy) || 1;
-      // dribble burst launches ball hard in facing direction
-      if (player.dribbling > 0) {
-        ball.vx = player.facing.x * 14;
-        ball.vy = player.facing.y * 14;
-      } else {
-        ball.vx = (dx / len) * 8;
-        ball.vy = (dy / len) * 8;
-      }
+      ball.vx = (dx / len) * 7;
+      ball.vy = (dy / len) * 7;
     }
 
     // --- Ball physics ---
@@ -421,13 +393,11 @@
     if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.55; }
 
     // --- Goalkeeper AI ---
-    // React toward ball's vertical position, stay inside goal zone
     const gkTargetY = Math.max(goal.y, Math.min(goal.y + goal.h - gk.h, ball.y - gk.h / 2));
     const gkDy = gkTargetY - gk.y;
     gk.y += Math.sign(gkDy) * Math.min(Math.abs(gkDy), gk.speed);
     gk.x = goal.x - gk.w - 4;
 
-    // GK-ball collision (GK deflects ball back)
     if (rectCircle(gk.x, gk.y, gk.w, gk.h, ball.x, ball.y, ball.r)) {
       ball.vx = -Math.abs(ball.vx) * 0.9 - 3;
       const dy = ball.y - (gk.y + gk.h / 2);
@@ -525,25 +495,14 @@
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(`SCORE  ${score}`, 22, 17);
 
-    // Cooldown bars
+    // Shoot cooldown bar
     const barW = 90, barH = 6, barX = WIDTH - barW - 14;
-    ctx.font = '9px Barlow'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-
-    // Dribble bar
-    const dFill = player.cooldown <= 0 ? 1 : 1 - player.cooldown / DRIBBLE_COOLDOWN;
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 32, barW, barH, 3); ctx.fill();
-    ctx.fillStyle = dFill >= 1 ? '#ffe044' : '#6a5000';
-    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 32, barW * dFill, barH, 3); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillText('DRIBBLE', barX + barW, HEIGHT - 35);
-
-    // Shoot bar
     const sFill = player.shootCooldown <= 0 ? 1 : 1 - player.shootCooldown / SHOOT_COOLDOWN;
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 20, barW, barH, 3); ctx.fill();
     ctx.fillStyle = sFill >= 1 ? '#ff7744' : '#661100';
     ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 20, barW * sFill, barH, 3); ctx.fill();
+    ctx.font = '9px Barlow'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fillText('SHOOT', barX + barW, HEIGHT - 23);
 
@@ -571,10 +530,7 @@
     drawPitch();
     drawGoalNet();
     drawCharacter(gk.x, gk.y, gk.w, gk.h, '#4488ff', '#1133aa', 'GK', '#4af');
-    drawCharacter(player.x, player.y, player.w, player.h,
-      player.dribbling > 0 ? '#ffcc00' : '#ff3a3a',
-      player.dribbling > 0 ? '#cc8800' : '#991111',
-      '7', player.dribbling > 0 ? '#fc0' : null);
+    drawCharacter(player.x, player.y, player.w, player.h, '#ff3a3a', '#991111', '7', null);
     drawBallSprite();
     drawHUD();
 
