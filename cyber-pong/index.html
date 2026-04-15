@@ -130,6 +130,12 @@
     lastT    = performance.now();
   }
 
+  // Initialise safe defaults so draw() never touches undefined refs on the menu screen
+  effects = {}; pl.h = PH_BASE;
+  ball = { x: W/2, y: H/2, vx: 0, vy: 0, trail: [] };
+  particles = []; powerUps = []; floats = [];
+  score = 0; lives = 3; rally = 0; mult = 1; flash = 0; flashColor = '#f44';
+  puTimer = PU_INTERVAL;
   state = 'menu';
 
   // ── Power-up definitions ──────────────────────────────────────
