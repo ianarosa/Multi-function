@@ -263,8 +263,7 @@
   const PLAYER_BASE_SPEED = 5;
   const SHOOT_COOLDOWN    = 1.2;   // seconds between shots
   const SHOOT_RANGE       = 90;    // max dist from ball centre to trigger shot
-  const CONTROL_RANGE     = 42;    // passive dribble spring engages within this distance
-  const SPRING_K          = 22;    // spring stiffness pulling ball to foot position
+  const CONTROL_RANGE     = 42;    // passive dribble lerp engages within this distance
 
   const player = { x: 100, y: 230, w: 28, h: 28, facing: { x: 1, y: 0 },
                    shootCooldown: 0 };
@@ -356,19 +355,22 @@
       }
     }
 
-    // --- Passive dribble: spring ball to foot position when player is moving ---
+    // --- Passive dribble: lerp ball to foot position when player is moving ---
     const playerCx = player.x + player.w / 2;
     const playerCy = player.y + player.h / 2;
     const distToBall = Math.hypot(ball.x - playerCx, ball.y - playerCy);
 
     if (inp.mag > 0.08 && distToBall < CONTROL_RANGE && player.shootCooldown <= 0) {
-      // Foot position: just ahead of player centre in movement direction
       const footDist = player.w / 2 + ball.r + 3;
       const footX = playerCx + inp.x * footDist;
       const footY = playerCy + inp.y * footDist;
-      // Spring force pulls ball toward foot
-      ball.vx += (footX - ball.x) * SPRING_K * dt;
-      ball.vy += (footY - ball.y) * SPRING_K * dt;
+      // Lerp position — no velocity accumulation, no oscillation
+      const t = Math.min(1, 14 * dt);
+      ball.x += (footX - ball.x) * t;
+      ball.y += (footY - ball.y) * t;
+      // Match ball velocity to player so it doesn't fight the lerp
+      ball.vx = inp.x * inp.mag * PLAYER_BASE_SPEED;
+      ball.vy = inp.y * inp.mag * PLAYER_BASE_SPEED;
     }
 
     // Positional separation: slide ball to player edge with no velocity spike
