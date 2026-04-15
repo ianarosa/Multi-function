@@ -70,62 +70,106 @@
     max-width: 100%;
   }
 
-  /* D-PAD */
-  #dpad {
-    position: relative;
-    width: 150px;
-    height: 150px;
-    margin-top: 18px;
-    flex-shrink: 0;
+  /* JOYSTICK */
+  #stick-zone {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(200, 240, 60, 0.06);
+    border: 2px solid rgba(200, 240, 60, 0.3);
+    touch-action: none;
+    z-index: 10;
   }
 
-  .dpad-btn {
+  #stick-base {
     position: absolute;
-    width: 46px;
-    height: 46px;
-    background: rgba(200, 240, 60, 0.12);
-    border: 2px solid rgba(200, 240, 60, 0.35);
-    border-radius: 8px;
+    left: 50%; top: 50%;
+    width: 80px; height: 80px;
+    margin-left: -40px; margin-top: -40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    border: 2px dashed rgba(200,240,60,0.18);
+  }
+
+  #stick-knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 54px; height: 54px;
+    margin-left: -27px; margin-top: -27px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #e8ff60, #6a8010);
+    box-shadow: 0 0 18px rgba(200,240,60,0.6), inset 0 0 8px rgba(255,255,255,0.25);
+    pointer-events: none;
+    transition: box-shadow 0.1s;
+  }
+
+  /* ACTION BUTTONS */
+  #action-btns {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    z-index: 10;
+  }
+
+  .action-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: none;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px;
+    letter-spacing: 2px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: background 0.08s, transform 0.08s;
+    flex-direction: column;
+    gap: 2px;
     -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    transition: transform 0.08s, opacity 0.08s;
+    user-select: none;
   }
+  .action-btn:active, .action-btn.pressed { transform: scale(0.9); }
 
-  .dpad-btn.pressed {
-    background: rgba(200, 240, 60, 0.35);
-    transform: scale(0.92);
+  #shoot-btn {
+    width: 84px;
+    height: 84px;
+    background: radial-gradient(circle at 35% 30%, #ff7744, #cc2200);
+    box-shadow: 0 0 22px rgba(255,80,30,0.6), inset 0 0 10px rgba(255,200,150,0.2);
+    color: #fff;
+    font-size: 14px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
+  #shoot-btn.pressed  { box-shadow: 0 0 12px rgba(255,80,30,0.3); }
+  #shoot-btn.cooldown { opacity: 0.45; }
 
-  .dpad-btn svg {
-    fill: #c8f03c;
-    width: 22px;
-    height: 22px;
-    pointer-events: none;
+  #dribble-btn {
+    background: radial-gradient(circle at 35% 30%, #ffe044, #a87800);
+    box-shadow: 0 0 18px rgba(220,180,0,0.55), inset 0 0 8px rgba(255,255,200,0.2);
+    color: #1a1000;
+    font-size: 11px;
   }
-
-  #btn-up    { top: 4px;    left: 52px; }
-  #btn-down  { bottom: 4px; left: 52px; }
-  #btn-left  { top: 52px;   left: 4px;  }
-  #btn-right { top: 52px;   right: 4px; }
-
-  #dpad-center {
-    position: absolute;
-    top: 52px; left: 52px;
-    width: 46px; height: 46px;
-    background: rgba(200,240,60,0.06);
-    border-radius: 50%;
-    border: 2px solid rgba(200,240,60,0.15);
-  }
+  #dribble-btn.pressed { box-shadow: 0 0 8px rgba(220,180,0,0.3); }
+  #dribble-btn.cooldown { opacity: 0.45; }
 
   #kb-hint {
-    margin-top: 10px;
-    color: #4a7a2a;
-    font-size: 0.75rem;
+    position: fixed;
+    bottom: 8px;
+    left: 0; right: 0;
+    text-align: center;
+    color: #3a5a1a;
+    font-size: 0.7rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
+    pointer-events: none;
   }
 </style>
 </head>
@@ -138,23 +182,17 @@
 </div>
 <canvas id="gameCanvas" width="800" height="500"></canvas>
 
-<div id="dpad">
-  <div id="dpad-center"></div>
-  <div class="dpad-btn" id="btn-up"    data-dir="up">
-    <svg viewBox="0 0 24 24"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
-  </div>
-  <div class="dpad-btn" id="btn-down"  data-dir="down">
-    <svg viewBox="0 0 24 24"><path d="M12 20l8-8h-5V4H9v8H4z"/></svg>
-  </div>
-  <div class="dpad-btn" id="btn-left"  data-dir="left">
-    <svg viewBox="0 0 24 24"><path d="M4 12l8-8v5h8v6h-8v5z"/></svg>
-  </div>
-  <div class="dpad-btn" id="btn-right" data-dir="right">
-    <svg viewBox="0 0 24 24"><path d="M20 12l-8 8v-5H4v-6h8V4z"/></svg>
-  </div>
+<div id="stick-zone">
+  <div id="stick-base"></div>
+  <div id="stick-knob"></div>
 </div>
 
-<p id="kb-hint">Keyboard arrows also work</p>
+<div id="action-btns">
+  <div class="action-btn" id="shoot-btn">SHOOT</div>
+  <div class="action-btn" id="dribble-btn">DRIBBLE</div>
+</div>
+
+<p id="kb-hint">WASD/Arrows · Space=Dribble · F=Shoot</p>
 
 <script>
   const canvas = document.getElementById('gameCanvas');
@@ -169,79 +207,266 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  const player = { x: 100, y: 200, w: 30, h: 30, speed: 5 };
-  const ball    = { x: 300, y: 220, r: 10, vx: 0, vy: 0 };
-  const BALL_START = { x: 300, y: 220 };
-  const goal    = { x: 750, y: 180, w: 50, h: 140 };
-  let score = 0;
+  // ── Joystick ──────────────────────────────────────────────────
+  const stickZone = document.getElementById('stick-zone');
+  const stickKnob = document.getElementById('stick-knob');
+  const STICK_MAX = 40;
+  let stickVec = { x: 0, y: 0 };
+  let stickId = null;
+  let mouseDownStick = false;
 
-  const keys = { up: false, down: false, left: false, right: false };
+  function setStick(clientX, clientY) {
+    const r = stickZone.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = Math.max(-STICK_MAX, Math.min(STICK_MAX, clientX - cx));
+    const dy = Math.max(-STICK_MAX, Math.min(STICK_MAX, clientY - cy));
+    stickKnob.style.transform = `translate(${dx}px,${dy}px)`;
+    stickVec.x = dx / STICK_MAX;
+    stickVec.y = dy / STICK_MAX;
+  }
+  function resetStick() {
+    stickKnob.style.transform = '';
+    stickVec.x = 0; stickVec.y = 0;
+    stickId = null;
+  }
 
+  stickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (stickId !== null) return;
+    const t = e.changedTouches[0]; stickId = t.identifier;
+    setStick(t.clientX, t.clientY);
+  }, { passive: false });
+  stickZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) if (t.identifier === stickId) { setStick(t.clientX, t.clientY); break; }
+  }, { passive: false });
+  function onStickEnd(e) {
+    for (const t of e.changedTouches) if (t.identifier === stickId) { resetStick(); break; }
+  }
+  stickZone.addEventListener('touchend',   onStickEnd, { passive: false });
+  stickZone.addEventListener('touchcancel',onStickEnd, { passive: false });
+
+  stickZone.addEventListener('mousedown', e => { e.preventDefault(); mouseDownStick = true; setStick(e.clientX, e.clientY); });
+  window.addEventListener('mousemove',    e => { if (mouseDownStick) setStick(e.clientX, e.clientY); });
+  window.addEventListener('mouseup',      ()  => { if (mouseDownStick) { mouseDownStick = false; resetStick(); } });
+
+  // ── Action buttons (touch/mouse) ─────────────────────────────
+  const shootBtn   = document.getElementById('shoot-btn');
+  const dribbleBtn = document.getElementById('dribble-btn');
+  let touchShoot   = false;
+  let touchDribble = false;
+
+  function bindActionBtn(el, setFn) {
+    const press   = e => { e.preventDefault(); el.classList.add('pressed');    setFn(true);  };
+    const release = e => { e.preventDefault(); el.classList.remove('pressed'); setFn(false); };
+    el.addEventListener('touchstart',  press,   { passive: false });
+    el.addEventListener('touchend',    release, { passive: false });
+    el.addEventListener('touchcancel', release, { passive: false });
+    el.addEventListener('mousedown',   press);
+    el.addEventListener('mouseup',     release);
+    el.addEventListener('mouseleave',  release);
+  }
+  bindActionBtn(shootBtn,   v => { touchShoot   = v; });
+  bindActionBtn(dribbleBtn, v => { touchDribble = v; });
+
+  // ── Keyboard ──────────────────────────────────────────────────
+  const keys = {};
   window.addEventListener('keydown', e => {
-    if (e.key === 'ArrowUp')    { keys.up    = true; e.preventDefault(); }
-    if (e.key === 'ArrowDown')  { keys.down  = true; e.preventDefault(); }
-    if (e.key === 'ArrowLeft')  { keys.left  = true; e.preventDefault(); }
-    if (e.key === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+    keys[e.key] = true;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','f'].includes(e.key.toLowerCase())) e.preventDefault();
   });
-  window.addEventListener('keyup', e => {
-    if (e.key === 'ArrowUp')    keys.up    = false;
-    if (e.key === 'ArrowDown')  keys.down  = false;
-    if (e.key === 'ArrowLeft')  keys.left  = false;
-    if (e.key === 'ArrowRight') keys.right = false;
-  });
+  window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-  function pressBtn(dir) {
-    keys[dir] = true;
-    document.getElementById('btn-' + dir).classList.add('pressed');
+  // ── Game state ────────────────────────────────────────────────
+  const PLAYER_BASE_SPEED = 5;
+  const DRIBBLE_SPEED     = 9;
+  const DRIBBLE_DURATION  = 0.5;   // seconds of burst
+  const DRIBBLE_COOLDOWN  = 2.5;   // seconds before reuse
+  const SHOOT_COOLDOWN    = 1.2;   // seconds between shots
+  const SHOOT_RANGE       = 80;    // max distance from ball to trigger shot
+
+  const player = { x: 100, y: 230, w: 28, h: 28, facing: { x: 1, y: 0 },
+                   dribbling: 0, cooldown: 0, shootCooldown: 0 };
+  const ball   = { x: 280, y: 230, r: 10, vx: 0, vy: 0, spin: 0 };
+  const BALL_START = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+  const goal   = { x: 755, y: HEIGHT / 2 - 70, w: 45, h: 140 };
+
+  // Goalkeeper
+  const gk = { x: goal.x - 12, y: HEIGHT / 2 - 14, w: 28, h: 28,
+               vy: 0, speed: 3.5, reaction: 0 };
+
+  let score = 0;
+  let goalFlash = 0;   // seconds remaining for goal flash effect
+  let lastT = performance.now();
+
+  // ── Input helpers ─────────────────────────────────────────────
+  function getInputVec() {
+    let dx = 0, dy = 0;
+    if (keys['ArrowLeft']  || keys['a']) dx -= 1;
+    if (keys['ArrowRight'] || keys['d']) dx += 1;
+    if (keys['ArrowUp']    || keys['w']) dy -= 1;
+    if (keys['ArrowDown']  || keys['s']) dy += 1;
+    if (dx || dy) {
+      const m = Math.hypot(dx, dy);
+      return { x: dx / m, y: dy / m, mag: 1 };
+    }
+    const mag = Math.min(1, Math.hypot(stickVec.x, stickVec.y));
+    return { x: stickVec.x, y: stickVec.y, mag };
   }
-  function releaseBtn(dir) {
-    keys[dir] = false;
-    document.getElementById('btn-' + dir).classList.remove('pressed');
+
+  function dribblePressed() {
+    return keys[' '] || keys['x'] || keys['z'] || touchDribble;
+  }
+  function shootPressed() {
+    return keys['f'] || keys['F'] || touchShoot;
   }
 
-  document.querySelectorAll('.dpad-btn').forEach(btn => {
-    const dir = btn.dataset.dir;
-    btn.addEventListener('mousedown',  e => { e.preventDefault(); pressBtn(dir); });
-    btn.addEventListener('mouseup',    e => { e.preventDefault(); releaseBtn(dir); });
-    btn.addEventListener('mouseleave', ()  => releaseBtn(dir));
-    btn.addEventListener('touchstart',  e => { e.preventDefault(); pressBtn(dir); },  { passive: false });
-    btn.addEventListener('touchend',    e => { e.preventDefault(); releaseBtn(dir); }, { passive: false });
-    btn.addEventListener('touchcancel', e => { e.preventDefault(); releaseBtn(dir); }, { passive: false });
-  });
+  // ── Geometry ──────────────────────────────────────────────────
+  function rectCircle(rx, ry, rw, rh, cx, cy, cr) {
+    const nx = Math.max(rx, Math.min(cx, rx + rw));
+    const ny = Math.max(ry, Math.min(cy, ry + rh));
+    const d2 = (cx - nx) ** 2 + (cy - ny) ** 2;
+    return d2 < cr * cr;
+  }
 
-  function drawPitch() {
-    ctx.fillStyle = '#1a7a1a';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  // ── Reset after goal ──────────────────────────────────────────
+  function resetBall() {
+    ball.x = BALL_START.x; ball.y = BALL_START.y;
+    ball.vx = 0; ball.vy = 0; ball.spin = 0;
+    player.x = 100; player.y = HEIGHT / 2 - 14;
+    gk.y = HEIGHT / 2 - 14;
+  }
 
-    for (let i = 0; i < 8; i++) {
-      if (i % 2 === 0) {
-        ctx.fillStyle = 'rgba(0,0,0,0.06)';
-        ctx.fillRect(i * 100, 0, 100, HEIGHT);
+  // ── Update ────────────────────────────────────────────────────
+  function update(dt) {
+    goalFlash = Math.max(0, goalFlash - dt);
+
+    // --- Player movement ---
+    const inp = getInputVec();
+    if (inp.mag > 0.08) {
+      player.facing.x = inp.x;
+      player.facing.y = inp.y;
+    }
+
+    player.dribbling    = Math.max(0, player.dribbling    - dt);
+    player.cooldown     = Math.max(0, player.cooldown     - dt);
+    player.shootCooldown = Math.max(0, player.shootCooldown - dt);
+
+    // Update button visual cooldown states
+    dribbleBtn.classList.toggle('cooldown', player.cooldown > 0);
+    shootBtn.classList.toggle('cooldown',   player.shootCooldown > 0);
+
+    if (dribblePressed() && player.cooldown <= 0 && inp.mag > 0.08) {
+      player.dribbling = DRIBBLE_DURATION;
+      player.cooldown  = DRIBBLE_COOLDOWN;
+    }
+
+    // --- Shoot ---
+    if (shootPressed() && player.shootCooldown <= 0) {
+      const distToBall = Math.hypot(
+        ball.x - (player.x + player.w / 2),
+        ball.y - (player.y + player.h / 2)
+      );
+      if (distToBall < SHOOT_RANGE) {
+        player.shootCooldown = SHOOT_COOLDOWN;
+        // Aim toward goal with slight bias from facing direction
+        const goalCx = goal.x + goal.w / 2;
+        const goalCy = goal.y + goal.h / 2;
+        const toGoalX = goalCx - ball.x;
+        const toGoalY = goalCy - ball.y;
+        const len = Math.hypot(toGoalX, toGoalY) || 1;
+        // Blend 70% toward goal, 30% facing
+        const sx = (toGoalX / len) * 0.7 + player.facing.x * 0.3;
+        const sy = (toGoalY / len) * 0.7 + player.facing.y * 0.3;
+        const slen = Math.hypot(sx, sy) || 1;
+        const power = 16 + Math.random() * 3;
+        ball.vx = (sx / slen) * power;
+        ball.vy = (sy / slen) * power;
+        ball.spin += power * 0.2;
       }
     }
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(WIDTH / 2, HEIGHT / 2, 70, 0, Math.PI * 2);
-    ctx.stroke();
+    const speed = player.dribbling > 0 ? DRIBBLE_SPEED : PLAYER_BASE_SPEED;
+    player.x += inp.x * inp.mag * speed;
+    player.y += inp.y * inp.mag * speed;
+    player.x = Math.max(0, Math.min(WIDTH  - player.w, player.x));
+    player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
 
-    ctx.beginPath();
-    ctx.moveTo(WIDTH / 2, 0);
-    ctx.lineTo(WIDTH / 2, HEIGHT);
-    ctx.stroke();
+    // --- Player-ball collision ---
+    if (rectCircle(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
+      const dx = ball.x - (player.x + player.w / 2);
+      const dy = ball.y - (player.y + player.h / 2);
+      const len = Math.hypot(dx, dy) || 1;
+      // dribble burst launches ball hard in facing direction
+      if (player.dribbling > 0) {
+        ball.vx = player.facing.x * 14;
+        ball.vy = player.facing.y * 14;
+      } else {
+        ball.vx = (dx / len) * 8;
+        ball.vy = (dy / len) * 8;
+      }
+    }
 
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath();
-    ctx.arc(WIDTH / 2, HEIGHT / 2, 4, 0, Math.PI * 2);
-    ctx.fill();
+    // --- Ball physics ---
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.vx *= 0.978;
+    ball.vy *= 0.978;
+    ball.spin += (ball.vx + ball.vy) * 0.04;
+
+    if (ball.x - ball.r < 0)      { ball.x = ball.r;          ball.vx *= -0.55; }
+    if (ball.x + ball.r > WIDTH)   { ball.x = WIDTH - ball.r;  ball.vx *= -0.55; }
+    if (ball.y - ball.r < 0)       { ball.y = ball.r;          ball.vy *= -0.55; }
+    if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.55; }
+
+    // --- Goalkeeper AI ---
+    // React toward ball's vertical position, stay inside goal zone
+    const gkTargetY = Math.max(goal.y, Math.min(goal.y + goal.h - gk.h, ball.y - gk.h / 2));
+    const gkDy = gkTargetY - gk.y;
+    gk.y += Math.sign(gkDy) * Math.min(Math.abs(gkDy), gk.speed);
+    gk.x = goal.x - gk.w - 4;
+
+    // GK-ball collision (GK deflects ball back)
+    if (rectCircle(gk.x, gk.y, gk.w, gk.h, ball.x, ball.y, ball.r)) {
+      ball.vx = -Math.abs(ball.vx) * 0.9 - 3;
+      const dy = ball.y - (gk.y + gk.h / 2);
+      ball.vy = (dy / (gk.h / 2)) * 5;
+    }
+
+    // --- Goal check ---
+    if (rectCircle(goal.x, goal.y, goal.w, goal.h, ball.x, ball.y, ball.r)) {
+      score++;
+      goalFlash = 1.2;
+      resetBall();
+    }
   }
 
-  function drawGoal() {
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+  // ── Draw helpers ──────────────────────────────────────────────
+  function drawPitch() {
+    ctx.fillStyle = '#1a7a1a';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (let i = 0; i < 8; i++) {
+      if (i % 2 === 0) { ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(i * 100, 0, 100, HEIGHT); }
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(WIDTH / 2, HEIGHT / 2, 70, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(WIDTH / 2, 0); ctx.lineTo(WIDTH / 2, HEIGHT); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath(); ctx.arc(WIDTH / 2, HEIGHT / 2, 4, 0, Math.PI * 2); ctx.fill();
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    // Penalty box
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    const pbW = 110, pbH = 220, pbX = WIDTH - pbW, pbY = (HEIGHT - pbH) / 2;
+    ctx.strokeRect(pbX, pbY, pbW, pbH);
+  }
+
+  function drawGoalNet() {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 1;
     for (let y = goal.y; y <= goal.y + goal.h; y += 14) {
       ctx.beginPath(); ctx.moveTo(goal.x, y); ctx.lineTo(goal.x + goal.w, y); ctx.stroke();
@@ -249,124 +474,114 @@
     for (let x = goal.x; x <= goal.x + goal.w; x += 14) {
       ctx.beginPath(); ctx.moveTo(x, goal.y); ctx.lineTo(x, goal.y + goal.h); ctx.stroke();
     }
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
     ctx.strokeRect(goal.x, goal.y, goal.w, goal.h);
   }
 
-  function drawPlayer() {
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  function drawCharacter(x, y, w, h, topColor, botColor, label, glowColor) {
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.beginPath();
-    ctx.ellipse(player.x + player.w / 2, player.y + player.h + 4, player.w / 2, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + w / 2, y + h + 3, w / 2, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    const grad = ctx.createLinearGradient(player.x, player.y, player.x + player.w, player.y + player.h);
-    grad.addColorStop(0, '#ff3a3a');
-    grad.addColorStop(1, '#991111');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.roundRect(player.x, player.y, player.w, player.h, 5);
-    ctx.fill();
-
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 12px Barlow';
-    ctx.textAlign = 'center';
-    ctx.fillText('7', player.x + player.w / 2, player.y + player.h / 2 + 4);
+    // body
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, topColor); g.addColorStop(1, botColor);
+    ctx.fillStyle = g;
+    if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = 14; }
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 5); ctx.fill();
+    ctx.shadowBlur = 0;
+    // number/label
+    ctx.fillStyle = 'white'; ctx.font = `bold ${Math.round(h * 0.44)}px Barlow`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + w / 2, y + h / 2);
   }
 
-  function drawBall() {
+  function drawBallSprite() {
     const cx = ball.x, cy = ball.y, r = ball.r;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + r + 3, r * 0.9, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + r + 2, r * 0.85, 3.5, 0, 0, Math.PI * 2); ctx.fill();
 
     ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.36, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.38, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
     for (let i = 0; i < 5; i++) {
-      const angle = (i / 5) * Math.PI * 2;
+      const a = ball.spin + (i / 5) * Math.PI * 2;
       ctx.beginPath();
-      ctx.arc(cx + Math.cos(angle) * r * 0.55, cy + Math.sin(angle) * r * 0.55, r * 0.28, angle + 0.5, angle + 1.8);
+      ctx.arc(cx + Math.cos(a)*r*0.54, cy + Math.sin(a)*r*0.54, r*0.27, a+0.5, a+1.8);
       ctx.stroke();
     }
   }
 
   function drawHUD() {
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.roundRect(10, 10, 140, 44, 8);
-    ctx.fill();
-
+    // Score
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.roundRect(10, 10, 150, 46, 8); ctx.fill();
     ctx.fillStyle = '#c8f03c';
-    ctx.font = 'bold 26px "Bebas Neue", cursive';
-    ctx.textAlign = 'left';
-    ctx.fillText(`SCORE  ${score}`, 22, 42);
-  }
+    ctx.font = 'bold 28px "Bebas Neue", cursive';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`SCORE  ${score}`, 22, 17);
 
-  function rectCollides(rx, ry, rw, rh, cx, cy, cr) {
-    const nearX = Math.max(rx, Math.min(cx, rx + rw));
-    const nearY = Math.max(ry, Math.min(cy, ry + rh));
-    const dx = cx - nearX, dy = cy - nearY;
-    return dx * dx + dy * dy < cr * cr;
-  }
+    // Cooldown bars
+    const barW = 90, barH = 6, barX = WIDTH - barW - 14;
+    ctx.font = '9px Barlow'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
 
-  function update() {
-    if (keys.up)    player.y -= player.speed;
-    if (keys.down)  player.y += player.speed;
-    if (keys.left)  player.x -= player.speed;
-    if (keys.right) player.x += player.speed;
+    // Dribble bar
+    const dFill = player.cooldown <= 0 ? 1 : 1 - player.cooldown / DRIBBLE_COOLDOWN;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 32, barW, barH, 3); ctx.fill();
+    ctx.fillStyle = dFill >= 1 ? '#ffe044' : '#6a5000';
+    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 32, barW * dFill, barH, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText('DRIBBLE', barX + barW, HEIGHT - 35);
 
-    player.x = Math.max(0, Math.min(WIDTH - player.w, player.x));
-    player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
+    // Shoot bar
+    const sFill = player.shootCooldown <= 0 ? 1 : 1 - player.shootCooldown / SHOOT_COOLDOWN;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 20, barW, barH, 3); ctx.fill();
+    ctx.fillStyle = sFill >= 1 ? '#ff7744' : '#661100';
+    ctx.beginPath(); ctx.roundRect(barX, HEIGHT - 20, barW * sFill, barH, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText('SHOOT', barX + barW, HEIGHT - 23);
 
-    if (rectCollides(player.x, player.y, player.w, player.h, ball.x, ball.y, ball.r)) {
-      const dx = ball.x - (player.x + player.w / 2);
-      const dy = ball.y - (player.y + player.h / 2);
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      ball.vx = (dx / len) * 8;
-      ball.vy = (dy / len) * 8;
-    }
-
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    ball.vx *= 0.98;
-    ball.vy *= 0.98;
-
-    if (ball.x - ball.r < 0)      { ball.x = ball.r;         ball.vx *= -0.6; }
-    if (ball.x + ball.r > WIDTH)   { ball.x = WIDTH - ball.r; ball.vx *= -0.6; }
-    if (ball.y - ball.r < 0)       { ball.y = ball.r;         ball.vy *= -0.6; }
-    if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.6; }
-
-    if (rectCollides(goal.x, goal.y, goal.w, goal.h, ball.x, ball.y, ball.r)) {
-      score++;
-      ball.x = BALL_START.x; ball.y = BALL_START.y;
-      ball.vx = 0; ball.vy = 0;
+    // Goal flash overlay
+    if (goalFlash > 0) {
+      const alpha = Math.min(1, goalFlash) * 0.55;
+      ctx.fillStyle = `rgba(200,240,60,${alpha})`;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = `rgba(0,0,0,${alpha * 0.8})`;
+      ctx.font = 'bold 72px "Bebas Neue", cursive';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#c8f03c'; ctx.shadowBlur = 30;
+      ctx.fillText('GOAL!', WIDTH / 2, HEIGHT / 2);
+      ctx.shadowBlur = 0;
     }
   }
 
-  function loop() {
-    update();
+  // ── Main loop ─────────────────────────────────────────────────
+  function loop(t) {
+    const dt = Math.min((t - lastT) / 1000, 1 / 30);
+    lastT = t;
+
+    update(dt);
+
     drawPitch();
-    drawGoal();
-    drawPlayer();
-    drawBall();
+    drawGoalNet();
+    drawCharacter(gk.x, gk.y, gk.w, gk.h, '#4488ff', '#1133aa', 'GK', '#4af');
+    drawCharacter(player.x, player.y, player.w, player.h,
+      player.dribbling > 0 ? '#ffcc00' : '#ff3a3a',
+      player.dribbling > 0 ? '#cc8800' : '#991111',
+      '7', player.dribbling > 0 ? '#fc0' : null);
+    drawBallSprite();
     drawHUD();
+
     requestAnimationFrame(loop);
   }
 
-  loop();
+  requestAnimationFrame(loop);
 </script>
 </body>
 </html>
