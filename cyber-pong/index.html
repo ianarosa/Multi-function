@@ -77,6 +77,16 @@
     box-shadow: 0 0 16px rgba(0,220,255,0.65), inset 0 0 8px rgba(255,255,255,0.25);
     pointer-events: none;
   }
+
+  @media (orientation: landscape) {
+    #top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      background: rgba(2,8,18,0.55); pointer-events: none;
+    }
+    #top-bar > * { pointer-events: auto; }
+    h1 { display: none; }
+    #hint { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -107,16 +117,16 @@
   const W = 620, H = 400;
 
   function fit() {
+    const isLandscape = window.innerWidth > window.innerHeight;
     const topBar = document.getElementById('top-bar');
     const hint   = document.getElementById('hint');
     const availW = window.innerWidth  - 8;
-    const availH = window.innerHeight - topBar.offsetHeight - hint.offsetHeight - 20;
+    const availH = isLandscape
+      ? window.innerHeight - 8
+      : window.innerHeight - topBar.offsetHeight - hint.offsetHeight - 20;
     const s      = Math.min(availW / W, availH / H) * 0.98;
     cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
-    // Keep joystick flush with canvas left edge, not the viewport edge
-    const stick = document.getElementById('stick-zone');
-    if (stick) stick.style.left = Math.max(8, (window.innerWidth - W * s) / 2 + 10) + 'px';
   }
   fit(); window.addEventListener('resize', fit);
 

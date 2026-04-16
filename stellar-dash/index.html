@@ -55,6 +55,16 @@
     font-size: 1.3rem; letter-spacing: 0.12em; cursor: pointer;
     touch-action: none; z-index: 10;
   }
+
+  @media (orientation: landscape) {
+    #top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      background: rgba(6,2,15,0.55); pointer-events: none;
+    }
+    #top-bar > * { pointer-events: auto; }
+    h1 { display: none; }
+    #hint { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -80,13 +90,16 @@
   const W = 800, H = 380;
 
   function fit() {
+    const isLandscape = window.innerWidth > window.innerHeight;
     const topBar = document.getElementById('top-bar');
     const flyBtn = document.getElementById('fly-btn');
     const hint   = document.getElementById('hint');
     const availW = window.innerWidth  - 8;
-    const availH = window.innerHeight - topBar.offsetHeight
-                   - (flyBtn ? flyBtn.offsetHeight + 8 : 0)
-                   - (hint   ? hint.offsetHeight   + 8 : 0) - 8;
+    const availH = isLandscape
+      ? window.innerHeight - 8
+      : window.innerHeight - topBar.offsetHeight
+                     - (flyBtn ? flyBtn.offsetHeight + 8 : 0)
+                     - (hint   ? hint.offsetHeight   + 8 : 0) - 8;
     const s      = Math.min(availW / W, availH / H) * 0.97;
     cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';

@@ -113,6 +113,14 @@
   }
   #focus-btn.active { background: rgba(100,255,255,0.25); border-color: #4ff; color: #4ff; text-shadow: 0 0 10px #4ff; }
 
+  @media (orientation: landscape) {
+    #top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      background: rgba(0,0,0,0.5); pointer-events: none;
+    }
+    #top-bar > * { pointer-events: auto; }
+  }
+
   #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; background: rgba(0,0,0,0.85); padding: 20px; z-index: 20; }
   #overlay h1 { font-size: 28px; color: #f0f; text-shadow: 0 0 12px #f0f; margin-bottom: 8px; letter-spacing: 4px; }
   #overlay p { margin: 6px 0; font-size: 13px; max-width: 340px; line-height: 1.5; color: #ccc; }
