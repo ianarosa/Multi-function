@@ -626,18 +626,31 @@
     dCtx.translate(shipX, shipY);
     const tilt = Math.cos(ms * 1.4) * 0.22;
     dCtx.rotate(tilt);
-    dCtx.shadowColor = '#b400ff'; dCtx.shadowBlur = 16;
-    dCtx.fillStyle = '#cc88ff';
+    // Hull
+    dCtx.shadowColor = '#b400ff'; dCtx.shadowBlur = 14;
+    dCtx.fillStyle = '#8822bb';
     dCtx.beginPath();
-    dCtx.moveTo(14, 0);
-    dCtx.lineTo(-14, -7);
-    dCtx.lineTo(-10, 0);
-    dCtx.lineTo(-14, 7);
+    dCtx.moveTo( 14,  0);
+    dCtx.lineTo(  7, -7);
+    dCtx.lineTo( -9, -7);
+    dCtx.lineTo(-14,  0);
+    dCtx.lineTo( -9,  7);
+    dCtx.lineTo(  7,  7);
     dCtx.closePath();
     dCtx.fill();
-    dCtx.shadowColor = '#00eeff'; dCtx.shadowBlur = 10;
-    dCtx.fillStyle = '#00eeff';
-    dCtx.beginPath(); dCtx.ellipse(3, 0, 5, 3, 0, 0, Math.PI * 2); dCtx.fill();
+    // Top surface
+    dCtx.fillStyle = '#cc55ff';
+    dCtx.beginPath();
+    dCtx.moveTo( 14,  0);
+    dCtx.lineTo(  7, -7);
+    dCtx.lineTo( -9, -7);
+    dCtx.lineTo( -4,  0);
+    dCtx.closePath();
+    dCtx.fill();
+    // Cockpit
+    dCtx.shadowColor = '#00ffee'; dCtx.shadowBlur = 10;
+    dCtx.fillStyle = '#55ffee';
+    dCtx.beginPath(); dCtx.ellipse(3, -2.5, 4, 2.8, 0, 0, Math.PI * 2); dCtx.fill();
     dCtx.shadowBlur = 0;
     dCtx.restore();
   }

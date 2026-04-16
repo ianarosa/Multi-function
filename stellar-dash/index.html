@@ -387,38 +387,63 @@
     ctx.translate(SHIP_X, ship.y);
     ctx.rotate(tilt);
 
+    const hw = SHIP_W / 2;  // 15
+    const hh = SHIP_H / 2;  // 8
+
     // Outer glow
-    glow('#b400ff', 24);
+    glow('#b400ff', 22);
 
-    // Hull
-    ctx.fillStyle = '#ddb0ff';
+    // Main hull — clean hexagon (pointed nose + tail)
+    ctx.fillStyle = '#8822bb';
     ctx.beginPath();
-    ctx.moveTo( SHIP_W / 2, 0);
-    ctx.lineTo(-SHIP_W / 2, -SHIP_H / 2 + 2);
-    ctx.lineTo(-SHIP_W / 2 + 7, 0);
-    ctx.lineTo(-SHIP_W / 2, SHIP_H / 2 - 2);
+    ctx.moveTo( hw,       0);     // nose
+    ctx.lineTo( hw - 7,  -hh);   // top-front
+    ctx.lineTo(-hw + 6,  -hh);   // top-rear
+    ctx.lineTo(-hw,       0);    // tail
+    ctx.lineTo(-hw + 6,   hh);   // bottom-rear
+    ctx.lineTo( hw - 7,   hh);   // bottom-front
     ctx.closePath();
     ctx.fill();
 
-    // Dark inner wing
-    ctx.fillStyle = '#8800cc';
+    // Top surface (lighter — facing "up")
+    ctx.fillStyle = '#cc55ff';
     ctx.beginPath();
-    ctx.moveTo( SHIP_W / 2 - 4, 0);
-    ctx.lineTo(-SHIP_W / 2, -SHIP_H / 2 + 2);
-    ctx.lineTo(-SHIP_W / 2 + 7, 0);
-    ctx.lineTo(-SHIP_W / 2, SHIP_H / 2 - 2);
+    ctx.moveTo( hw,       0);
+    ctx.lineTo( hw - 7,  -hh);
+    ctx.lineTo(-hw + 6,  -hh);
+    ctx.lineTo(-hw + 11,  0);
     ctx.closePath();
     ctx.fill();
 
-    // Cockpit
-    glow('#00eeff', 18);
-    ctx.fillStyle = '#00eeff';
-    ctx.beginPath(); ctx.ellipse(5, 0, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Bright edge stripe along the centreline
+    ctx.fillStyle = '#eeb0ff';
+    ctx.beginPath();
+    ctx.moveTo( hw,      0);
+    ctx.lineTo( hw - 4, -2);
+    ctx.lineTo(-hw + 10, -2);
+    ctx.lineTo(-hw + 10,  2);
+    ctx.lineTo( hw - 4,  2);
+    ctx.closePath();
+    ctx.fill();
 
-    // Engine nozzle glow
-    glow('#ff88ff', 12);
-    ctx.fillStyle = '#ff88ff';
-    ctx.beginPath(); ctx.ellipse(-SHIP_W / 2 + 3, 0, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+    // Cockpit dome
+    glow('#00ffee', 16);
+    ctx.fillStyle = '#55ffee';
+    ctx.beginPath();
+    ctx.ellipse(hw * 0.22, -hh * 0.4, 5, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Cockpit glint
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.beginPath();
+    ctx.ellipse(hw * 0.22 + 1.2, -hh * 0.4 - 1, 1.8, 1.1, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Engine nozzle
+    glow('#ff44cc', 14);
+    ctx.fillStyle = '#ff66dd';
+    ctx.beginPath();
+    ctx.ellipse(-hw + 3, 0, 3.5, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     noGlow();
     ctx.restore();
