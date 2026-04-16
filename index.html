@@ -183,6 +183,22 @@
   .card-dash .play-btn     { color: #cc44ff; background: rgba(180,0,255,0.1); border-color: rgba(180,0,255,0.4); }
   .card-dash:hover .play-btn { background: rgba(180,0,255,0.22); }
 
+  /* ── Lucky Sixes theme ── */
+  .card-dice {
+    background: #170c02;
+    border: 1px solid rgba(255,200,70,0.25);
+    box-shadow: 0 2px 24px rgba(255,160,0,0.05);
+  }
+  .card-dice:hover {
+    box-shadow: 0 10px 44px rgba(255,160,0,0.25);
+    border-color: rgba(255,200,70,0.55);
+  }
+  .card-dice .card-preview { background: radial-gradient(ellipse at 50% 50%, #291605 0%, #0b0500 100%); }
+  .card-dice .card-genre   { color: rgba(255,200,70,0.7); }
+  .card-dice .card-name    { color: #ffd24a; }
+  .card-dice .play-btn     { color: #ffd24a; background: rgba(255,200,70,0.1); border-color: rgba(255,200,70,0.4); }
+  .card-dice:hover .play-btn { background: rgba(255,200,70,0.22); }
+
   /* ── Cyber Pong theme ── */
   .card-pong {
     background: #020c18;
@@ -253,6 +269,18 @@
         <div class="card-genre">Arcade &middot; Action</div>
         <div class="card-name">CYBER PONG</div>
         <div class="card-desc">1-player pong vs a relentless AI. Catch power-ups mid-rally, chain combos, and keep the ball alive.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-dice" href="/dice-roll/">
+      <div class="card-preview">
+        <canvas id="cv-dice"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Incremental &middot; Luck</div>
+        <div class="card-name">LUCKY SIXES</div>
+        <div class="card-desc">Roll sixes in a row to hit the jackpot. Buy upgrades to load the dice, boost payouts, and automate the grind.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -655,6 +683,140 @@
     dCtx.restore();
   }
 
+  // ── Lucky Sixes card preview ──────────────────────────────────
+  const diceCvs = document.getElementById('cv-dice');
+  const dxCtx = diceCvs.getContext('2d');
+
+  function resizeDice() {
+    const r = diceCvs.parentElement.getBoundingClientRect();
+    diceCvs.width  = r.width  || 320;
+    diceCvs.height = r.height || 190;
+  }
+  resizeDice();
+  window.addEventListener('resize', resizeDice);
+
+  // Pre-bake floating coin particles
+  const DICE_COINS = Array.from({ length: 14 }, () => ({
+    x: Math.random(), y: Math.random(), s: 0.4 + Math.random() * 0.8, p: Math.random() * 10,
+  }));
+
+  const DICE_PIPS = {
+    1: [[0,0]],
+    2: [[-1,-1],[1,1]],
+    3: [[-1,-1],[0,0],[1,1]],
+    4: [[-1,-1],[1,-1],[-1,1],[1,1]],
+    5: [[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],
+    6: [[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]],
+  };
+
+  function drawDiceShape(ctx, cx, cy, size, rot, value, glow) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    const s = size;
+    ctx.shadowColor = glow ? '#ffd24a' : 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = glow ? 22 : 10;
+    // Body
+    const grad = ctx.createLinearGradient(-s/2, -s/2, s/2, s/2);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#d8d2c0');
+    ctx.fillStyle = grad;
+    roundRect(ctx, -s/2, -s/2, s, s, s * 0.15);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Pips
+    ctx.fillStyle = '#1a1200';
+    const pipR = s * 0.09;
+    const off = s * 0.27;
+    for (const [px, py] of DICE_PIPS[value] || []) {
+      ctx.beginPath();
+      ctx.arc(px * off, py * off, pipR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y,     x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x,     y + h, r);
+    ctx.arcTo(x,     y + h, x,     y,     r);
+    ctx.arcTo(x,     y,     x + w, y,     r);
+    ctx.closePath();
+  }
+
+  function drawDicePreview(t) {
+    const W = diceCvs.width, H = diceCvs.height;
+    const ms = t * 0.001;
+
+    // bg
+    const bg = dxCtx.createRadialGradient(W/2, H/2, 20, W/2, H/2, Math.max(W,H) * 0.7);
+    bg.addColorStop(0, '#2a1508');
+    bg.addColorStop(1, '#0b0500');
+    dxCtx.fillStyle = bg;
+    dxCtx.fillRect(0, 0, W, H);
+
+    // faint grid shimmer
+    dxCtx.strokeStyle = 'rgba(255,180,40,0.05)';
+    dxCtx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const y = ((i * 40 + ms * 20) % H + H) % H;
+      dxCtx.beginPath(); dxCtx.moveTo(0, y); dxCtx.lineTo(W, y); dxCtx.stroke();
+    }
+
+    // floating coins
+    for (const c of DICE_COINS) {
+      const cx = ((c.x * W + ms * 18 * c.s) % W + W) % W;
+      const cy = H - ((ms * 30 * c.s + c.p * 20) % (H + 40));
+      dxCtx.globalAlpha = 0.55;
+      dxCtx.fillStyle = '#ffd24a';
+      dxCtx.shadowColor = '#ffd24a';
+      dxCtx.shadowBlur = 6;
+      dxCtx.beginPath();
+      dxCtx.arc(cx, cy, 2.2 * c.s, 0, Math.PI * 2);
+      dxCtx.fill();
+    }
+    dxCtx.globalAlpha = 1;
+    dxCtx.shadowBlur = 0;
+
+    // Three tumbling dice
+    const cycle = 1.6;
+    const phase = (ms % cycle) / cycle; // 0..1
+    const mid   = W / 2;
+    const baseY = H * 0.55;
+    const bounce = Math.abs(Math.sin(phase * Math.PI)) * 14;
+    const rotT = phase * Math.PI * 1.6;
+    const size = Math.min(W, H) * 0.3;
+
+    const vals = [
+      phase > 0.85 ? 6 : (1 + Math.floor((ms * 7) % 6)),
+      phase > 0.85 ? 6 : (1 + Math.floor((ms * 11 + 2) % 6)),
+      phase > 0.85 ? 6 : (1 + Math.floor((ms * 13 + 4) % 6)),
+    ];
+    const landed = phase > 0.85;
+    const spacing = size * 1.15;
+
+    for (let i = 0; i < 3; i++) {
+      const ox = (i - 1) * spacing;
+      const r = landed ? 0 : rotT * (i === 1 ? 1 : (i === 0 ? -0.8 : 0.7));
+      drawDiceShape(dxCtx, mid + ox, baseY - bounce, size, r, vals[i], landed);
+    }
+
+    // "6 6 6" flash
+    if (landed) {
+      const fade = Math.min(1, (phase - 0.85) / 0.08) * Math.min(1, (1 - phase) / 0.06);
+      dxCtx.globalAlpha = fade;
+      dxCtx.fillStyle = '#ffd24a';
+      dxCtx.shadowColor = '#ffd24a'; dxCtx.shadowBlur = 16;
+      dxCtx.font = 'bold 22px "Bebas Neue", cursive';
+      dxCtx.textAlign = 'center';
+      dxCtx.fillText('JACKPOT', W / 2, H * 0.22);
+      dxCtx.shadowBlur = 0;
+      dxCtx.globalAlpha = 1;
+    }
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -667,6 +829,7 @@
     drawFootball(t);
     drawPongPreview(dt, t);
     drawDashPreview(t);
+    drawDicePreview(t);
 
     requestAnimationFrame(loop);
   }
