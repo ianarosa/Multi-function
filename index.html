@@ -167,6 +167,22 @@
   .card-football .play-btn     { color: #c8f03c; background: rgba(200,240,60,0.08); }
   .card-football:hover .play-btn { background: rgba(200,240,60,0.2); }
 
+  /* ── Stellar Dash theme ── */
+  .card-dash {
+    background: #0d0220;
+    border: 1px solid rgba(180,0,255,0.25);
+    box-shadow: 0 2px 24px rgba(180,0,255,0.06);
+  }
+  .card-dash:hover {
+    box-shadow: 0 10px 44px rgba(180,0,255,0.28);
+    border-color: rgba(180,0,255,0.55);
+  }
+  .card-dash .card-preview { background: linear-gradient(160deg, #100128 0%, #06010f 100%); }
+  .card-dash .card-genre   { color: rgba(180,0,255,0.7); }
+  .card-dash .card-name    { color: #cc44ff; }
+  .card-dash .play-btn     { color: #cc44ff; background: rgba(180,0,255,0.1); border-color: rgba(180,0,255,0.4); }
+  .card-dash:hover .play-btn { background: rgba(180,0,255,0.22); }
+
   /* ── Cyber Pong theme ── */
   .card-pong {
     background: #020c18;
@@ -237,6 +253,18 @@
         <div class="card-genre">Arcade &middot; Action</div>
         <div class="card-name">CYBER PONG</div>
         <div class="card-desc">1-player pong vs a relentless AI. Catch power-ups mid-rally, chain combos, and keep the ball alive.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-dash" href="/stellar-dash/">
+      <div class="card-preview">
+        <canvas id="cv-dash"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Side-Scroller &middot; Skill</div>
+        <div class="card-name">STELLAR DASH</div>
+        <div class="card-desc">Hold to fly, release to fall. Navigate your ship through endless gates that get faster and tighter every level.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -524,6 +552,96 @@
     pCtx.shadowBlur = 0;
   }
 
+  // ── Stellar Dash card preview ─────────────────────────────────
+  const dashCvs = document.getElementById('cv-dash');
+  const dCtx = dashCvs.getContext('2d');
+
+  function resizeDash() {
+    const r = dashCvs.parentElement.getBoundingClientRect();
+    dashCvs.width  = r.width  || 320;
+    dashCvs.height = r.height || 190;
+  }
+  resizeDash();
+  window.addEventListener('resize', resizeDash);
+
+  // Pre-bake pillar positions for the preview
+  const dPillars = [0.72, 1.3, 1.9, 2.5, 3.1].map(f => ({
+    xFrac: f,     // fraction of W — scrolls left
+    gapFrac: 0.2 + Math.random() * 0.45,
+    gapH: 0.32 + Math.random() * 0.1,
+  }));
+  const DASH_STARS = Array.from({ length: 60 }, () => ({
+    x: Math.random(), y: Math.random(), p: 0.08 + Math.random() * 0.3, a: 0.2 + Math.random() * 0.7,
+  }));
+
+  function drawDashPreview(t) {
+    const W = dashCvs.width, H = dashCvs.height;
+    const ms = t * 0.001;
+
+    dCtx.fillStyle = '#06020f';
+    dCtx.fillRect(0, 0, W, H);
+
+    // Grid
+    const gridSz = 36;
+    const ox = ((-ms * 90) % gridSz + gridSz) % gridSz;
+    dCtx.strokeStyle = 'rgba(120,0,200,0.07)';
+    dCtx.lineWidth = 1;
+    for (let x = ox; x < W; x += gridSz) {
+      dCtx.beginPath(); dCtx.moveTo(x, 0); dCtx.lineTo(x, H); dCtx.stroke();
+    }
+
+    // Stars
+    for (const s of DASH_STARS) {
+      const sx = ((s.x * W - ms * 60 * s.p) % W + W) % W;
+      dCtx.globalAlpha = s.a;
+      dCtx.fillStyle = '#fff';
+      dCtx.fillRect(sx, s.y * H, 1.2, 1.2);
+    }
+    dCtx.globalAlpha = 1;
+
+    // Boundary lines
+    dCtx.strokeStyle = 'rgba(180,0,255,0.35)';
+    dCtx.lineWidth = 2;
+    dCtx.beginPath(); dCtx.moveTo(0, 2);     dCtx.lineTo(W, 2);     dCtx.stroke();
+    dCtx.beginPath(); dCtx.moveTo(0, H - 2); dCtx.lineTo(W, H - 2); dCtx.stroke();
+
+    // Scrolling pillars
+    const scrollSpd = 90;
+    for (const p of dPillars) {
+      const px = ((p.xFrac * W - ms * scrollSpd) % (W * 3.5) + W * 3.5) % (W * 3.5) - W * 0.5;
+      const gY  = p.gapFrac * H;
+      const gH  = p.gapH * H;
+      const pw  = 14;
+      dCtx.shadowColor = '#ff2200'; dCtx.shadowBlur = 10;
+      dCtx.fillStyle = '#aa1020';
+      dCtx.fillRect(px, 0, pw, gY);
+      dCtx.fillRect(px, gY + gH, pw, H - gY - gH);
+      dCtx.shadowBlur = 0;
+    }
+
+    // Ship
+    const shipX = W * 0.18;
+    const shipY = H * 0.5 + Math.sin(ms * 1.4) * H * 0.18;
+    dCtx.save();
+    dCtx.translate(shipX, shipY);
+    const tilt = Math.cos(ms * 1.4) * 0.22;
+    dCtx.rotate(tilt);
+    dCtx.shadowColor = '#b400ff'; dCtx.shadowBlur = 16;
+    dCtx.fillStyle = '#cc88ff';
+    dCtx.beginPath();
+    dCtx.moveTo(14, 0);
+    dCtx.lineTo(-14, -7);
+    dCtx.lineTo(-10, 0);
+    dCtx.lineTo(-14, 7);
+    dCtx.closePath();
+    dCtx.fill();
+    dCtx.shadowColor = '#00eeff'; dCtx.shadowBlur = 10;
+    dCtx.fillStyle = '#00eeff';
+    dCtx.beginPath(); dCtx.ellipse(3, 0, 5, 3, 0, 0, Math.PI * 2); dCtx.fill();
+    dCtx.shadowBlur = 0;
+    dCtx.restore();
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -535,6 +653,7 @@
     drawVoid(t);
     drawFootball(t);
     drawPongPreview(dt, t);
+    drawDashPreview(t);
 
     requestAnimationFrame(loop);
   }
