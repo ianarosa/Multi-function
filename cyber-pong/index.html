@@ -194,8 +194,11 @@
     effects  = {};
     pl.h     = PH_BASE;
     pl.y     = H/2 - PH_BASE/2;
+    targetY  = H/2 - PH_BASE/2;   // reset so paddle doesn't snap to a stale position
     ai.y     = H/2 - AIH/2;
     ai.trackedY = H/2;
+    ai.reactionTimer = 0;
+    ai.errorOffset = 0; ai.errorTimer = 0;
     ball     = makeBall(1);
     particles = []; powerUps = []; floats = [];
     score = 0; lives = 5; rally = 0; mult = 1;
@@ -293,6 +296,7 @@
     if (keys['ArrowUp']   || keys['w']) targetY -= 7 * dt * 60;
     if (keys['ArrowDown'] || keys['s']) targetY += 7 * dt * 60;
     if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 7 * dt * 60;
+    targetY = Math.max(0, Math.min(H - pl.h, targetY));   // clamp so it never drifts past wall
     pl.y += (targetY - pl.y) * Math.min(1, 0.22 * dt * 60);
     pl.y  = Math.max(0, Math.min(H - pl.h, pl.y));
 
@@ -427,8 +431,10 @@
 
     // Flash
     if (flash > 0) {
-      ctx.fillStyle = flashColor.replace(')', `,${flash * 0.28})`).replace('rgb', 'rgba');
+      ctx.globalAlpha = flash * 0.28;
+      ctx.fillStyle = flashColor;
       ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
     }
 
     // Centre dashes
