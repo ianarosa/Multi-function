@@ -385,6 +385,7 @@
     }
 
     // --- Ball physics ---
+    const prevBallX = ball.x;
     ball.x += ball.vx;
     ball.y += ball.vy;
     ball.vx *= 0.978;
@@ -413,8 +414,10 @@
       ball.vy = (dy / (gk.h / 2)) * 5;
     }
 
-    // --- Goal check: ball must cross the mouth AND be clear of both posts ---
-    if (ball.x + ball.r >= goal.x &&
+    // --- Goal check: ball must CROSS the mouth line on this frame ---
+    // prevBallX ensures side-entry (ball inside goal x-range but entering from top/bottom) never scores
+    if (prevBallX + ball.r < goal.x &&
+        ball.x + ball.r >= goal.x &&
         ball.y >= goal.y + ball.r &&
         ball.y <= goal.y + goal.h - ball.r) {
       score++;
