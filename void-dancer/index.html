@@ -41,12 +41,12 @@
   #back-btn:hover { background: rgba(200,80,255,0.2); color: #e080ff; }
   #hud {
     flex: 1; text-align: center;
-    color: #fff; text-shadow: 0 0 8px #a0f; font-size: 13px;
-    pointer-events: none; letter-spacing: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #fff; text-shadow: 0 0 8px #a0f; font-size: 12px;
+    pointer-events: none; letter-spacing: 1px;
+    line-height: 1.45;
   }
   #hud b { color: #ff4; }
-  #top-spacer { flex-shrink: 0; width: 70px; } /* balances back-btn width */
+  #top-spacer { flex-shrink: 0; width: 62px; } /* balances back-btn width */
 
   /* ── Canvas area fills remaining space ── */
   #wrap { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -121,7 +121,8 @@
 <div id="top-bar">
   <a id="back-btn" href="/">&#9664; HUB</a>
   <div id="hud">
-    LEVEL <b id="level">1</b> &nbsp; TIME <b id="time">0.0</b> &nbsp; LIVES <b id="lives">&#9829;&#9829;&#9829;&#9829;&#9829;</b> &nbsp; BEST <b id="best">0.0</b>
+    <div>LEVEL <b id="level">1</b> &nbsp;&nbsp; TIME <b id="time">0.0</b></div>
+    <div>LIVES <b id="lives">&#9829;&#9829;&#9829;&#9829;&#9829;</b> &nbsp;&nbsp; BEST <b id="best">0.0</b></div>
   </div>
   <div id="top-spacer"></div>
 </div>
