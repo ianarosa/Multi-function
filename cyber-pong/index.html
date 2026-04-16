@@ -265,14 +265,18 @@
     burst(pu.x, pu.y, pu.color, 18);
     floats.push({ x: pu.x, y: pu.y - 10, text: pu.label, color: pu.color, life: 1.2 });
     if (pu.id === 'wide') {
-      effects.wide = 9;
-      pl.h = PH_BASE * 1.75;
+      const already = !!effects.wide;
+      effects.wide = (effects.wide || 0) + 9;
+      if (!already) pl.h = PH_BASE * 1.75;
     } else if (pu.id === 'slow') {
-      effects.slow = 7;
-      ball.vx *= 0.62;   // (ball.vx/spd)*spd*0.62 simplifies to ball.vx*0.62; avoids div-by-zero
-      ball.vy *= 0.62;
+      const already = !!effects.slow;
+      effects.slow = (effects.slow || 0) + 7;
+      if (!already) {
+        ball.vx *= 0.62;   // only slow the ball the first time; repeats extend duration
+        ball.vy *= 0.62;
+      }
     } else if (pu.id === 'shield') {
-      effects.shield = true;
+      effects.shield = (effects.shield || 0) + 1;
     }
   }
 
@@ -419,7 +423,8 @@
     // Ball exits left — player misses
     if (ball.x + BR < 0) {
       if (effects.shield) {
-        delete effects.shield;
+        effects.shield--;
+        if (effects.shield <= 0) delete effects.shield;
         burst(pl.x + pl.w, pl.y + pl.h/2, '#c0f', 20);
         floats.push({ x: W/2, y: H/2, text: 'SAVED!', color: '#c0f', life: 1.2 });
         ball = makeBall(1);
@@ -564,7 +569,7 @@
     ctx.font = '10px Barlow'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     if (effects.wide)   { ctx.fillStyle = '#0f8'; ctx.fillText(`WIDE  ${effects.wide.toFixed(1)}s`,  14, ey); ey += 15; }
     if (effects.slow)   { ctx.fillStyle = '#fe0'; ctx.fillText(`SLOW  ${effects.slow.toFixed(1)}s`,  14, ey); ey += 15; }
-    if (effects.shield) { ctx.fillStyle = '#c0f'; ctx.fillText('GUARD  READY',                      14, ey); }
+    if (effects.shield) { ctx.fillStyle = '#c0f'; ctx.fillText(`GUARD  x${effects.shield}`,          14, ey); }
 
     // ── Overlays ─────────────────────────────────────────────────
     if (state === 'menu' || state === 'gameover') {
