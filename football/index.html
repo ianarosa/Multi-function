@@ -15,7 +15,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     font-family: 'Barlow', sans-serif;
     overflow: hidden;
     touch-action: none;
@@ -197,9 +198,12 @@
   const WIDTH = 800, HEIGHT = 500;
 
   function resizeCanvas() {
-    const maxW = Math.min(window.innerWidth - 16, 800);
-    canvas.style.width  = maxW + 'px';
-    canvas.style.height = (maxW * 500 / 800) + 'px';
+    const topBar = document.getElementById('top-bar');
+    const availW = window.innerWidth  - 8;
+    const availH = window.innerHeight - topBar.offsetHeight - 8;
+    const s      = Math.min(availW / WIDTH, availH / HEIGHT);
+    canvas.style.width  = (WIDTH  * s) + 'px';
+    canvas.style.height = (HEIGHT * s) + 'px';
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
