@@ -80,7 +80,14 @@
   const W = 800, H = 380;
 
   function fit() {
-    const s = Math.min((window.innerWidth - 8) / W, (window.innerHeight - 112) / H) * 0.97;
+    const topBar = document.getElementById('top-bar');
+    const flyBtn = document.getElementById('fly-btn');
+    const hint   = document.getElementById('hint');
+    const availW = window.innerWidth  - 8;
+    const availH = window.innerHeight - topBar.offsetHeight
+                   - (flyBtn ? flyBtn.offsetHeight + 8 : 0)
+                   - (hint   ? hint.offsetHeight   + 8 : 0) - 8;
+    const s      = Math.min(availW / W, availH / H) * 0.97;
     cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
   }

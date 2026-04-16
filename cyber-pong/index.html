@@ -107,9 +107,16 @@
   const W = 620, H = 400;
 
   function fit() {
-    const s = Math.min((window.innerWidth - 8) / W, (window.innerHeight - 90) / H) * 0.98;
+    const topBar = document.getElementById('top-bar');
+    const hint   = document.getElementById('hint');
+    const availW = window.innerWidth  - 8;
+    const availH = window.innerHeight - topBar.offsetHeight - hint.offsetHeight - 20;
+    const s      = Math.min(availW / W, availH / H) * 0.98;
     cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
+    // Keep joystick flush with canvas left edge, not the viewport edge
+    const stick = document.getElementById('stick-zone');
+    if (stick) stick.style.left = Math.max(8, (window.innerWidth - W * s) / 2 + 10) + 'px';
   }
   fit(); window.addEventListener('resize', fit);
 

@@ -204,6 +204,9 @@
     const s      = Math.min(availW / WIDTH, availH / HEIGHT);
     canvas.style.width  = (WIDTH  * s) + 'px';
     canvas.style.height = (HEIGHT * s) + 'px';
+    // Keep joystick flush with canvas left edge on wide screens
+    const stick = document.getElementById('stick-zone');
+    if (stick) stick.style.left = Math.max(8, (window.innerWidth - WIDTH * s) / 2 + 10) + 'px';
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
