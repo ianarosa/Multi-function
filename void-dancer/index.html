@@ -142,7 +142,7 @@
   const levelEl = document.getElementById('level');
   const bestEl = document.getElementById('best');
 
-  let best = parseFloat(localStorage.getItem('vd_best') || '0');
+  let best; try { best = parseFloat(localStorage.getItem('vd_best') || '0'); } catch(e) { best = 0; }
   bestEl.textContent = best.toFixed(1);
 
   const keys = {};
@@ -500,7 +500,7 @@
     running = false;
     if (time > best) {
       best = time;
-      localStorage.setItem('vd_best', best.toString());
+      try { localStorage.setItem('vd_best', best.toString()); } catch(e) {}
       bestEl.textContent = best.toFixed(1);
     }
     overlay.classList.remove('hide');

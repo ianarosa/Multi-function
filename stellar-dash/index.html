@@ -103,7 +103,7 @@
   let state = 'menu';
   let lastT = null;
   let thrusting = false;
-  let highScore = +(localStorage.getItem('sd_hs') || 0);
+  let highScore; try { highScore = +(localStorage.getItem('sd_hs') || 0); } catch(e) { highScore = 0; }
 
   // ── Input ─────────────────────────────────────────────────────
   const keys = {};
@@ -230,7 +230,8 @@
   // ── Die ────────────────────────────────────────────────────────
   let deathTimer = null;
   function die() {
-    if (score > highScore) { highScore = score; localStorage.setItem('sd_hs', highScore); }
+    if (score > highScore) { highScore = score; try { localStorage.setItem('sd_hs', highScore); } catch(e) {} }
+    ship.trail = [];  // clear trail so stale ghost positions don't linger during death animation
     burst(SHIP_X, ship.y, '#b400ff', 28);
     burst(SHIP_X, ship.y, '#ff4433', 20);
     flash = 1.0; flashColor = '#ff3322';

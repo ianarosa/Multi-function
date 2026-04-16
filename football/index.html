@@ -255,9 +255,13 @@
   const keys = {};
   window.addEventListener('keydown', e => {
     keys[e.key] = true;
+    keys[e.key.toLowerCase()] = true;   // also store lowercase so WASD works with Caps Lock
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','f'].includes(e.key.toLowerCase())) e.preventDefault();
   });
-  window.addEventListener('keyup', e => { keys[e.key] = false; });
+  window.addEventListener('keyup', e => {
+    keys[e.key] = false;
+    keys[e.key.toLowerCase()] = false;
+  });
 
   // ── Game state ────────────────────────────────────────────────
   const PLAYER_BASE_SPEED = 5;
@@ -330,8 +334,8 @@
     player.shootCooldown = Math.max(0, player.shootCooldown - dt);
     shootBtn.classList.toggle('cooldown', player.shootCooldown > 0);
 
-    player.x += inp.x * inp.mag * PLAYER_BASE_SPEED;
-    player.y += inp.y * inp.mag * PLAYER_BASE_SPEED;
+    player.x += inp.x * inp.mag * PLAYER_BASE_SPEED * dt * 60;
+    player.y += inp.y * inp.mag * PLAYER_BASE_SPEED * dt * 60;
     player.x = Math.max(0, Math.min(WIDTH  - player.w, player.x));
     player.y = Math.max(0, Math.min(HEIGHT - player.h, player.y));
 
@@ -386,10 +390,12 @@
 
     // --- Ball physics ---
     const prevBallX = ball.x;
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    ball.vx *= 0.978;
-    ball.vy *= 0.978;
+    ball.x += ball.vx * dt * 60;
+    ball.y += ball.vy * dt * 60;
+    // Scale friction by dt so deceleration is frame-rate independent
+    const friction = Math.pow(0.978, dt * 60);
+    ball.vx *= friction;
+    ball.vy *= friction;
     ball.spin += (ball.vx + ball.vy) * 0.04;
 
     if (ball.x - ball.r < 0)      { ball.x = ball.r;          ball.vx *= -0.55; }
@@ -405,11 +411,14 @@
     }
     const gkTargetY = Math.max(goal.y, Math.min(goal.y + goal.h - gk.h, gk.trackedY - gk.h / 2));
     const gkDy = gkTargetY - gk.y;
-    gk.y += Math.sign(gkDy) * Math.min(Math.abs(gkDy), gk.speed);
+    gk.y += Math.sign(gkDy) * Math.min(Math.abs(gkDy), gk.speed * dt * 60);
     gk.x = goal.x - gk.w - 4;
 
-    if (rectCircle(gk.x, gk.y, gk.w, gk.h, ball.x, ball.y, ball.r)) {
-      ball.vx = -Math.abs(ball.vx) * 0.9 - 3;
+    // Guard ball.vx > 0: only bounce when ball is actually moving toward the goal,
+    // then eject from overlap so multi-frame velocity compounding can't happen.
+    if (ball.vx > 0 && rectCircle(gk.x, gk.y, gk.w, gk.h, ball.x, ball.y, ball.r)) {
+      ball.x = gk.x - ball.r - 1;
+      ball.vx = -(Math.abs(ball.vx) * 0.9 + 3);
       const dy = ball.y - (gk.y + gk.h / 2);
       ball.vy = (dy / (gk.h / 2)) * 5;
     }

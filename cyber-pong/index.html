@@ -117,7 +117,7 @@
   let score, lives, rally, mult, state, flash, flashColor;
   let effects; // { wide: secs, slow: secs, shield: bool }
   let puTimer, lastT;
-  let highScore = +(localStorage.getItem('cp_hs') || 0);
+  let highScore; try { highScore = +(localStorage.getItem('cp_hs') || 0); } catch(e) { highScore = 0; }
 
   // ── Input ─────────────────────────────────────────────────────
   let targetY = H / 2;
@@ -211,7 +211,7 @@
   effects = {}; pl.h = PH_BASE;
   ball = { x: W/2, y: H/2, vx: 0, vy: 0, trail: [] };
   particles = []; powerUps = []; floats = [];
-  score = 0; lives = 3; rally = 0; mult = 1; flash = 0; flashColor = '#f44';
+  score = 0; lives = 5; rally = 0; mult = 1; flash = 0; flashColor = '#f44';
   puTimer = PU_INTERVAL;
   state = 'menu';
 
@@ -240,9 +240,8 @@
       pl.h = PH_BASE * 1.75;
     } else if (pu.id === 'slow') {
       effects.slow = 7;
-      const spd = Math.hypot(ball.vx, ball.vy);
-      ball.vx = (ball.vx / spd) * spd * 0.62;
-      ball.vy = (ball.vy / spd) * spd * 0.62;
+      ball.vx *= 0.62;   // (ball.vx/spd)*spd*0.62 simplifies to ball.vx*0.62; avoids div-by-zero
+      ball.vy *= 0.62;
     } else if (pu.id === 'shield') {
       effects.shield = true;
     }
@@ -269,9 +268,24 @@
 
   // ── Update ────────────────────────────────────────────────────
   function update(dt) {
-    if (state !== 'playing') return;
-
     flash = Math.max(0, flash - dt);
+
+    // Always tick particles and floats so they finish animating on game-over screen
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.88; p.vy *= 0.88;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = floats.length - 1; i >= 0; i--) {
+      const f = floats[i];
+      f.y -= 28 * dt;
+      f.life -= dt;
+      if (f.life <= 0) floats.splice(i, 1);
+    }
+
+    if (state !== 'playing') return;
     puTimer -= dt;
     if (puTimer <= 0 && powerUps.length < 2) { puTimer = PU_INTERVAL; spawnPU(); }
 
@@ -285,7 +299,7 @@
       if (effects.slow <= 0) {
         delete effects.slow;
         const spd = Math.hypot(ball.vx, ball.vy);
-        if (spd < BASE_SPD - 0.5) {
+        if (spd > 0 && spd < BASE_SPD - 0.5) {   // guard spd>0 to prevent NaN from div-by-zero
           ball.vx = (ball.vx / spd) * BASE_SPD;
           ball.vy = (ball.vy / spd) * BASE_SPD;
         }
@@ -367,7 +381,7 @@
     if (ball.x - BR > W) {
       const earned = mult;
       score += earned;
-      if (score > highScore) { highScore = score; localStorage.setItem('cp_hs', highScore); }
+      if (score > highScore) { highScore = score; try { localStorage.setItem('cp_hs', highScore); } catch(e) {} }
       floats.push({ x: W/2, y: H/2 - 20, text: `+${earned}`, color: '#0df', life: 1 });
       rally = 0; mult = 1;
       ball = makeBall(-1); // serve toward player
@@ -393,22 +407,6 @@
       }
     }
 
-    // Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vx *= 0.88; p.vy *= 0.88;
-      p.life -= dt;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-
-    // Floating text
-    for (let i = floats.length - 1; i >= 0; i--) {
-      const f = floats[i];
-      f.y -= 28 * dt;
-      f.life -= dt;
-      if (f.life <= 0) floats.splice(i, 1);
-    }
   }
 
   // ── Draw ──────────────────────────────────────────────────────
