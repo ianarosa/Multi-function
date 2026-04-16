@@ -46,7 +46,14 @@
     line-height: 1.45;
   }
   #hud b { color: #ff4; }
-  #top-spacer { flex-shrink: 0; width: 62px; } /* balances back-btn width */
+  #top-spacer { flex-shrink: 0; width: 62px; display: flex; justify-content: flex-end; align-items: center; }
+  #fs-btn {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(200,80,255,0.35);
+    color: rgba(200,80,255,0.8); border-radius: 4px; cursor: pointer;
+    width: 32px; height: 28px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0;
+  }
+  #fs-btn:hover { background: rgba(200,80,255,0.2); color: #e080ff; }
 
   /* ── Canvas area fills remaining space ── */
   #wrap { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -124,7 +131,12 @@
     <div>LEVEL <b id="level">1</b> &nbsp;&nbsp; TIME <b id="time">0.0</b></div>
     <div>LIVES <b id="lives">&#9829;&#9829;&#9829;&#9829;&#9829;</b> &nbsp;&nbsp; BEST <b id="best">0.0</b></div>
   </div>
-  <div id="top-spacer"></div>
+  <div id="top-spacer">
+    <button id="fs-btn" title="Fullscreen">
+      <svg id="fs-enter" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/></svg>
+      <svg id="fs-exit" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="display:none"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5zm5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5zM0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zm10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4z"/></svg>
+    </button>
+  </div>
 </div>
 <div id="wrap">
   <canvas id="game"></canvas>
@@ -551,6 +563,29 @@
   });
 
   requestAnimationFrame(loop);
+})();
+
+// ── Fullscreen ────────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('fs-btn');
+  const enterIcon = document.getElementById('fs-enter');
+  const exitIcon  = document.getElementById('fs-exit');
+  document.addEventListener('fullscreenchange', function() {
+    const inFs = !!document.fullscreenElement;
+    enterIcon.style.display = inFs ? 'none' : '';
+    exitIcon.style.display  = inFs ? '' : 'none';
+  });
+  btn.addEventListener('click', function() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+        .then(function() {
+          if (screen.orientation && screen.orientation.lock)
+            screen.orientation.lock('landscape').catch(function() {});
+        }).catch(function() {});
+    } else {
+      document.exitFullscreen().catch(function() {});
+    }
+  });
 })();
 </script>
 </body>
