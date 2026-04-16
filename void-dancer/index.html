@@ -2,22 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>VOID DANCER</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-  body { display: flex; align-items: center; justify-content: center; }
-  #wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
-  canvas { background: radial-gradient(ellipse at center, #0a0520 0%, #000 80%); box-shadow: 0 0 60px rgba(140,80,255,0.4); image-rendering: pixelated; display: block; }
-  #hud { position: absolute; top: 10px; left: 0; right: 0; text-align: center; color: #fff; text-shadow: 0 0 8px #a0f; font-size: 14px; pointer-events: none; letter-spacing: 2px; z-index: 5; }
-  #hud b { color: #ff4; }
+  html { height: 100%; }
+  body {
+    width: 100%; height: 100%;
+    /* dvh = dynamic viewport height: shrinks when browser chrome is visible */
+    height: 100dvh;
+    overflow: hidden; background: #000; font-family: 'Courier New', monospace;
+    display: flex; flex-direction: column;
+    /* respect notch / status bar on iOS */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 
+  /* ── Top bar: always visible, never behind status bar ── */
+  #top-bar {
+    display: flex; align-items: center; flex-shrink: 0;
+    padding: 5px 8px; gap: 6px;
+  }
   #back-btn {
-    position: absolute;
-    top: 10px;
-    left: 14px;
-    z-index: 15;
+    flex-shrink: 0;
     background: rgba(0,0,0,0.55);
     border: 1px solid rgba(200,80,255,0.35);
     color: rgba(200,80,255,0.8);
@@ -29,8 +36,21 @@
     text-decoration: none;
     border-radius: 4px;
     transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
   }
   #back-btn:hover { background: rgba(200,80,255,0.2); color: #e080ff; }
+  #hud {
+    flex: 1; text-align: center;
+    color: #fff; text-shadow: 0 0 8px #a0f; font-size: 13px;
+    pointer-events: none; letter-spacing: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #hud b { color: #ff4; }
+  #top-spacer { flex-shrink: 0; width: 70px; } /* balances back-btn width */
+
+  /* ── Canvas area fills remaining space ── */
+  #wrap { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { background: radial-gradient(ellipse at center, #0a0520 0%, #000 80%); box-shadow: 0 0 60px rgba(140,80,255,0.4); image-rendering: pixelated; display: block; }
 
   #stick-zone {
     position: absolute;
@@ -98,12 +118,15 @@
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game"></canvas>
+<div id="top-bar">
   <a id="back-btn" href="/">&#9664; HUB</a>
   <div id="hud">
     LEVEL <b id="level">1</b> &nbsp; TIME <b id="time">0.0</b> &nbsp; LIVES <b id="lives">&#9829;&#9829;&#9829;&#9829;&#9829;</b> &nbsp; BEST <b id="best">0.0</b>
   </div>
+  <div id="top-spacer"></div>
+</div>
+<div id="wrap">
+  <canvas id="game"></canvas>
 
   <div id="stick-zone">
     <div id="stick-base"></div>
@@ -128,9 +151,10 @@
   const W = 400, H = 600;
   cvs.width = W; cvs.height = H;
 
+  const wrapEl = document.getElementById('wrap');
   function fit() {
-    const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.98;
-    cvs.style.width = (W * s) + 'px';
+    const s = Math.min(wrapEl.clientWidth / W, wrapEl.clientHeight / H) * 0.98;
+    cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
   }
   fit(); window.addEventListener('resize', fit);
