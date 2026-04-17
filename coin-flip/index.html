@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUCKY FLIP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html,body{
+    min-height:100vh;
+    background:#0a0a14;
+    font-family:'Barlow','Helvetica Neue',sans-serif;
+    color:#fff;
+    overflow-x:hidden;
+    user-select:none;
+  }
+
+  body{
+    background:
+      radial-gradient(ellipse at 30% 0%,rgba(255,215,0,0.06) 0%,transparent 50%),
+      radial-gradient(ellipse at 70% 100%,rgba(192,192,192,0.05) 0%,transparent 50%),
+      #0a0a14;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ── Top Bar ── */
+  .top-bar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;
+    background:rgba(10,10,20,0.85);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-bottom:2px solid rgba(255,215,0,0.35);
+  }
+  .top-btn{
+    font-family:'Barlow',sans-serif;font-size:12px;font-weight:600;
+    letter-spacing:2px;text-transform:uppercase;
+    color:rgba(255,215,0,0.7);text-decoration:none;
+    border:1px solid rgba(255,215,0,0.3);
+    padding:6px 12px;border-radius:4px;
+    background:transparent;cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .top-btn:hover{background:rgba(255,215,0,0.1);color:#ffd700;}
+  .top-title{
+    font-family:'Bebas Neue',cursive;font-size:clamp(22px,5vw,32px);
+    letter-spacing:6px;color:#ffd700;
+    text-shadow:0 0 14px rgba(255,215,0,0.5);
+    position:absolute;left:50%;transform:translateX(-50%);
+    pointer-events:none;
+  }
+
+  /* ── Main Layout ── */
+  .main{
+    flex:1;display:flex;flex-direction:column;
+    max-width:980px;width:100%;margin:0 auto;
+    padding:14px;gap:14px;
+  }
+
+  @media(min-width:821px){
+    .main{
+      display:grid;
+      grid-template-columns:1fr 320px;
+      grid-template-rows:auto 1fr;
+      gap:16px;
+    }
+    .stats-row{grid-column:1/-1;}
+    .stage{grid-column:1;grid-row:2;}
+    .shop{grid-column:2;grid-row:2;}
+  }
+
+  /* ── Stats Row ── */
+  .stats-row{
+    display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  }
+  .stat-card{
+    background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(255,215,0,0.02));
+    border:1px solid rgba(255,215,0,0.2);border-radius:10px;
+    padding:10px 18px;text-align:center;min-width:120px;flex:1;
+  }
+  .stat-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);}
+  .stat-val{font-family:'Bebas Neue',cursive;font-size:28px;color:#ffd700;margin-top:2px;}
+  .stat-val.silver{color:#c0c0c0;}
+
+  /* ── Stage ── */
+  .stage{
+    background:linear-gradient(160deg,#12121e 0%,#0a0a14 100%);
+    border:1px solid rgba(255,215,0,0.2);border-radius:14px;
+    padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:16px;
+    position:relative;overflow:hidden;
+  }
+
+  /* Coin Canvas */
+  #coinCanvas{
+    width:200px;height:200px;
+    filter:drop-shadow(0 0 20px rgba(255,215,0,0.25));
+  }
+
+  /* Streak Display */
+  .streak-display{
+    text-align:center;min-height:60px;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+  }
+  .streak-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);}
+  .streak-num{
+    font-family:'Bebas Neue',cursive;font-size:52px;line-height:1;
+    color:#ffd700;transition:transform .2s;
+  }
+  .streak-num.fire{
+    text-shadow:0 0 20px rgba(255,100,0,0.8),0 0 40px rgba(255,50,0,0.5);
+    animation:flamePulse .4s infinite alternate;
+  }
+  @keyframes flamePulse{
+    0%{text-shadow:0 0 20px rgba(255,100,0,0.8),0 0 40px rgba(255,50,0,0.5);}
+    100%{text-shadow:0 0 30px rgba(255,140,0,1),0 0 60px rgba(255,80,0,0.7),0 -10px 40px rgba(255,200,0,0.4);}
+  }
+  .streak-reward{font-size:13px;color:rgba(255,215,0,0.7);font-weight:600;}
+
+  /* Result Text */
+  .result-text{
+    font-family:'Bebas Neue',cursive;font-size:32px;letter-spacing:4px;
+    min-height:40px;transition:opacity .3s;
+  }
+  .result-text.heads{color:#ffd700;text-shadow:0 0 16px rgba(255,215,0,0.6);}
+  .result-text.tails{color:#888;}
+
+  /* Buttons */
+  .btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .btn-flip,.btn-cashout{
+    font-family:'Bebas Neue',cursive;font-size:26px;letter-spacing:4px;
+    border:none;border-radius:10px;padding:14px 40px;cursor:pointer;
+    transition:transform .1s,box-shadow .2s,opacity .2s;
+    position:relative;overflow:hidden;
+  }
+  .btn-flip{
+    background:linear-gradient(135deg,#ffd700,#ffaa00);color:#1a1200;
+    box-shadow:0 4px 20px rgba(255,215,0,0.3);
+  }
+  .btn-flip:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 28px rgba(255,215,0,0.45);}
+  .btn-flip:active:not(:disabled){transform:translateY(1px);}
+  .btn-flip:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-flip .cooldown-bar{
+    position:absolute;bottom:0;left:0;height:3px;
+    background:rgba(0,0,0,0.4);transition:width linear;
+  }
+
+  .btn-cashout{
+    background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;
+    box-shadow:0 4px 16px rgba(46,204,113,0.3);
+    display:none;
+  }
+  .btn-cashout:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(46,204,113,0.45);}
+  .btn-cashout.show{display:inline-block;animation:popIn .25s ease-out;}
+  @keyframes popIn{0%{transform:scale(0.7);opacity:0;}100%{transform:scale(1);opacity:1;}}
+
+  /* ── Shop ── */
+  .shop{
+    background:linear-gradient(160deg,#12121e,#0a0a14);
+    border:1px solid rgba(255,215,0,0.2);border-radius:14px;
+    padding:16px;overflow-y:auto;max-height:calc(100vh - 180px);
+  }
+  .shop-title{
+    font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:4px;
+    color:rgba(255,215,0,0.6);text-align:center;margin-bottom:12px;
+  }
+  .upgrade{
+    background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);
+    border-radius:8px;padding:12px;margin-bottom:8px;
+    display:flex;align-items:center;gap:12px;
+    transition:border-color .2s;
+  }
+  .upgrade:hover{border-color:rgba(255,215,0,0.3);}
+  .upgrade.maxed{opacity:0.5;pointer-events:none;}
+  .upg-icon{font-size:28px;width:40px;text-align:center;flex-shrink:0;}
+  .upg-info{flex:1;min-width:0;}
+  .upg-name{font-weight:700;font-size:14px;color:#ffd700;}
+  .upg-desc{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;}
+  .upg-level{font-size:10px;color:rgba(255,215,0,0.5);margin-top:2px;letter-spacing:1px;}
+  .upg-buy{
+    font-family:'Barlow',sans-serif;font-weight:700;font-size:12px;
+    background:linear-gradient(135deg,#ffd700,#ffaa00);color:#1a1200;
+    border:none;border-radius:6px;padding:8px 14px;cursor:pointer;
+    white-space:nowrap;transition:transform .1s,opacity .2s;flex-shrink:0;
+  }
+  .upg-buy:hover:not(:disabled){transform:scale(1.05);}
+  .upg-buy:disabled{opacity:0.35;cursor:not-allowed;}
+
+  /* ── Particles ── */
+  #particleCanvas{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;z-index:50;
+  }
+
+  /* ── Mobile ── */
+  @media(max-width:820px){
+    .shop{max-height:none;}
+    #coinCanvas{width:160px;height:160px;}
+    .streak-num{font-size:42px;}
+  }
+
+  /* Smooth number transitions */
+  .counting{transition:none;animation:countPulse .15s;}
+  @keyframes countPulse{0%{transform:scale(1.15);}100%{transform:scale(1);}}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <a href="/" class="top-btn">&larr; HUB</a>
+  <div class="top-title">LUCKY FLIP</div>
+  <button class="top-btn" id="btnFS" onclick="toggleFS()">&#x26F6;</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Coins</div>
+      <div class="stat-val" id="dispCoins">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Best Streak</div>
+      <div class="stat-val" id="dispBest">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Flips</div>
+      <div class="stat-val silver" id="dispFlips">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Coins/sec</div>
+      <div class="stat-val" id="dispCps">0</div>
+    </div>
+  </div>
+
+  <!-- Stage -->
+  <div class="stage">
+    <canvas id="coinCanvas" width="400" height="400"></canvas>
+    <div class="streak-display">
+      <div class="streak-label">Current Streak</div>
+      <div class="streak-num" id="streakNum">0</div>
+      <div class="streak-reward" id="streakReward"></div>
+    </div>
+    <div class="result-text" id="resultText">&nbsp;</div>
+    <div class="btn-row">
+      <button class="btn-flip" id="btnFlip" onclick="doFlip()">
+        FLIP
+        <div class="cooldown-bar" id="cooldownBar"></div>
+      </button>
+      <button class="btn-cashout" id="btnCashout" onclick="cashOut()">CASH OUT</button>
+    </div>
+  </div>
+
+  <!-- Shop -->
+  <div class="shop">
+    <div class="shop-title">UPGRADES</div>
+    <div id="shopList"></div>
+  </div>
+
+</div>
+
+<canvas id="particleCanvas"></canvas>
+
+<script>
+// ── Save / Load ──
+const SAVE_KEY = 'luckyFlip_save';
+let state = {
+  coins: 0,
+  bestStreak: 0,
+  totalFlips: 0,
+  upgrades: { charm: 0, double: 0, auto: 0, shield: 0, magnet: 0, speed: 0 }
+};
+
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (d) {
+      state.coins = d.coins || 0;
+      state.bestStreak = d.bestStreak || 0;
+      state.totalFlips = d.totalFlips || 0;
+      if (d.upgrades) Object.assign(state.upgrades, d.upgrades);
+    }
+  } catch(e) {}
+}
+
+// ── Upgrade Definitions ──
+const UPGRADES = [
+  {
+    id: 'charm', icon: '🍀', name: 'Lucky Charm', maxLv: 5,
+    desc: lv => `Heads chance: ${(50 + lv * 3)}% → ${50 + (lv+1) * 3}%`,
+    maxDesc: 'Heads chance: 65%',
+    cost: lv => [50, 200, 800, 3000, 12000][lv]
+  },
+  {
+    id: 'double', icon: '💰', name: 'Double Down', maxLv: 5,
+    desc: lv => `Payout multiplier: ${[1,1.5,2,2.5,3][lv]}x → ${[1.5,2,2.5,3,4][lv]}x`,
+    maxDesc: 'Payout multiplier: 4x',
+    cost: lv => [80, 350, 1400, 5000, 20000][lv]
+  },
+  {
+    id: 'auto', icon: '⚡', name: 'Auto Flip', maxLv: 3,
+    desc: lv => `Auto flip every ${['-','3','2'][lv]}s → ${['3','2','1'][lv]}s`,
+    maxDesc: 'Auto flip every 1s',
+    cost: lv => [300, 2000, 10000][lv]
+  },
+  {
+    id: 'shield', icon: '🛡️', name: 'Streak Shield', maxLv: 3,
+    desc: lv => `Ignore tails: ${[0,10,20][lv]}% → ${[10,20,35][lv]}%`,
+    maxDesc: 'Ignore tails: 35%',
+    cost: lv => [500, 3000, 15000][lv]
+  },
+  {
+    id: 'magnet', icon: '🧲', name: 'Coin Magnet', maxLv: 5,
+    desc: lv => `Passive: ${[0,1,3,8,20][lv]}/s → ${[1,3,8,20,50][lv]}/s`,
+    maxDesc: 'Passive: 50 coins/s',
+    cost: lv => [100, 500, 2500, 10000, 40000][lv]
+  },
+  {
+    id: 'speed', icon: '🏎️', name: 'Flip Speed', maxLv: 5,
+    desc: lv => `Cooldown: ${(2 - lv * 0.25).toFixed(2)}s → ${(2 - (lv+1) * 0.25).toFixed(2)}s`,
+    maxDesc: 'Cooldown: 0.75s',
+    cost: lv => [60, 250, 1000, 4000, 16000][lv]
+  }
+];
+
+// ── Derived Stats ──
+function headChance() { return 0.50 + state.upgrades.charm * 0.03; }
+function payoutMult() { return [1, 1.5, 2, 2.5, 3, 4][state.upgrades.double]; }
+function autoInterval() { return state.upgrades.auto === 0 ? 0 : [0, 3000, 2000, 1000][state.upgrades.auto]; }
+function shieldChance() { return [0, 0.10, 0.20, 0.35][state.upgrades.shield]; }
+function magnetRate() { return [0, 1, 3, 8, 20, 50][state.upgrades.magnet]; }
+function flipCooldown() { return 2000 - state.upgrades.speed * 250; }
+function streakPayout(n) { return n === 0 ? 0 : Math.floor((Math.pow(2, n) - 1) * payoutMult()); }
+
+// ── Game State ──
+let streak = 0;
+let flipping = false;
+let cooldownEnd = 0;
+let autoTimer = null;
+let displayedCoins = 0;
+
+// ── DOM refs ──
+const dispCoins = document.getElementById('dispCoins');
+const dispBest = document.getElementById('dispBest');
+const dispFlips = document.getElementById('dispFlips');
+const dispCps = document.getElementById('dispCps');
+const streakNumEl = document.getElementById('streakNum');
+const streakRewardEl = document.getElementById('streakReward');
+const resultText = document.getElementById('resultText');
+const btnFlip = document.getElementById('btnFlip');
+const btnCashout = document.getElementById('btnCashout');
+const cooldownBar = document.getElementById('cooldownBar');
+
+// ── Coin Canvas ──
+const coinCvs = document.getElementById('coinCanvas');
+const coinCtx = coinCvs.getContext('2d');
+let coinAngle = 0;       // 0 = heads facing, PI = tails facing
+let coinTargetAngle = 0;
+let coinSpinning = false;
+let coinSpinSpeed = 0;
+let showSide = 'heads';  // which side to show at rest
+
+function drawCoin(angle) {
+  const w = coinCvs.width, h = coinCvs.height;
+  const cx = w / 2, cy = h / 2, r = w * 0.38;
+  coinCtx.clearRect(0, 0, w, h);
+
+  const scaleX = Math.cos(angle);
+  const absScale = Math.abs(scaleX);
+  const isFront = scaleX >= 0; // heads side visible
+
+  coinCtx.save();
+  coinCtx.translate(cx, cy);
+  coinCtx.scale(absScale < 0.05 ? 0.05 : absScale, 1);
+
+  // Coin edge (thickness)
+  const edgeW = 12;
+  if (absScale < 0.95) {
+    coinCtx.beginPath();
+    coinCtx.ellipse(0, 0, r + edgeW/2, r, 0, 0, Math.PI * 2);
+    coinCtx.fillStyle = '#b8860b';
+    coinCtx.fill();
+  }
+
+  // Coin face
+  const grad = coinCtx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r);
+  if (isFront) {
+    // Heads - gold
+    grad.addColorStop(0, '#ffe066');
+    grad.addColorStop(0.5, '#ffd700');
+    grad.addColorStop(1, '#b8860b');
+  } else {
+    // Tails - silver
+    grad.addColorStop(0, '#e8e8e8');
+    grad.addColorStop(0.5, '#c0c0c0');
+    grad.addColorStop(1, '#808080');
+  }
+  coinCtx.beginPath();
+  coinCtx.arc(0, 0, r, 0, Math.PI * 2);
+  coinCtx.fillStyle = grad;
+  coinCtx.fill();
+
+  // Inner ring
+  coinCtx.beginPath();
+  coinCtx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
+  coinCtx.strokeStyle = isFront ? 'rgba(255,255,200,0.4)' : 'rgba(255,255,255,0.3)';
+  coinCtx.lineWidth = 2;
+  coinCtx.stroke();
+
+  // Emblem
+  if (absScale > 0.25) {
+    coinCtx.globalAlpha = Math.min(1, (absScale - 0.25) / 0.3);
+    if (isFront) {
+      // Star
+      drawStar(coinCtx, 0, -5, 5, r * 0.38, r * 0.18);
+      coinCtx.fillStyle = 'rgba(180,120,0,0.7)';
+      coinCtx.fill();
+      coinCtx.strokeStyle = 'rgba(255,240,150,0.5)';
+      coinCtx.lineWidth = 1.5;
+      coinCtx.stroke();
+      // H text
+      coinCtx.font = `bold ${r * 0.28}px 'Bebas Neue', sans-serif`;
+      coinCtx.fillStyle = 'rgba(160,100,0,0.6)';
+      coinCtx.textAlign = 'center';
+      coinCtx.textBaseline = 'middle';
+      coinCtx.fillText('H', 0, r * 0.48);
+    } else {
+      // Moon crescent
+      coinCtx.beginPath();
+      coinCtx.arc(0, -5, r * 0.32, 0, Math.PI * 2);
+      coinCtx.fillStyle = 'rgba(100,100,110,0.5)';
+      coinCtx.fill();
+      coinCtx.beginPath();
+      coinCtx.arc(r * 0.12, -r * 0.1, r * 0.28, 0, Math.PI * 2);
+      coinCtx.fillStyle = isFront ? '#ffd700' : '#c0c0c0';
+      // re-fill with coin color to create crescent
+      const g2 = coinCtx.createRadialGradient(-r*0.3,-r*0.3,0,0,0,r);
+      g2.addColorStop(0,'#e8e8e8');g2.addColorStop(0.5,'#c0c0c0');g2.addColorStop(1,'#808080');
+      coinCtx.fillStyle = g2;
+      coinCtx.fill();
+      // T text
+      coinCtx.font = `bold ${r * 0.28}px 'Bebas Neue', sans-serif`;
+      coinCtx.fillStyle = 'rgba(80,80,90,0.6)';
+      coinCtx.textAlign = 'center';
+      coinCtx.textBaseline = 'middle';
+      coinCtx.fillText('T', 0, r * 0.48);
+    }
+    coinCtx.globalAlpha = 1;
+  }
+
+  coinCtx.restore();
+}
+
+function drawStar(ctx, cx, cy, points, outerR, innerR) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = (Math.PI / points) * i - Math.PI / 2;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+// ── Coin Animation Loop ──
+let lastTime = 0;
+function animateCoin(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.1);
+  lastTime = ts;
+
+  if (coinSpinning) {
+    coinAngle += coinSpinSpeed * dt;
+    coinSpinSpeed *= 0.97; // friction
+    if (coinSpinSpeed < 0.5 && !flipping) {
+      // Snap to target
+      coinSpinning = false;
+      coinAngle = showSide === 'heads' ? 0 : Math.PI;
+    }
+  }
+
+  drawCoin(coinAngle);
+  requestAnimationFrame(animateCoin);
+}
+requestAnimationFrame(animateCoin);
+
+// ── Particle System ──
+const pCvs = document.getElementById('particleCanvas');
+const pCtx = pCvs.getContext('2d');
+let particles = [];
+
+function resizeParticles() {
+  pCvs.width = window.innerWidth;
+  pCvs.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeParticles);
+resizeParticles();
+
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 80 + Math.random() * 200;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 60,
+      life: 0.6 + Math.random() * 0.6,
+      maxLife: 0.6 + Math.random() * 0.6,
+      size: 3 + Math.random() * 5,
+      color
+    });
+  }
+}
+
+function updateParticles(dt) {
+  pCtx.clearRect(0, 0, pCvs.width, pCvs.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt; // gravity
+    const alpha = p.life / p.maxLife;
+    pCtx.globalAlpha = alpha;
+    pCtx.fillStyle = p.color;
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    pCtx.fill();
+  }
+  pCtx.globalAlpha = 1;
+}
+
+let pLastTime = 0;
+function animateParticles(ts) {
+  const dt = Math.min((ts - pLastTime) / 1000, 0.1);
+  pLastTime = ts;
+  updateParticles(dt);
+  requestAnimationFrame(animateParticles);
+}
+requestAnimationFrame(animateParticles);
+
+// ── Flip Logic ──
+function doFlip() {
+  if (flipping || Date.now() < cooldownEnd) return;
+  flipping = true;
+  btnFlip.disabled = true;
+  state.totalFlips++;
+
+  // Determine result
+  const isHeads = Math.random() < headChance();
+  let shielded = false;
+  if (!isHeads && streak > 0 && Math.random() < shieldChance()) {
+    shielded = true;
+  }
+  const finalHeads = isHeads || shielded;
+
+  // Start spin
+  coinSpinning = true;
+  coinSpinSpeed = 25 + Math.random() * 15;
+  showSide = finalHeads ? 'heads' : 'tails';
+
+  // Resolve after animation
+  const spinTime = 600 + Math.random() * 300;
+  setTimeout(() => {
+    coinSpinning = false;
+    coinAngle = finalHeads ? 0 : Math.PI;
+    flipping = false;
+
+    // Get coin position for particles
+    const rect = coinCvs.getBoundingClientRect();
+    const px = rect.left + rect.width / 2;
+    const py = rect.top + rect.height / 2;
+
+    if (finalHeads) {
+      streak++;
+      if (shielded) {
+        resultText.innerHTML = '🛡️ SHIELDED!';
+        resultText.className = 'result-text heads';
+      } else {
+        resultText.innerHTML = 'HEADS!';
+        resultText.className = 'result-text heads';
+      }
+      spawnParticles(px, py, '#ffd700', 20 + streak * 5);
+      updateStreakDisplay();
+      btnCashout.classList.add('show');
+    } else {
+      // Tails - lose streak
+      resultText.innerHTML = 'TAILS...';
+      resultText.className = 'result-text tails';
+      spawnParticles(px, py, '#666', 8);
+      streak = 0;
+      updateStreakDisplay();
+      btnCashout.classList.remove('show');
+    }
+
+    // Cooldown
+    const cd = flipCooldown();
+    cooldownEnd = Date.now() + cd;
+    cooldownBar.style.width = '100%';
+    cooldownBar.style.transition = 'none';
+    requestAnimationFrame(() => {
+      cooldownBar.style.transition = `width ${cd}ms linear`;
+      cooldownBar.style.width = '0%';
+    });
+    setTimeout(() => { btnFlip.disabled = false; }, cd);
+
+    updateUI();
+    save();
+  }, spinTime);
+}
+
+function cashOut() {
+  if (streak === 0) return;
+  const payout = streakPayout(streak);
+  state.coins += payout;
+  if (streak > state.bestStreak) state.bestStreak = streak;
+
+  // Particles at cashout button
+  const rect = btnCashout.getBoundingClientRect();
+  spawnParticles(rect.left + rect.width/2, rect.top, '#2ecc71', 25);
+
+  resultText.innerHTML = `+${formatNum(payout)} COINS!`;
+  resultText.className = 'result-text heads';
+  streak = 0;
+  updateStreakDisplay();
+  btnCashout.classList.remove('show');
+  updateUI();
+  save();
+}
+
+function updateStreakDisplay() {
+  streakNumEl.textContent = streak;
+  if (streak >= 4) {
+    streakNumEl.classList.add('fire');
+  } else {
+    streakNumEl.classList.remove('fire');
+  }
+  if (streak > 0) {
+    streakRewardEl.textContent = `Worth: ${formatNum(streakPayout(streak))} coins`;
+  } else {
+    streakRewardEl.textContent = '';
+  }
+}
+
+// ── Auto Flip ──
+function setupAutoFlip() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  const interval = autoInterval();
+  if (interval > 0) {
+    autoTimer = setInterval(() => {
+      if (!flipping && Date.now() >= cooldownEnd) {
+        doFlip();
+      }
+    }, interval);
+  }
+}
+
+// ── Passive Income ──
+let lastPassive = Date.now();
+function tickPassive() {
+  const now = Date.now();
+  const dt = (now - lastPassive) / 1000;
+  lastPassive = now;
+  const rate = magnetRate();
+  if (rate > 0) {
+    state.coins += rate * dt;
+  }
+}
+
+// ── UI Updates ──
+function formatNum(n) {
+  n = Math.floor(n);
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function animateNumber(el, target) {
+  el.textContent = formatNum(target);
+}
+
+function updateUI() {
+  animateNumber(dispCoins, state.coins);
+  animateNumber(dispBest, state.bestStreak);
+  animateNumber(dispFlips, state.totalFlips);
+  dispCps.textContent = magnetRate();
+  renderShop();
+}
+
+// ── Shop ──
+function renderShop() {
+  const shopEl = document.getElementById('shopList');
+  shopEl.innerHTML = '';
+  for (const upg of UPGRADES) {
+    const lv = state.upgrades[upg.id];
+    const maxed = lv >= upg.maxLv;
+    const cost = maxed ? 0 : upg.cost(lv);
+    const canBuy = !maxed && state.coins >= cost;
+
+    const div = document.createElement('div');
+    div.className = 'upgrade' + (maxed ? ' maxed' : '');
+    div.innerHTML = `
+      <div class="upg-icon">${upg.icon}</div>
+      <div class="upg-info">
+        <div class="upg-name">${upg.name}</div>
+        <div class="upg-desc">${maxed ? upg.maxDesc : upg.desc(lv)}</div>
+        <div class="upg-level">LV ${lv} / ${upg.maxLv}</div>
+      </div>
+      ${maxed ? '<div class="upg-buy" disabled style="background:#555;color:#999;">MAX</div>' :
+        `<button class="upg-buy" ${canBuy ? '' : 'disabled'} onclick="buyUpgrade('${upg.id}')">${formatNum(cost)} ⛁</button>`}
+    `;
+    shopEl.appendChild(div);
+  }
+}
+
+function buyUpgrade(id) {
+  const upg = UPGRADES.find(u => u.id === id);
+  const lv = state.upgrades[id];
+  if (lv >= upg.maxLv) return;
+  const cost = upg.cost(lv);
+  if (state.coins < cost) return;
+  state.coins -= cost;
+  state.upgrades[id]++;
+
+  // If auto flip upgraded, reset timer
+  if (id === 'auto') setupAutoFlip();
+
+  updateUI();
+  save();
+}
+
+// ── Fullscreen ──
+function toggleFS() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ── Main Loop ──
+function mainLoop() {
+  tickPassive();
+  animateNumber(dispCoins, state.coins);
+  dispCps.textContent = magnetRate();
+  requestAnimationFrame(mainLoop);
+}
+
+// ── Init ──
+load();
+updateUI();
+updateStreakDisplay();
+drawCoin(0);
+setupAutoFlip();
+requestAnimationFrame(mainLoop);
+
+// Save periodically
+setInterval(save, 5000);
+</script>
+</body>
+</html>

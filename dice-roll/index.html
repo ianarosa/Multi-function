@@ -191,9 +191,16 @@
     transition: transform 0.1s, box-shadow 0.15s;
     box-shadow: 0 4px 18px rgba(255,160,0,0.4);
   }
+  .roll-btn { position: relative; overflow: hidden; }
   .roll-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 22px rgba(255,160,0,0.55); }
   .roll-btn:active:not(:disabled) { transform: translateY(1px); }
   .roll-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .roll-btn .cd-bar {
+    position: absolute; left: 0; bottom: 0; height: 4px;
+    background: linear-gradient(90deg, #ff4400, #ffd24a);
+    border-radius: 0 0 10px 10px;
+    transition: width 0.05s linear;
+  }
 
   .message {
     text-align: center;
@@ -454,6 +461,15 @@
       costMul: 2.3,
       maxLvl: 15,
     },
+    {
+      id: 'speed',
+      name: 'Quick Hands',
+      desc: lvl => `Roll cooldown: ${rollCooldown(lvl).toFixed(1)}s`,
+      effect: lvl => rollCooldown(lvl),
+      baseCost: 20,
+      costMul: 1.6,
+      maxLvl: 12,
+    },
   ];
 
   function sixChance(lvl)   { return Math.min(0.62, 1/6 + lvl * 0.022); }
@@ -462,6 +478,7 @@
   function diceCount(lvl)   { return 1 + lvl; }
   function autoDelay(lvl)   { return lvl === 0 ? 0 : Math.max(0.25, 1.5 - (lvl - 1) * 0.14); }
   function jackMul(lvl)     { return 1 + lvl * 0.6; }
+  function rollCooldown(lvl){ return Math.max(0.3, 2.0 - lvl * 0.15); }
 
   function costOf(u, lvl) { return Math.floor(u.baseCost * Math.pow(u.costMul, lvl)); }
 
@@ -615,6 +632,37 @@
 
   // ── Rolling logic ─────────────────────────────────────────────
   let rolling = false;
+  let onCooldown = false;
+  let cdBar = null;
+
+  // Create cooldown bar element inside roll button
+  (function initCdBar() {
+    cdBar = document.createElement('div');
+    cdBar.className = 'cd-bar';
+    cdBar.style.width = '0%';
+    rollBtn.appendChild(cdBar);
+  })();
+
+  function startCooldown() {
+    const cd = rollCooldown(state.levels.speed) * 1000;
+    onCooldown = true;
+    rollBtn.disabled = true;
+    const start = performance.now();
+    cdBar.style.width = '100%';
+    function tick() {
+      const elapsed = performance.now() - start;
+      const pct = Math.max(0, 1 - elapsed / cd) * 100;
+      cdBar.style.width = pct + '%';
+      if (elapsed >= cd) {
+        onCooldown = false;
+        rollBtn.disabled = false;
+        cdBar.style.width = '0%';
+        return;
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
 
   function rollValue() {
     const p = sixChance(state.levels.luck);
@@ -624,7 +672,7 @@
   }
 
   function doRoll() {
-    if (rolling) return;
+    if (rolling || onCooldown) return;
     rolling = true;
     rollBtn.disabled = true;
 
@@ -664,7 +712,7 @@
 
       if (state.streak >= target) {
         // JACKPOT
-        const base = 50 * Math.pow(2, 6 - target); // reward more for shorter targets? actually reward bigger for original 6
+        const base = 50 * Math.pow(2, 6 - target);
         const prize = Math.floor(base * mult * jackMul(state.levels.jackbonus) * (target * target));
         state.money += prize;
         msgEl.className = 'message jackpot';
@@ -689,7 +737,7 @@
     save();
     updateHUD();
     rolling = false;
-    rollBtn.disabled = false;
+    startCooldown();
   }
 
   function floatFromDice(text, color) {
@@ -707,7 +755,7 @@
     if (lvl === 0) return;
     const delay = autoDelay(lvl) * 1000;
     autoTimer = setInterval(() => {
-      if (!rolling) doRoll();
+      if (!rolling && !onCooldown) doRoll();
     }, Math.max(120, delay));
   }
 
@@ -730,7 +778,7 @@
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
-      if (!rolling) doRoll();
+      if (!rolling && !onCooldown) doRoll();
     }
   });
 

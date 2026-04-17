@@ -391,6 +391,22 @@
   .card-pipe .play-btn     { color: #2288ff; background: rgba(34,136,255,0.1); border-color: rgba(34,136,255,0.4); }
   .card-pipe:hover .play-btn { background: rgba(34,136,255,0.22); }
 
+  /* ── Lucky Flip theme ── */
+  .card-flip {
+    background: #0d0a02;
+    border: 1px solid rgba(255,215,0,0.25);
+    box-shadow: 0 2px 24px rgba(255,215,0,0.05);
+  }
+  .card-flip:hover {
+    box-shadow: 0 10px 44px rgba(255,215,0,0.25);
+    border-color: rgba(255,215,0,0.55);
+  }
+  .card-flip .card-preview { background: radial-gradient(ellipse at 50% 50%, #1a1400 0%, #0a0700 100%); }
+  .card-flip .card-genre   { color: rgba(255,215,0,0.7); }
+  .card-flip .card-name    { color: #ffd700; }
+  .card-flip .play-btn     { color: #ffd700; background: rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.4); }
+  .card-flip:hover .play-btn { background: rgba(255,215,0,0.22); }
+
   footer {
     margin-top: 60px;
     text-align: center;
@@ -601,6 +617,18 @@
         <div class="card-genre">Puzzle &middot; Timed</div>
         <div class="card-name">PIPE FLOW</div>
         <div class="card-desc">Rotate pipe segments to connect source to drain before time runs out. 15 levels of plumbing pandemonium.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-flip" href="/coin-flip/">
+      <div class="card-preview">
+        <canvas id="cv-flip"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Incremental &middot; Risk</div>
+        <div class="card-name">LUCKY FLIP</div>
+        <div class="card-desc">Flip coins and chase heads streaks for exponential payouts. Cash out or risk it all — tails takes everything.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -1961,6 +1989,118 @@
     }
   }
 
+  // ── Lucky Flip card preview ──────────────────────────────────
+  const flipCvs = document.getElementById('cv-flip');
+  const flCtx = flipCvs.getContext('2d');
+
+  function resizeFlip() {
+    const r = flipCvs.parentElement.getBoundingClientRect();
+    flipCvs.width  = r.width  || 320;
+    flipCvs.height = r.height || 190;
+  }
+  resizeFlip();
+  window.addEventListener('resize', resizeFlip);
+
+  let flipAngle = 0;
+  let flipSpeed = 2.5;
+  let flipResult = 1; // 1 = heads showing, -1 = tails
+  let flipPause = 0;
+
+  function drawFlipPreview(dt, t) {
+    const W = flipCvs.width, H = flipCvs.height;
+    const ms = t * 0.001;
+
+    flCtx.fillStyle = '#0a0a14';
+    flCtx.fillRect(0, 0, W, H);
+
+    // Subtle sparkle background
+    flCtx.globalAlpha = 0.15;
+    for (let i = 0; i < 12; i++) {
+      const sx = ((i * 137 + 31) % W);
+      const sy = ((i * 97 + 13 + ms * 8 * ((i % 3) + 1)) % H);
+      flCtx.fillStyle = i % 2 === 0 ? '#ffd700' : '#c0c0c0';
+      flCtx.fillRect(sx, sy, 1.5, 1.5);
+    }
+    flCtx.globalAlpha = 1;
+
+    // Coin flip animation
+    if (flipPause > 0) {
+      flipPause -= dt;
+    } else {
+      flipAngle += flipSpeed * dt;
+      if (flipAngle > Math.PI * 4) {
+        flipAngle = 0;
+        flipResult *= -1;
+        flipPause = 1.2;
+      }
+    }
+
+    const cx = W / 2, cy = H / 2;
+    const radius = Math.min(W, H) * 0.28;
+    const scaleX = Math.cos(flipPause > 0 ? 0 : flipAngle);
+    const isHeads = flipPause > 0 ? flipResult > 0 : scaleX > 0;
+
+    // Draw coin
+    const absScale = Math.abs(flipPause > 0 ? 1 : scaleX);
+    const coinW = radius * 2 * Math.max(0.05, absScale);
+    const coinH = radius * 2;
+
+    // Shadow
+    flCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    flCtx.beginPath();
+    flCtx.ellipse(cx, cy + radius + 10, coinW * 0.4, 6, 0, 0, Math.PI * 2);
+    flCtx.fill();
+
+    // Edge thickness
+    flCtx.fillStyle = isHeads ? '#b8960a' : '#888';
+    flCtx.fillRect(cx - coinW / 2, cy - coinH / 2 + 2, coinW, coinH - 2);
+
+    // Face
+    const faceColor = isHeads ? '#ffd700' : '#c0c0c0';
+    const grad = flCtx.createRadialGradient(cx - coinW * 0.2, cy - coinH * 0.2, 0, cx, cy, coinH * 0.6);
+    grad.addColorStop(0, isHeads ? '#ffe566' : '#e0e0e0');
+    grad.addColorStop(1, faceColor);
+    flCtx.fillStyle = grad;
+    flCtx.beginPath();
+    flCtx.ellipse(cx, cy, coinW / 2, coinH / 2, 0, 0, Math.PI * 2);
+    flCtx.fill();
+
+    // Glow
+    flCtx.shadowColor = faceColor;
+    flCtx.shadowBlur = 16;
+    flCtx.strokeStyle = faceColor + '88';
+    flCtx.lineWidth = 2;
+    flCtx.beginPath();
+    flCtx.ellipse(cx, cy, coinW / 2, coinH / 2, 0, 0, Math.PI * 2);
+    flCtx.stroke();
+    flCtx.shadowBlur = 0;
+
+    // Letter
+    if (absScale > 0.3) {
+      flCtx.globalAlpha = absScale;
+      flCtx.font = `bold ${Math.round(radius * 0.6)}px 'Bebas Neue', cursive`;
+      flCtx.textAlign = 'center';
+      flCtx.textBaseline = 'middle';
+      flCtx.fillStyle = isHeads ? '#b8960a' : '#777';
+      flCtx.fillText(isHeads ? 'H' : 'T', cx, cy + 2);
+      flCtx.globalAlpha = 1;
+    }
+
+    // Streak text when paused on heads
+    if (flipPause > 0 && isHeads) {
+      const fade = Math.min(1, flipPause / 0.3);
+      flCtx.globalAlpha = fade * 0.8;
+      flCtx.font = 'bold 14px "Bebas Neue", cursive';
+      flCtx.fillStyle = '#ffd700';
+      flCtx.shadowColor = '#ffd700';
+      flCtx.shadowBlur = 10;
+      flCtx.textAlign = 'center';
+      flCtx.fillText('HEADS!', cx, cy - radius - 16);
+      flCtx.shadowBlur = 0;
+      flCtx.globalAlpha = 1;
+    }
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -1985,6 +2125,7 @@
     drawJumperPreview(dt, t);
     drawSlashPreview(dt, t);
     drawPipePreview(dt, t);
+    drawFlipPreview(dt, t);
 
     requestAnimationFrame(loop);
   }
