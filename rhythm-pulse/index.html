@@ -133,14 +133,14 @@ window.addEventListener('resize', resize);
 resize();
 
 /* ── Constants ── */
-const HIT_ZONE_X_FRAC = 0.15;   // fraction of screen width
+const HIT_ZONE_Y_FRAC = 0.82;   // fraction of screen height (near bottom)
 const LANE_COUNT = 3;
 const BEAT_RADIUS = 22;
 const PERFECT_MS = 30;
 const GREAT_MS = 80;
 const GOOD_MS = 150;
 const MISS_MS = 200;
-const TRAVEL_TIME_BEATS = 4;     // how many beats to cross screen
+const TRAVEL_TIME_BEATS = 4;     // how many beats to fall down screen
 const HEALTH_MAX = 100;
 const HEALTH_MISS_PENALTY = 28;
 const HEALTH_GOOD_REGEN = 2;
@@ -173,14 +173,13 @@ let consecutiveMisses = 0;
 let highScore = parseInt(localStorage.getItem('rhythmPulseHigh') || '0', 10);
 
 /* ── Helpers ── */
-function hitZoneX(){ return W * HIT_ZONE_X_FRAC; }
-function laneY(i){
-  const topPad = 80;
-  const botPad = (window.innerWidth <= 768) ? 100 : 40;
-  const usable = H - topPad - botPad;
-  return topPad + usable * (i + 0.5) / LANE_COUNT;
+function hitZoneY(){ return H * HIT_ZONE_Y_FRAC; }
+function laneX(i){
+  const sidePad = W * 0.15;
+  const usable = W - sidePad * 2;
+  return sidePad + usable * (i + 0.5) / LANE_COUNT;
 }
-function travelPx(){ return W - hitZoneX(); }
+function travelPx(){ return hitZoneY() - 60; } // from top to hit zone
 function travelMs(){ return beatInterval * TRAVEL_TIME_BEATS; }
 
 /* ── Beat generation ── */
@@ -231,7 +230,7 @@ function spawnBeat(lane, arrivalTime){
     lane,
     arrivalTime,        // gameTime when it should be at hit zone
     spawnTime: arrivalTime - travel,
-    x: W + BEAT_RADIUS,
+    y: -BEAT_RADIUS,    // start above screen, fall down
     hit: false,
     missed: false,
     alpha: 1
@@ -257,12 +256,12 @@ function emitParticles(x, y, color, count){
 
 /* ── Grade text ── */
 function showGrade(lane, grade){
-  const hx = hitZoneX();
-  const ly = laneY(lane);
+  const lx = laneX(lane);
+  const hy = hitZoneY();
   gradeTexts.push({
     text: grade,
-    x: hx,
-    y: ly - 30,
+    x: lx,
+    y: hy - 40,
     alpha: 1,
     scale: 1.4,
     color: GRADE_COLORS[grade]
@@ -304,13 +303,13 @@ function hitLane(laneIdx){
 
     if(grade === 'PERFECT'){
       health = Math.min(HEALTH_MAX, health + HEALTH_PERFECT_REGEN);
-      emitParticles(hitZoneX(), laneY(laneIdx), '#ffd700', 30);
+      emitParticles(laneX(laneIdx), hitZoneY(), '#ffd700', 30);
     } else if(grade === 'GREAT'){
       health = Math.min(HEALTH_MAX, health + HEALTH_GREAT_REGEN);
-      emitParticles(hitZoneX(), laneY(laneIdx), '#aa44ff', 16);
+      emitParticles(laneX(laneIdx), hitZoneY(), '#aa44ff', 16);
     } else {
       health = Math.min(HEALTH_MAX, health + HEALTH_GOOD_REGEN);
-      emitParticles(hitZoneX(), laneY(laneIdx), '#4488ff', 8);
+      emitParticles(laneX(laneIdx), hitZoneY(), '#4488ff', 8);
     }
 
     showGrade(laneIdx, grade);
@@ -408,13 +407,13 @@ function loop(ts){
   }
 
   // Update beats
-  const hx = hitZoneX();
+  const hy = hitZoneY();
   beats.forEach(b => {
     if(b.hit){
       b.alpha -= 0.06;
     } else {
       const progress = (gameTime - b.spawnTime) / travel;
-      b.x = W + BEAT_RADIUS - progress * (W + BEAT_RADIUS - hx + BEAT_RADIUS);
+      b.y = -BEAT_RADIUS + progress * (hy + BEAT_RADIUS);
       // Check for miss (passed the zone)
       if(!b.missed && gameTime > b.arrivalTime + MISS_MS){
         b.missed = true;
@@ -429,7 +428,7 @@ function loop(ts){
   });
 
   // Remove dead beats
-  beats = beats.filter(b => b.alpha > 0 && b.x > -60);
+  beats = beats.filter(b => b.alpha > 0 && b.y < H + 60);
 
   // Check game over
   if(health <= 0){
@@ -463,73 +462,72 @@ function loop(ts){
 
 function render(){
   // Background with pulse
-  const bgBright = 0.02 + bgPulse * 0.04;
   const r = Math.round(8 + bgPulse * 24);
   const g = Math.round(2 + bgPulse * 4);
   const b2 = Math.round(13 + bgPulse * 40);
   ctx.fillStyle = `rgb(${r},${g},${b2})`;
   ctx.fillRect(0, 0, W, H);
 
-  const hx = hitZoneX();
+  const hy = hitZoneY();
 
-  // Lane lines
+  // Vertical lane lines (top to hit zone)
   for(let i = 0; i < LANE_COUNT; i++){
-    const ly = laneY(i);
+    const lx = laneX(i);
     ctx.save();
-    ctx.strokeStyle = LANE_COLORS[i] + '22';
+    ctx.strokeStyle = LANE_COLORS[i] + '18';
     ctx.lineWidth = 1;
     ctx.setLineDash([8, 12]);
     ctx.beginPath();
-    ctx.moveTo(hx - 40, ly);
-    ctx.lineTo(W, ly);
+    ctx.moveTo(lx, 50);
+    ctx.lineTo(lx, hy + 40);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
   }
 
-  // Hit zone column glow
-  const grd = ctx.createLinearGradient(hx - 50, 0, hx + 50, 0);
+  // Hit zone row glow
+  const grd = ctx.createLinearGradient(0, hy - 50, 0, hy + 50);
   grd.addColorStop(0, 'rgba(136,0,255,0)');
-  grd.addColorStop(0.5, 'rgba(136,0,255,' + (0.06 + bgPulse * 0.1) + ')');
+  grd.addColorStop(0.5, 'rgba(136,0,255,' + (0.06 + bgPulse * 0.12) + ')');
   grd.addColorStop(1, 'rgba(136,0,255,0)');
   ctx.fillStyle = grd;
-  ctx.fillRect(hx - 50, 0, 100, H);
+  ctx.fillRect(0, hy - 50, W, 100);
 
   // Hit zone rings
   for(let i = 0; i < LANE_COUNT; i++){
-    const ly = laneY(i);
+    const lx = laneX(i);
     ctx.save();
     ctx.strokeStyle = LANE_COLORS[i] + '88';
     ctx.lineWidth = 3;
     ctx.shadowColor = LANE_COLORS[i];
-    ctx.shadowBlur = 10 + bgPulse * 8;
+    ctx.shadowBlur = 10 + bgPulse * 10;
     ctx.beginPath();
-    ctx.arc(hx, ly, BEAT_RADIUS + 6, 0, Math.PI * 2);
+    ctx.arc(lx, hy, BEAT_RADIUS + 6, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
 
-  // Beats
+  // Beats (falling downward)
   beats.forEach(beat => {
-    const ly = laneY(beat.lane);
-    const distToZone = Math.abs(beat.x - hx);
-    const proximity = 1 - Math.min(distToZone / (W * 0.5), 1);
+    const lx = laneX(beat.lane);
+    const distToZone = Math.abs(beat.y - hy);
+    const proximity = 1 - Math.min(distToZone / (H * 0.5), 1);
     const glowSize = 6 + proximity * 14;
     const pulseSize = Math.sin(gameTime * 0.008) * 3 * proximity;
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, beat.alpha);
 
-    // Motion trail
+    // Upward motion trail
     if(!beat.hit && !beat.missed){
       const trailLen = 4;
       for(let t = 1; t <= trailLen; t++){
-        const tx = beat.x + t * 12;
+        const ty = beat.y - t * 12;
         const ta = (1 - t / (trailLen + 1)) * 0.25 * beat.alpha;
         ctx.globalAlpha = ta;
         ctx.fillStyle = LANE_COLORS[beat.lane];
         ctx.beginPath();
-        ctx.arc(tx, ly, BEAT_RADIUS - t * 2, 0, Math.PI * 2);
+        ctx.arc(lx, ty, BEAT_RADIUS - t * 2, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = Math.max(0, beat.alpha);
@@ -540,20 +538,20 @@ function render(){
     ctx.shadowBlur = glowSize + pulseSize;
 
     // Filled circle
-    const grad = ctx.createRadialGradient(beat.x, ly, 0, beat.x, ly, BEAT_RADIUS + pulseSize);
+    const grad = ctx.createRadialGradient(lx, beat.y, 0, lx, beat.y, BEAT_RADIUS + pulseSize);
     grad.addColorStop(0, '#fff');
     grad.addColorStop(0.3, LANE_COLORS[beat.lane]);
     grad.addColorStop(1, LANE_COLORS[beat.lane] + '44');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(beat.x, ly, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
+    ctx.arc(lx, beat.y, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
     ctx.fill();
 
     // Ring
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(beat.x, ly, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
+    ctx.arc(lx, beat.y, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.restore();
@@ -572,7 +570,7 @@ function render(){
     ctx.restore();
   });
 
-  // Grade texts
+  // Grade texts (float upward from hit zone)
   gradeTexts.forEach(g => {
     ctx.save();
     ctx.globalAlpha = Math.max(0, g.alpha);
@@ -588,13 +586,13 @@ function render(){
   // Lane labels at hit zone (small, subtle)
   const keys = ['D','F','J'];
   for(let i = 0; i < LANE_COUNT; i++){
-    const ly = laneY(i);
+    const lx = laneX(i);
     ctx.save();
     ctx.globalAlpha = 0.3;
     ctx.font = "14px 'Barlow', sans-serif";
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.fillText(keys[i], hx, ly + 5);
+    ctx.fillText(keys[i], lx, hy + 5);
     ctx.restore();
   }
 }

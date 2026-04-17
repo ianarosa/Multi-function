@@ -1420,15 +1420,19 @@
     rCtx.fillStyle = `rgb(${rr},${rg},${rb})`;
     rCtx.fillRect(0, 0, W, H);
 
-    // Lane lines
+    // Vertical lanes — beats fall downward
     const laneColors = ['#8800ff','#aa44ff','#c864ff'];
-    const hitX = W * 0.18;
+    const hitY = H * 0.82;
+    const lanePad = W * 0.15;
+    const laneSpacing = (W - lanePad * 2) / 3;
+
     for (let i = 0; i < 3; i++) {
-      const ly = H * (0.22 + i * 0.28);
-      rCtx.strokeStyle = laneColors[i] + '22';
+      const lx = lanePad + laneSpacing * (i + 0.5);
+      // Vertical lane line
+      rCtx.strokeStyle = laneColors[i] + '18';
       rCtx.lineWidth = 1;
       rCtx.setLineDash([4, 8]);
-      rCtx.beginPath(); rCtx.moveTo(hitX, ly); rCtx.lineTo(W, ly); rCtx.stroke();
+      rCtx.beginPath(); rCtx.moveTo(lx, 0); rCtx.lineTo(lx, hitY + 20); rCtx.stroke();
       rCtx.setLineDash([]);
 
       // Hit zone ring
@@ -1437,27 +1441,26 @@
       rCtx.shadowColor = laneColors[i];
       rCtx.shadowBlur = 6 + bgPulse * 20;
       rCtx.beginPath();
-      rCtx.arc(hitX, ly, 14, 0, Math.PI * 2);
+      rCtx.arc(lx, hitY, 14, 0, Math.PI * 2);
       rCtx.stroke();
       rCtx.shadowBlur = 0;
     }
 
-    // Hit zone glow column
-    const grd = rCtx.createLinearGradient(hitX - 30, 0, hitX + 30, 0);
+    // Hit zone glow row
+    const grd = rCtx.createLinearGradient(0, hitY - 25, 0, hitY + 25);
     grd.addColorStop(0, 'rgba(136,0,255,0)');
     grd.addColorStop(0.5, 'rgba(136,0,255,' + (0.05 + bgPulse * 0.3) + ')');
     grd.addColorStop(1, 'rgba(136,0,255,0)');
     rCtx.fillStyle = grd;
-    rCtx.fillRect(hitX - 30, 0, 60, H);
+    rCtx.fillRect(0, hitY - 25, W, 50);
 
-    // Spawn beats
+    // Spawn beats (falling from top)
     if (ms > rNextSpawn) {
       const lane = Math.floor(Math.random() * 3);
-      RHYTHM_BEATS.push({ lane, x: W + 12, spawnT: ms });
-      // sometimes double
+      RHYTHM_BEATS.push({ lane, y: -12, spawnT: ms });
       if (Math.random() < 0.3) {
         const l2 = (lane + 1 + Math.floor(Math.random() * 2)) % 3;
-        RHYTHM_BEATS.push({ lane: l2, x: W + 12, spawnT: ms });
+        RHYTHM_BEATS.push({ lane: l2, y: -12, spawnT: ms });
       }
       rNextSpawn = ms + 0.44 + Math.random() * 0.3;
     }
@@ -1465,17 +1468,17 @@
     // Update & draw beats
     for (let i = RHYTHM_BEATS.length - 1; i >= 0; i--) {
       const b = RHYTHM_BEATS[i];
-      b.x -= 1.8;
-      const ly = H * (0.22 + b.lane * 0.28);
-      const proximity = 1 - Math.min(Math.abs(b.x - hitX) / (W * 0.4), 1);
+      b.y += 1.5;
+      const lx = lanePad + laneSpacing * (b.lane + 0.5);
+      const proximity = 1 - Math.min(Math.abs(b.y - hitY) / (H * 0.4), 1);
       const pulseR = Math.sin(ms * 6) * 2 * proximity;
 
-      // Trail
+      // Upward trail
       for (let tr = 1; tr <= 3; tr++) {
         rCtx.globalAlpha = (1 - tr / 4) * 0.2;
         rCtx.fillStyle = laneColors[b.lane];
         rCtx.beginPath();
-        rCtx.arc(b.x + tr * 8, ly, 10 - tr * 2, 0, Math.PI * 2);
+        rCtx.arc(lx, b.y - tr * 8, 10 - tr * 2, 0, Math.PI * 2);
         rCtx.fill();
       }
       rCtx.globalAlpha = 1;
@@ -1483,13 +1486,13 @@
       // Main beat
       rCtx.shadowColor = laneColors[b.lane];
       rCtx.shadowBlur = 6 + proximity * 10;
-      const grad = rCtx.createRadialGradient(b.x, ly, 0, b.x, ly, 12 + pulseR);
+      const grad = rCtx.createRadialGradient(lx, b.y, 0, lx, b.y, 12 + pulseR);
       grad.addColorStop(0, '#fff');
       grad.addColorStop(0.4, laneColors[b.lane]);
       grad.addColorStop(1, laneColors[b.lane] + '44');
       rCtx.fillStyle = grad;
       rCtx.beginPath();
-      rCtx.arc(b.x, ly, 12 + pulseR, 0, Math.PI * 2);
+      rCtx.arc(lx, b.y, 12 + pulseR, 0, Math.PI * 2);
       rCtx.fill();
       rCtx.strokeStyle = '#fff8';
       rCtx.lineWidth = 1.5;
@@ -1497,19 +1500,19 @@
       rCtx.shadowBlur = 0;
 
       // "Hit" flash when passing zone
-      if (Math.abs(b.x - hitX) < 6) {
+      if (Math.abs(b.y - hitY) < 6) {
         rCtx.globalAlpha = 0.7;
         rCtx.fillStyle = '#ffd700';
         rCtx.shadowColor = '#ffd700';
         rCtx.shadowBlur = 18;
         rCtx.font = 'bold 11px "Bebas Neue", cursive';
         rCtx.textAlign = 'center';
-        rCtx.fillText('PERFECT', hitX, ly - 22);
+        rCtx.fillText('PERFECT', lx, hitY - 22);
         rCtx.shadowBlur = 0;
         rCtx.globalAlpha = 1;
       }
 
-      if (b.x < -20) RHYTHM_BEATS.splice(i, 1);
+      if (b.y > H + 20) RHYTHM_BEATS.splice(i, 1);
     }
   }
 
