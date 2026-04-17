@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>RHYTHM PULSE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:'Barlow',sans-serif;color:#fff;touch-action:none;-webkit-tap-highlight-color:transparent;}
+
+#top-bar{position:fixed;top:0;left:0;width:100%;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:rgba(8,2,13,0.92);border-bottom:2px solid #aa44ff44;z-index:100;backdrop-filter:blur(6px);}
+#back-btn{color:#aa44ff;text-decoration:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;}
+#back-btn:hover{color:#cc77ff;}
+#top-bar h1{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:3px;color:#aa44ff;text-align:center;flex:1;text-shadow:0 0 12px #8800ff88;}
+#top-spacer{display:flex;align-items:center;justify-content:flex-end;min-width:60px;}
+#fs-btn{background:none;border:1px solid #aa44ff66;color:#aa44ff;font-size:18px;width:34px;height:34px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#fs-btn:hover{background:#aa44ff22;}
+
+#game-canvas{display:block;width:100%;height:100%;}
+
+#ui-overlay{position:fixed;top:48px;left:0;width:100%;pointer-events:none;z-index:50;padding:8px 14px;display:flex;justify-content:space-between;align-items:flex-start;}
+#score-display{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#fff;text-shadow:0 0 8px #aa44ff88;letter-spacing:2px;}
+#combo-display{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#aa44ff;text-shadow:0 0 6px #8800ff66;letter-spacing:1px;}
+#health-bar-wrap{width:120px;height:10px;background:#1a0a24;border:1px solid #aa44ff44;border-radius:5px;overflow:hidden;margin-top:4px;}
+#health-bar-inner{width:100%;height:100%;background:linear-gradient(90deg,#8800ff,#aa44ff);transition:width 0.2s;border-radius:5px;}
+#bpm-display{font-family:'Barlow',sans-serif;font-size:13px;color:#aa44ff99;margin-top:2px;}
+.ui-left,.ui-right{display:flex;flex-direction:column;}
+.ui-right{align-items:flex-end;}
+
+#mobile-lanes{position:fixed;bottom:0;left:0;width:100%;display:none;z-index:90;pointer-events:auto;}
+#mobile-lanes .lane-btn{flex:1;height:80px;border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#mobile-lanes .lane-btn:nth-child(1){background:rgba(136,0,255,0.25);border-right:1px solid #aa44ff44;}
+#mobile-lanes .lane-btn:nth-child(2){background:rgba(170,68,255,0.25);border-right:1px solid #aa44ff44;}
+#mobile-lanes .lane-btn:nth-child(3){background:rgba(200,100,255,0.25);}
+#mobile-lanes .lane-btn:active{background:rgba(170,68,255,0.55);}
+
+#start-screen,#gameover-screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;background:rgba(8,2,13,0.95);pointer-events:auto;}
+#start-screen h2,#gameover-screen h2{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:6px;color:#aa44ff;text-shadow:0 0 20px #8800ff88;margin-bottom:8px;}
+#start-screen .sub,#gameover-screen .sub{font-family:'Barlow',sans-serif;font-size:16px;color:#aa44ff99;margin-bottom:24px;text-align:center;max-width:320px;line-height:1.5;}
+.play-btn{background:linear-gradient(135deg,#8800ff,#aa44ff);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;padding:14px 48px;border-radius:8px;cursor:pointer;box-shadow:0 0 24px #8800ff66;transition:transform 0.15s,box-shadow 0.15s;}
+.play-btn:hover{transform:scale(1.05);box-shadow:0 0 36px #aa44ff88;}
+#gameover-screen .final-score{font-family:'Bebas Neue',sans-serif;font-size:64px;color:#fff;text-shadow:0 0 16px #aa44ff88;margin:8px 0;}
+#gameover-screen .hi-score{font-family:'Barlow',sans-serif;font-size:15px;color:#aa44ff99;margin-bottom:20px;}
+.hidden{display:none!important;}
+
+@media(max-width:768px){
+  #mobile-lanes{display:flex!important;}
+  #score-display{font-size:22px;}
+  #combo-display{font-size:18px;}
+}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <a id="back-btn" href="/">&#8592; HUB</a>
+  <h1>RHYTHM PULSE</h1>
+  <div id="top-spacer">
+    <button id="fs-btn" title="Fullscreen">&#x26F6;</button>
+  </div>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="ui-overlay">
+  <div class="ui-left">
+    <div id="score-display">0</div>
+    <div id="combo-display"></div>
+    <div id="bpm-display">90 BPM</div>
+  </div>
+  <div class="ui-right">
+    <div id="health-bar-wrap"><div id="health-bar-inner"></div></div>
+  </div>
+</div>
+
+<div id="mobile-lanes" class="hidden">
+  <button class="lane-btn" data-lane="0">D</button>
+  <button class="lane-btn" data-lane="1">F</button>
+  <button class="lane-btn" data-lane="2">J</button>
+</div>
+
+<div id="start-screen">
+  <h2>RHYTHM PULSE</h2>
+  <p class="sub">Beats fly toward the hit zone. Tap in time!<br>Keyboard: D / F / J for 3 lanes.<br>Mobile: tap the lane buttons.</p>
+  <button class="play-btn" id="start-btn">PLAY</button>
+</div>
+
+<div id="gameover-screen" class="hidden">
+  <h2>GAME OVER</h2>
+  <div class="final-score" id="final-score">0</div>
+  <div class="hi-score" id="hi-score-text">HIGH SCORE: 0</div>
+  <button class="play-btn" id="retry-btn">RETRY</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── DOM refs ── */
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score-display');
+const comboEl = document.getElementById('combo-display');
+const bpmEl = document.getElementById('bpm-display');
+const healthBar = document.getElementById('health-bar-inner');
+const startScreen = document.getElementById('start-screen');
+const gameoverScreen = document.getElementById('gameover-screen');
+const finalScoreEl = document.getElementById('final-score');
+const hiScoreText = document.getElementById('hi-score-text');
+const mobileLanes = document.getElementById('mobile-lanes');
+const fsBtn = document.getElementById('fs-btn');
+const startBtn = document.getElementById('start-btn');
+const retryBtn = document.getElementById('retry-btn');
+
+/* ── Fullscreen ── */
+fsBtn.addEventListener('click', () => {
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+  } else {
+    document.exitFullscreen().catch(()=>{});
+  }
+});
+
+/* ── Canvas sizing ── */
+let W, H;
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ── Constants ── */
+const HIT_ZONE_X_FRAC = 0.15;   // fraction of screen width
+const LANE_COUNT = 3;
+const BEAT_RADIUS = 22;
+const PERFECT_MS = 30;
+const GREAT_MS = 80;
+const GOOD_MS = 150;
+const MISS_MS = 200;
+const TRAVEL_TIME_BEATS = 4;     // how many beats to cross screen
+const HEALTH_MAX = 100;
+const HEALTH_MISS_PENALTY = 28;
+const HEALTH_GOOD_REGEN = 2;
+const HEALTH_GREAT_REGEN = 5;
+const HEALTH_PERFECT_REGEN = 12;
+
+const GRADE_COLORS = {PERFECT:'#ffd700',GREAT:'#aa44ff',GOOD:'#4488ff',MISS:'#ff2244'};
+const GRADE_POINTS = {PERFECT:300,GREAT:200,GOOD:100,MISS:0};
+
+const LANE_COLORS = ['#8800ff','#aa44ff','#c864ff'];
+
+/* ── State ── */
+let running = false;
+let score = 0;
+let combo = 0;
+let maxCombo = 0;
+let health = HEALTH_MAX;
+let bpm = 90;
+let beatInterval = 60000 / bpm;   // ms per beat
+let gameTime = 0;                  // ms since game start
+let lastFrameTime = 0;
+let beats = [];                    // active beat objects
+let particles = [];
+let gradeTexts = [];               // floating grade labels
+let bgPulse = 0;                   // 0-1 background pulse
+let nextBeatTime = 0;              // game time of next scheduled beat
+let patternQueue = [];             // upcoming pattern entries
+let beatsSpawned = 0;
+let consecutiveMisses = 0;
+let highScore = parseInt(localStorage.getItem('rhythmPulseHigh') || '0', 10);
+
+/* ── Helpers ── */
+function hitZoneX(){ return W * HIT_ZONE_X_FRAC; }
+function laneY(i){
+  const topPad = 80;
+  const botPad = (window.innerWidth <= 768) ? 100 : 40;
+  const usable = H - topPad - botPad;
+  return topPad + usable * (i + 0.5) / LANE_COUNT;
+}
+function travelPx(){ return W - hitZoneX(); }
+function travelMs(){ return beatInterval * TRAVEL_TIME_BEATS; }
+
+/* ── Beat generation ── */
+function generatePattern(){
+  // Produce a small chunk of beats (4-8 beats worth)
+  const chunkBeats = 4 + Math.floor(Math.random()*5);
+  const pattern = [];
+  let t = 0;
+  for(let i = 0; i < chunkBeats; i++){
+    const r = Math.random();
+    if(r < 0.55){
+      // single
+      pattern.push({dt: t, lanes:[Math.floor(Math.random()*3)]});
+    } else if(r < 0.82){
+      // double
+      const a = Math.floor(Math.random()*3);
+      let b = (a + 1 + Math.floor(Math.random()*2)) % 3;
+      pattern.push({dt: t, lanes:[a, b]});
+    } else if(r < 0.92){
+      // triple
+      pattern.push({dt: t, lanes:[0,1,2]});
+    } else {
+      // off-beat (half beat)
+      pattern.push({dt: t, lanes:[Math.floor(Math.random()*3)]});
+      t += 0.5;
+      pattern.push({dt: t, lanes:[Math.floor(Math.random()*3)]});
+    }
+    t += 1;
+  }
+  return pattern;
+}
+
+function scheduleBeats(){
+  if(patternQueue.length > 0) return;
+  const pat = generatePattern();
+  pat.forEach(p => {
+    const spawnTime = nextBeatTime + p.dt * beatInterval;
+    p.lanes.forEach(lane => {
+      patternQueue.push({spawnTime, lane});
+    });
+  });
+  nextBeatTime += (pat[pat.length-1].dt + 1) * beatInterval;
+}
+
+function spawnBeat(lane, arrivalTime){
+  const travel = travelMs();
+  beats.push({
+    lane,
+    arrivalTime,        // gameTime when it should be at hit zone
+    spawnTime: arrivalTime - travel,
+    x: W + BEAT_RADIUS,
+    hit: false,
+    missed: false,
+    alpha: 1
+  });
+}
+
+/* ── Particles ── */
+function emitParticles(x, y, color, count){
+  for(let i = 0; i < count; i++){
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.025,
+      radius: 2 + Math.random() * 4,
+      color
+    });
+  }
+}
+
+/* ── Grade text ── */
+function showGrade(lane, grade){
+  const hx = hitZoneX();
+  const ly = laneY(lane);
+  gradeTexts.push({
+    text: grade,
+    x: hx,
+    y: ly - 30,
+    alpha: 1,
+    scale: 1.4,
+    color: GRADE_COLORS[grade]
+  });
+}
+
+/* ── Input handling ── */
+function hitLane(laneIdx){
+  if(!running) return;
+  const hx = hitZoneX();
+  const now = gameTime;
+  // find closest unhit beat in this lane
+  let best = null;
+  let bestDiff = Infinity;
+  beats.forEach(b => {
+    if(b.lane !== laneIdx || b.hit || b.missed) return;
+    const diff = Math.abs(now - b.arrivalTime);
+    if(diff < bestDiff){
+      bestDiff = diff;
+      best = b;
+    }
+  });
+
+  let grade = 'MISS';
+  if(best && bestDiff <= MISS_MS){
+    if(bestDiff <= PERFECT_MS) grade = 'PERFECT';
+    else if(bestDiff <= GREAT_MS) grade = 'GREAT';
+    else if(bestDiff <= GOOD_MS) grade = 'GOOD';
+    else grade = 'MISS';
+  }
+
+  if(grade !== 'MISS' && best){
+    best.hit = true;
+    combo++;
+    consecutiveMisses = 0;
+    if(combo > maxCombo) maxCombo = combo;
+    const mult = 1 + Math.floor(combo / 10) * 0.5;
+    score += Math.round(GRADE_POINTS[grade] * mult);
+
+    if(grade === 'PERFECT'){
+      health = Math.min(HEALTH_MAX, health + HEALTH_PERFECT_REGEN);
+      emitParticles(hitZoneX(), laneY(laneIdx), '#ffd700', 30);
+    } else if(grade === 'GREAT'){
+      health = Math.min(HEALTH_MAX, health + HEALTH_GREAT_REGEN);
+      emitParticles(hitZoneX(), laneY(laneIdx), '#aa44ff', 16);
+    } else {
+      health = Math.min(HEALTH_MAX, health + HEALTH_GOOD_REGEN);
+      emitParticles(hitZoneX(), laneY(laneIdx), '#4488ff', 8);
+    }
+
+    showGrade(laneIdx, grade);
+  } else {
+    // player tapped but nothing close enough -- silent, no penalty
+    // (penalty comes from beats passing the zone)
+  }
+  updateUI();
+}
+
+const KEY_MAP = {'d':0,'D':0,'f':1,'F':1,'j':2,'J':2};
+document.addEventListener('keydown', e => {
+  if(KEY_MAP[e.key] !== undefined){
+    e.preventDefault();
+    hitLane(KEY_MAP[e.key]);
+  }
+});
+
+/* Mobile lane buttons */
+document.querySelectorAll('.lane-btn').forEach(btn => {
+  const lane = parseInt(btn.dataset.lane);
+  btn.addEventListener('touchstart', e => { e.preventDefault(); hitLane(lane); }, {passive:false});
+  btn.addEventListener('mousedown', e => { e.preventDefault(); hitLane(lane); });
+});
+
+/* ── UI updates ── */
+function updateUI(){
+  scoreEl.textContent = score;
+  comboEl.textContent = combo > 1 ? combo + 'x COMBO' : '';
+  healthBar.style.width = Math.max(0, health) + '%';
+  if(health < 30){
+    healthBar.style.background = 'linear-gradient(90deg,#ff2244,#ff4466)';
+  } else {
+    healthBar.style.background = 'linear-gradient(90deg,#8800ff,#aa44ff)';
+  }
+  bpmEl.textContent = Math.round(bpm) + ' BPM';
+}
+
+/* ── Game flow ── */
+function startGame(){
+  score = 0; combo = 0; maxCombo = 0; health = HEALTH_MAX;
+  bpm = 90; beatInterval = 60000/bpm;
+  gameTime = 0; lastFrameTime = 0;
+  beats = []; particles = []; gradeTexts = [];
+  patternQueue = []; nextBeatTime = beatInterval * 2;
+  beatsSpawned = 0; consecutiveMisses = 0;
+  running = true;
+  startScreen.classList.add('hidden');
+  gameoverScreen.classList.add('hidden');
+  if(window.innerWidth <= 768) mobileLanes.classList.remove('hidden');
+  updateUI();
+  lastFrameTime = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function endGame(){
+  running = false;
+  if(score > highScore){
+    highScore = score;
+    localStorage.setItem('rhythmPulseHigh', highScore);
+  }
+  finalScoreEl.textContent = score;
+  hiScoreText.textContent = 'HIGH SCORE: ' + highScore;
+  gameoverScreen.classList.remove('hidden');
+  mobileLanes.classList.add('hidden');
+}
+
+startBtn.addEventListener('click', startGame);
+retryBtn.addEventListener('click', startGame);
+
+/* ── Main loop ── */
+function loop(ts){
+  if(!running) return;
+  const dt = lastFrameTime ? ts - lastFrameTime : 16;
+  lastFrameTime = ts;
+  gameTime += dt;
+
+  // Increase BPM over time
+  bpm = 90 + gameTime / 1000 * 0.15;  // +0.15 bpm per second
+  beatInterval = 60000 / bpm;
+
+  // BG pulse synced to BPM
+  const beatPhase = (gameTime % beatInterval) / beatInterval;
+  bgPulse = Math.pow(1 - beatPhase, 3);
+
+  // Schedule & spawn beats
+  scheduleBeats();
+  const travel = travelMs();
+  while(patternQueue.length > 0){
+    const next = patternQueue[0];
+    if(next.spawnTime <= gameTime + travel + 100){
+      patternQueue.shift();
+      spawnBeat(next.lane, next.spawnTime);
+    } else break;
+  }
+
+  // Update beats
+  const hx = hitZoneX();
+  beats.forEach(b => {
+    if(b.hit){
+      b.alpha -= 0.06;
+    } else {
+      const progress = (gameTime - b.spawnTime) / travel;
+      b.x = W + BEAT_RADIUS - progress * (W + BEAT_RADIUS - hx + BEAT_RADIUS);
+      // Check for miss (passed the zone)
+      if(!b.missed && gameTime > b.arrivalTime + MISS_MS){
+        b.missed = true;
+        combo = 0;
+        consecutiveMisses++;
+        health -= HEALTH_MISS_PENALTY;
+        showGrade(b.lane, 'MISS');
+        updateUI();
+      }
+      if(b.missed) b.alpha -= 0.03;
+    }
+  });
+
+  // Remove dead beats
+  beats = beats.filter(b => b.alpha > 0 && b.x > -60);
+
+  // Check game over
+  if(health <= 0){
+    endGame();
+    return;
+  }
+
+  // Update particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= p.decay;
+    p.vx *= 0.97;
+    p.vy *= 0.97;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Update grade texts
+  gradeTexts.forEach(g => {
+    g.y -= 1.2;
+    g.alpha -= 0.018;
+    g.scale *= 0.985;
+  });
+  gradeTexts = gradeTexts.filter(g => g.alpha > 0);
+
+  // ── RENDER ──
+  render();
+  updateUI();
+  requestAnimationFrame(loop);
+}
+
+function render(){
+  // Background with pulse
+  const bgBright = 0.02 + bgPulse * 0.04;
+  const r = Math.round(8 + bgPulse * 24);
+  const g = Math.round(2 + bgPulse * 4);
+  const b2 = Math.round(13 + bgPulse * 40);
+  ctx.fillStyle = `rgb(${r},${g},${b2})`;
+  ctx.fillRect(0, 0, W, H);
+
+  const hx = hitZoneX();
+
+  // Lane lines
+  for(let i = 0; i < LANE_COUNT; i++){
+    const ly = laneY(i);
+    ctx.save();
+    ctx.strokeStyle = LANE_COLORS[i] + '22';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([8, 12]);
+    ctx.beginPath();
+    ctx.moveTo(hx - 40, ly);
+    ctx.lineTo(W, ly);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Hit zone column glow
+  const grd = ctx.createLinearGradient(hx - 50, 0, hx + 50, 0);
+  grd.addColorStop(0, 'rgba(136,0,255,0)');
+  grd.addColorStop(0.5, 'rgba(136,0,255,' + (0.06 + bgPulse * 0.1) + ')');
+  grd.addColorStop(1, 'rgba(136,0,255,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(hx - 50, 0, 100, H);
+
+  // Hit zone rings
+  for(let i = 0; i < LANE_COUNT; i++){
+    const ly = laneY(i);
+    ctx.save();
+    ctx.strokeStyle = LANE_COLORS[i] + '88';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = LANE_COLORS[i];
+    ctx.shadowBlur = 10 + bgPulse * 8;
+    ctx.beginPath();
+    ctx.arc(hx, ly, BEAT_RADIUS + 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Beats
+  beats.forEach(beat => {
+    const ly = laneY(beat.lane);
+    const distToZone = Math.abs(beat.x - hx);
+    const proximity = 1 - Math.min(distToZone / (W * 0.5), 1);
+    const glowSize = 6 + proximity * 14;
+    const pulseSize = Math.sin(gameTime * 0.008) * 3 * proximity;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, beat.alpha);
+
+    // Motion trail
+    if(!beat.hit && !beat.missed){
+      const trailLen = 4;
+      for(let t = 1; t <= trailLen; t++){
+        const tx = beat.x + t * 12;
+        const ta = (1 - t / (trailLen + 1)) * 0.25 * beat.alpha;
+        ctx.globalAlpha = ta;
+        ctx.fillStyle = LANE_COLORS[beat.lane];
+        ctx.beginPath();
+        ctx.arc(tx, ly, BEAT_RADIUS - t * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = Math.max(0, beat.alpha);
+    }
+
+    // Outer glow
+    ctx.shadowColor = LANE_COLORS[beat.lane];
+    ctx.shadowBlur = glowSize + pulseSize;
+
+    // Filled circle
+    const grad = ctx.createRadialGradient(beat.x, ly, 0, beat.x, ly, BEAT_RADIUS + pulseSize);
+    grad.addColorStop(0, '#fff');
+    grad.addColorStop(0.3, LANE_COLORS[beat.lane]);
+    grad.addColorStop(1, LANE_COLORS[beat.lane] + '44');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(beat.x, ly, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ring
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(beat.x, ly, BEAT_RADIUS + pulseSize, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  });
+
+  // Particles
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Grade texts
+  gradeTexts.forEach(g => {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, g.alpha);
+    ctx.font = `${Math.round(28 * g.scale)}px 'Bebas Neue', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = g.color;
+    ctx.shadowColor = g.color;
+    ctx.shadowBlur = 12;
+    ctx.fillText(g.text, g.x, g.y);
+    ctx.restore();
+  });
+
+  // Lane labels at hit zone (small, subtle)
+  const keys = ['D','F','J'];
+  for(let i = 0; i < LANE_COUNT; i++){
+    const ly = laneY(i);
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.font = "14px 'Barlow', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(keys[i], hx, ly + 5);
+    ctx.restore();
+  }
+}
+
+/* ── Start screen shows high score ── */
+if(highScore > 0){
+  const sub = startScreen.querySelector('.sub');
+  sub.innerHTML += '<br>High Score: ' + highScore;
+}
+
+})();
+</script>
+</body>
+</html>

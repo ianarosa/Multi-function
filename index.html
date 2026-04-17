@@ -215,6 +215,86 @@
   .card-pong .play-btn     { color: #0df; background: rgba(0,220,255,0.08); border-color: rgba(0,220,255,0.4); }
   .card-pong:hover .play-btn { background: rgba(0,220,255,0.2); }
 
+  /* ── Snake Neon theme ── */
+  .card-snake {
+    background: #020d02;
+    border: 1px solid rgba(0,255,100,0.25);
+    box-shadow: 0 2px 24px rgba(0,255,100,0.05);
+  }
+  .card-snake:hover {
+    box-shadow: 0 10px 44px rgba(0,255,100,0.25);
+    border-color: rgba(0,255,100,0.55);
+  }
+  .card-snake .card-preview { background: radial-gradient(ellipse at 50% 50%, #041a04 0%, #010a01 100%); }
+  .card-snake .card-genre   { color: rgba(0,255,100,0.7); }
+  .card-snake .card-name    { color: #00ff66; }
+  .card-snake .play-btn     { color: #00ff66; background: rgba(0,255,100,0.1); border-color: rgba(0,255,100,0.4); }
+  .card-snake:hover .play-btn { background: rgba(0,255,100,0.22); }
+
+  /* ── Asteroid Blitz theme ── */
+  .card-asteroid {
+    background: #0d0202;
+    border: 1px solid rgba(255,68,68,0.25);
+    box-shadow: 0 2px 24px rgba(255,100,0,0.05);
+  }
+  .card-asteroid:hover {
+    box-shadow: 0 10px 44px rgba(255,100,0,0.25);
+    border-color: rgba(255,68,68,0.55);
+  }
+  .card-asteroid .card-preview { background: radial-gradient(ellipse at 50% 50%, #1a0808 0%, #0a0101 100%); }
+  .card-asteroid .card-genre   { color: rgba(255,100,0,0.7); }
+  .card-asteroid .card-name    { color: #ff6600; }
+  .card-asteroid .play-btn     { color: #ff6600; background: rgba(255,100,0,0.1); border-color: rgba(255,100,0,0.4); }
+  .card-asteroid:hover .play-btn { background: rgba(255,100,0,0.22); }
+
+  /* ── Memory Matrix theme ── */
+  .card-memory {
+    background: #020810;
+    border: 1px solid rgba(0,170,255,0.25);
+    box-shadow: 0 2px 24px rgba(0,170,255,0.05);
+  }
+  .card-memory:hover {
+    box-shadow: 0 10px 44px rgba(0,170,255,0.25);
+    border-color: rgba(0,170,255,0.55);
+  }
+  .card-memory .card-preview { background: radial-gradient(ellipse at 50% 50%, #041020 0%, #010610 100%); }
+  .card-memory .card-genre   { color: rgba(0,170,255,0.7); }
+  .card-memory .card-name    { color: #0af; }
+  .card-memory .play-btn     { color: #0af; background: rgba(0,170,255,0.1); border-color: rgba(0,170,255,0.4); }
+  .card-memory:hover .play-btn { background: rgba(0,170,255,0.22); }
+
+  /* ── Tower Stack theme ── */
+  .card-tower {
+    background: #0d0208;
+    border: 1px solid rgba(255,34,136,0.25);
+    box-shadow: 0 2px 24px rgba(255,0,102,0.05);
+  }
+  .card-tower:hover {
+    box-shadow: 0 10px 44px rgba(255,0,102,0.25);
+    border-color: rgba(255,34,136,0.55);
+  }
+  .card-tower .card-preview { background: linear-gradient(160deg, #140210 0%, #080105 100%); }
+  .card-tower .card-genre   { color: rgba(255,34,136,0.7); }
+  .card-tower .card-name    { color: #ff2288; }
+  .card-tower .play-btn     { color: #ff2288; background: rgba(255,34,136,0.1); border-color: rgba(255,34,136,0.4); }
+  .card-tower:hover .play-btn { background: rgba(255,34,136,0.22); }
+
+  /* ── Rhythm Pulse theme ── */
+  .card-rhythm {
+    background: #0d0218;
+    border: 1px solid rgba(170,68,255,0.25);
+    box-shadow: 0 2px 24px rgba(136,0,255,0.06);
+  }
+  .card-rhythm:hover {
+    box-shadow: 0 10px 44px rgba(136,0,255,0.28);
+    border-color: rgba(170,68,255,0.55);
+  }
+  .card-rhythm .card-preview { background: radial-gradient(ellipse at 30% 50%, #14042a 0%, #08020d 100%); }
+  .card-rhythm .card-genre   { color: rgba(170,68,255,0.7); }
+  .card-rhythm .card-name    { color: #aa44ff; }
+  .card-rhythm .play-btn     { color: #aa44ff; background: rgba(170,68,255,0.1); border-color: rgba(170,68,255,0.4); }
+  .card-rhythm:hover .play-btn { background: rgba(170,68,255,0.22); }
+
   footer {
     margin-top: 60px;
     text-align: center;
@@ -293,6 +373,66 @@
         <div class="card-genre">Side-Scroller &middot; Skill</div>
         <div class="card-name">STELLAR DASH</div>
         <div class="card-desc">Hold to fly, release to fall. Navigate your ship through endless gates that get faster and tighter every level.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-snake" href="/snake-neon/">
+      <div class="card-preview">
+        <canvas id="cv-snake"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Classic &middot; Arcade</div>
+        <div class="card-name">SNAKE NEON</div>
+        <div class="card-desc">Guide a glowing serpent through a neon grid. Eat to grow, dodge yourself, and chase bonus pickups before they vanish.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-asteroid" href="/asteroid-blitz/">
+      <div class="card-preview">
+        <canvas id="cv-asteroid"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Shooter &middot; Space</div>
+        <div class="card-name">ASTEROID BLITZ</div>
+        <div class="card-desc">Pilot your ship through fields of tumbling asteroids. Blast them apart, survive the debris, and rack up wave bonuses.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-memory" href="/memory-matrix/">
+      <div class="card-preview">
+        <canvas id="cv-memory"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Puzzle &middot; Memory</div>
+        <div class="card-name">MEMORY MATRIX</div>
+        <div class="card-desc">Watch the pattern flash, then tap it back from memory. Grids grow and display times shrink as you level up.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-tower" href="/tower-stack/">
+      <div class="card-preview">
+        <canvas id="cv-tower"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Arcade &middot; Precision</div>
+        <div class="card-name">TOWER STACK</div>
+        <div class="card-desc">Tap to drop sliding blocks and build the tallest tower. Nail perfect drops for combos. One misalignment and it's over.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-rhythm" href="/rhythm-pulse/">
+      <div class="card-preview">
+        <canvas id="cv-rhythm"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Rhythm &middot; Timing</div>
+        <div class="card-name">RHYTHM PULSE</div>
+        <div class="card-desc">Beats fly toward the hit zone across 3 lanes. Tap in time for PERFECT hits, build combos, and survive the rising BPM.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -817,6 +957,562 @@
     }
   }
 
+  // ── Snake Neon card preview ──────────────────────────────────
+  const snakeCvs = document.getElementById('cv-snake');
+  const snCtx = snakeCvs.getContext('2d');
+
+  function resizeSnake() {
+    const r = snakeCvs.parentElement.getBoundingClientRect();
+    snakeCvs.width  = r.width  || 320;
+    snakeCvs.height = r.height || 190;
+  }
+  resizeSnake();
+  window.addEventListener('resize', resizeSnake);
+
+  const snakeBody = [];
+  let snakeDir = { x: 1, y: 0 };
+  let snakeFood = null;
+  let snakeTick = 0;
+  const SN_GRID = 16;
+
+  function initSnakePreview() {
+    snakeBody.length = 0;
+    for (let i = 5; i >= 0; i--) snakeBody.push({ x: 3 + i, y: 5 });
+    snakeDir = { x: 1, y: 0 };
+    snakeFood = { x: 12, y: 5 };
+  }
+  initSnakePreview();
+
+  function drawSnakePreview(dt, t) {
+    const W = snakeCvs.width, H = snakeCvs.height;
+    const cellW = W / 20, cellH = H / 12;
+
+    snCtx.fillStyle = '#020d02';
+    snCtx.fillRect(0, 0, W, H);
+
+    // Grid
+    snCtx.strokeStyle = 'rgba(0,255,100,0.04)';
+    snCtx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += cellW) { snCtx.beginPath(); snCtx.moveTo(x, 0); snCtx.lineTo(x, H); snCtx.stroke(); }
+    for (let y = 0; y < H; y += cellH) { snCtx.beginPath(); snCtx.moveTo(0, y); snCtx.lineTo(W, y); snCtx.stroke(); }
+
+    // Move snake
+    snakeTick += dt;
+    if (snakeTick > 0.15) {
+      snakeTick = 0;
+      const head = snakeBody[0];
+      // Simple AI: steer toward food
+      if (snakeFood) {
+        if (Math.random() < 0.7) {
+          const dx = snakeFood.x - head.x, dy = snakeFood.y - head.y;
+          if (Math.abs(dx) > Math.abs(dy)) snakeDir = { x: dx > 0 ? 1 : -1, y: 0 };
+          else snakeDir = { x: 0, y: dy > 0 ? 1 : -1 };
+        }
+      }
+      const nx = ((head.x + snakeDir.x) % 20 + 20) % 20;
+      const ny = ((head.y + snakeDir.y) % 12 + 12) % 12;
+      snakeBody.unshift({ x: nx, y: ny });
+      if (snakeFood && nx === snakeFood.x && ny === snakeFood.y) {
+        snakeFood = { x: Math.floor(Math.random() * 18) + 1, y: Math.floor(Math.random() * 10) + 1 };
+      } else {
+        snakeBody.pop();
+      }
+      if (snakeBody.length > 15) snakeBody.pop();
+    }
+
+    // Draw food
+    if (snakeFood) {
+      const pulse = Math.sin(t * 0.004) * 3 + 6;
+      snCtx.shadowColor = '#00ff66';
+      snCtx.shadowBlur = pulse + 8;
+      snCtx.fillStyle = '#00ff66';
+      snCtx.beginPath();
+      snCtx.arc(snakeFood.x * cellW + cellW / 2, snakeFood.y * cellH + cellH / 2, pulse, 0, Math.PI * 2);
+      snCtx.fill();
+      snCtx.shadowBlur = 0;
+    }
+
+    // Draw snake
+    for (let i = snakeBody.length - 1; i >= 0; i--) {
+      const s = snakeBody[i];
+      const brightness = 1 - (i / snakeBody.length) * 0.6;
+      const g = Math.floor(255 * brightness);
+      snCtx.shadowColor = `rgb(0,${g},${Math.floor(g * 0.4)})`;
+      snCtx.shadowBlur = i === 0 ? 14 : 6;
+      snCtx.fillStyle = `rgb(0,${g},${Math.floor(g * 0.4)})`;
+      snCtx.beginPath();
+      snCtx.roundRect(s.x * cellW + 1, s.y * cellH + 1, cellW - 2, cellH - 2, 3);
+      snCtx.fill();
+    }
+    snCtx.shadowBlur = 0;
+  }
+
+  // ── Asteroid Blitz card preview ─────────────────────────────
+  const astCvs = document.getElementById('cv-asteroid');
+  const aCtx = astCvs.getContext('2d');
+
+  function resizeAst() {
+    const r = astCvs.parentElement.getBoundingClientRect();
+    astCvs.width  = r.width  || 320;
+    astCvs.height = r.height || 190;
+  }
+  resizeAst();
+  window.addEventListener('resize', resizeAst);
+
+  const AST_STARS = Array.from({ length: 40 }, () => ({
+    x: Math.random(), y: Math.random(), a: 0.2 + Math.random() * 0.5
+  }));
+  const AST_ROCKS = Array.from({ length: 6 }, () => {
+    const pts = [];
+    const n = 7 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = 0.7 + Math.random() * 0.3;
+      pts.push({ a, r });
+    }
+    return {
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 30,
+      vy: (Math.random() - 0.5) * 20,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 1.5,
+      size: 12 + Math.random() * 18,
+      pts
+    };
+  });
+
+  let astShipAngle = 0;
+  let astBullets = [];
+  let astFireTimer = 0;
+
+  function drawAsteroidPreview(dt, t) {
+    const W = astCvs.width, H = astCvs.height;
+
+    aCtx.fillStyle = '#0a0202';
+    aCtx.fillRect(0, 0, W, H);
+
+    // Stars
+    for (const s of AST_STARS) {
+      aCtx.globalAlpha = s.a * (0.5 + Math.sin(t * 0.001 + s.x * 10) * 0.3);
+      aCtx.fillStyle = '#fff';
+      aCtx.fillRect(s.x * W, s.y * H, 1.2, 1.2);
+    }
+    aCtx.globalAlpha = 1;
+
+    // Ship
+    astShipAngle += dt * 0.6;
+    const sx = W * 0.5 + Math.sin(t * 0.0008) * W * 0.08;
+    const sy = H * 0.5 + Math.cos(t * 0.0011) * H * 0.12;
+    const sa = Math.sin(t * 0.0006) * 0.8;
+
+    aCtx.save();
+    aCtx.translate(sx, sy);
+    aCtx.rotate(sa);
+    aCtx.shadowColor = '#ff4444';
+    aCtx.shadowBlur = 12;
+    aCtx.strokeStyle = '#ff6600';
+    aCtx.lineWidth = 2;
+    aCtx.beginPath();
+    aCtx.moveTo(14, 0);
+    aCtx.lineTo(-8, -8);
+    aCtx.lineTo(-4, 0);
+    aCtx.lineTo(-8, 8);
+    aCtx.closePath();
+    aCtx.stroke();
+    aCtx.fillStyle = 'rgba(255,100,0,0.3)';
+    aCtx.fill();
+    // Engine glow
+    aCtx.shadowColor = '#ff8800';
+    aCtx.shadowBlur = 8;
+    aCtx.fillStyle = '#ff6600';
+    aCtx.beginPath();
+    aCtx.moveTo(-4, -3);
+    aCtx.lineTo(-10 - Math.random() * 4, 0);
+    aCtx.lineTo(-4, 3);
+    aCtx.fill();
+    aCtx.shadowBlur = 0;
+    aCtx.restore();
+
+    // Bullets
+    astFireTimer += dt;
+    if (astFireTimer > 0.4) {
+      astFireTimer = 0;
+      astBullets.push({ x: sx + Math.cos(sa) * 14, y: sy + Math.sin(sa) * 14, vx: Math.cos(sa) * 180, vy: Math.sin(sa) * 180, life: 0 });
+    }
+    for (let i = astBullets.length - 1; i >= 0; i--) {
+      const b = astBullets[i];
+      b.x += b.vx * dt; b.y += b.vy * dt; b.life += dt;
+      aCtx.shadowColor = '#ff4444'; aCtx.shadowBlur = 6;
+      aCtx.fillStyle = '#fff';
+      aCtx.fillRect(b.x - 2, b.y - 1, 4, 2);
+      aCtx.shadowBlur = 0;
+      if (b.life > 0.8 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) astBullets.splice(i, 1);
+    }
+
+    // Asteroids
+    for (const rock of AST_ROCKS) {
+      rock.x += rock.vx * dt / W;
+      rock.y += rock.vy * dt / H;
+      rock.rot += rock.rotV * dt;
+      rock.x = ((rock.x % 1) + 1) % 1;
+      rock.y = ((rock.y % 1) + 1) % 1;
+
+      aCtx.save();
+      aCtx.translate(rock.x * W, rock.y * H);
+      aCtx.rotate(rock.rot);
+      aCtx.shadowColor = '#ff4444';
+      aCtx.shadowBlur = 6;
+      aCtx.strokeStyle = '#ff6644';
+      aCtx.lineWidth = 1.5;
+      aCtx.beginPath();
+      for (let j = 0; j < rock.pts.length; j++) {
+        const p = rock.pts[j];
+        const px = Math.cos(p.a) * rock.size * p.r;
+        const py = Math.sin(p.a) * rock.size * p.r;
+        j === 0 ? aCtx.moveTo(px, py) : aCtx.lineTo(px, py);
+      }
+      aCtx.closePath();
+      aCtx.stroke();
+      aCtx.fillStyle = 'rgba(255,60,30,0.08)';
+      aCtx.fill();
+      aCtx.shadowBlur = 0;
+      aCtx.restore();
+    }
+  }
+
+  // ── Memory Matrix card preview ──────────────────────────────
+  const memCvs = document.getElementById('cv-memory');
+  const mCtx = memCvs.getContext('2d');
+
+  function resizeMem() {
+    const r = memCvs.parentElement.getBoundingClientRect();
+    memCvs.width  = r.width  || 320;
+    memCvs.height = r.height || 190;
+  }
+  resizeMem();
+  window.addEventListener('resize', resizeMem);
+
+  let memPhase = 0;
+  let memLit = [0, 2, 4, 6, 8];
+  let memShown = [];
+  let memCycle = 0;
+
+  function drawMemoryPreview(t) {
+    const W = memCvs.width, H = memCvs.height;
+    const ms = t * 0.001;
+
+    mCtx.fillStyle = '#020810';
+    mCtx.fillRect(0, 0, W, H);
+
+    // Matrix rain background
+    mCtx.globalAlpha = 0.08;
+    mCtx.fillStyle = '#0af';
+    mCtx.font = '10px monospace';
+    for (let i = 0; i < 15; i++) {
+      const cx = (i * 23 + 5) % W;
+      const cy = ((ms * 30 * (1 + (i % 3) * 0.5) + i * 47) % (H + 40)) - 20;
+      mCtx.fillText(String.fromCharCode(0x30 + (i * 7 + Math.floor(ms * 2)) % 10), cx, cy);
+    }
+    mCtx.globalAlpha = 1;
+
+    // Draw 4x4 grid
+    const gridSize = 4;
+    const cellSz = Math.min(W, H) * 0.16;
+    const gap = cellSz * 0.2;
+    const totalW = gridSize * cellSz + (gridSize - 1) * gap;
+    const totalH = totalW;
+    const ox = (W - totalW) / 2;
+    const oy = (H - totalH) / 2;
+
+    // Cycle pattern
+    const cycleDur = 3.0;
+    memCycle = (ms % cycleDur) / cycleDur;
+    const showPhase = memCycle < 0.5; // first half: show, second: hide
+
+    for (let i = 0; i < gridSize * gridSize; i++) {
+      const gx = i % gridSize, gy = Math.floor(i / gridSize);
+      const cx = ox + gx * (cellSz + gap);
+      const cy = oy + gy * (cellSz + gap);
+      const isLit = memLit.includes(i);
+
+      if (isLit && showPhase) {
+        const fade = memCycle < 0.1 ? memCycle / 0.1 : memCycle > 0.4 ? (0.5 - memCycle) / 0.1 : 1;
+        mCtx.shadowColor = '#0af';
+        mCtx.shadowBlur = 16 * fade;
+        mCtx.fillStyle = `rgba(0,170,255,${0.7 * fade})`;
+      } else if (isLit && memCycle > 0.7 && memCycle < 0.9) {
+        // "correct" flash
+        const fade = Math.min(1, (memCycle - 0.7) / 0.05) * Math.min(1, (0.9 - memCycle) / 0.05);
+        mCtx.shadowColor = '#0f8';
+        mCtx.shadowBlur = 12 * fade;
+        mCtx.fillStyle = `rgba(0,255,136,${0.6 * fade})`;
+      } else {
+        mCtx.shadowBlur = 0;
+        mCtx.fillStyle = 'rgba(0,170,255,0.08)';
+      }
+
+      mCtx.beginPath();
+      mCtx.roundRect(cx, cy, cellSz, cellSz, 4);
+      mCtx.fill();
+
+      // Border
+      mCtx.strokeStyle = 'rgba(0,170,255,0.2)';
+      mCtx.lineWidth = 1;
+      mCtx.stroke();
+      mCtx.shadowBlur = 0;
+    }
+
+    // Pulsing grid border
+    const borderPulse = Math.sin(ms * 2) * 0.15 + 0.25;
+    mCtx.strokeStyle = `rgba(0,170,255,${borderPulse})`;
+    mCtx.lineWidth = 1.5;
+    mCtx.strokeRect(ox - 8, oy - 8, totalW + 16, totalH + 16);
+  }
+
+  // ── Tower Stack card preview ────────────────────────────────
+  const twrCvs = document.getElementById('cv-tower');
+  const tCtx = twrCvs.getContext('2d');
+
+  function resizeTower() {
+    const r = twrCvs.parentElement.getBoundingClientRect();
+    twrCvs.width  = r.width  || 320;
+    twrCvs.height = r.height || 190;
+  }
+  resizeTower();
+  window.addEventListener('resize', resizeTower);
+
+  const TWR_COLORS = ['#ff2288','#ff6644','#ffaa22','#44ff88','#22aaff','#aa44ff','#ff44aa','#44ffdd'];
+  const twrStack = [];
+  let twrMoving = { x: 0, w: 0.5, dir: 1 };
+  let twrDropTimer = 0;
+  let twrInit = false;
+
+  function drawTowerPreview(dt, t) {
+    const W = twrCvs.width, H = twrCvs.height;
+    const ms = t * 0.001;
+
+    if (!twrInit) {
+      twrStack.length = 0;
+      twrStack.push({ x: 0.25, w: 0.5, color: TWR_COLORS[0] });
+      twrMoving = { x: 0, w: 0.5, dir: 1 };
+      twrInit = true;
+    }
+
+    // Bg gradient
+    const hueShift = twrStack.length * 8;
+    tCtx.fillStyle = '#0d0208';
+    tCtx.fillRect(0, 0, W, H);
+
+    // Grid lines
+    tCtx.strokeStyle = 'rgba(255,34,136,0.04)';
+    tCtx.lineWidth = 0.5;
+    for (let y = 0; y < H; y += 20) { tCtx.beginPath(); tCtx.moveTo(0, y); tCtx.lineTo(W, y); tCtx.stroke(); }
+
+    // Move block
+    twrMoving.x += twrMoving.dir * dt * 0.6;
+    if (twrMoving.x + twrMoving.w > 1) { twrMoving.dir = -1; }
+    if (twrMoving.x < 0) { twrMoving.dir = 1; }
+
+    // Auto-drop
+    twrDropTimer += dt;
+    if (twrDropTimer > 1.2) {
+      twrDropTimer = 0;
+      const prev = twrStack[twrStack.length - 1];
+      const overlapStart = Math.max(twrMoving.x, prev.x);
+      const overlapEnd = Math.min(twrMoving.x + twrMoving.w, prev.x + prev.w);
+      if (overlapEnd > overlapStart) {
+        const nw = overlapEnd - overlapStart;
+        twrStack.push({ x: overlapStart, w: nw, color: TWR_COLORS[twrStack.length % TWR_COLORS.length] });
+        twrMoving = { x: 0, w: nw, dir: 1 };
+      }
+      if (twrStack.length > 8) {
+        twrStack.splice(0, twrStack.length - 6);
+        twrMoving = { x: 0, w: 0.5, dir: 1 };
+        twrStack.length = 0;
+        twrStack.push({ x: 0.25, w: 0.5, color: TWR_COLORS[0] });
+      }
+    }
+
+    const blockH = 18;
+    const depth = 6;
+    const baseY = H - 16;
+
+    // Draw stacked blocks
+    for (let i = 0; i < twrStack.length; i++) {
+      const b = twrStack[i];
+      const bx = b.x * W, bw = b.w * W;
+      const by = baseY - (i + 1) * blockH;
+
+      // Front face
+      tCtx.fillStyle = b.color;
+      tCtx.shadowColor = b.color;
+      tCtx.shadowBlur = 6;
+      tCtx.fillRect(bx, by, bw, blockH);
+      // Top face
+      tCtx.fillStyle = b.color + 'aa';
+      tCtx.beginPath();
+      tCtx.moveTo(bx, by);
+      tCtx.lineTo(bx + depth, by - depth);
+      tCtx.lineTo(bx + bw + depth, by - depth);
+      tCtx.lineTo(bx + bw, by);
+      tCtx.fill();
+      // Right face
+      tCtx.fillStyle = b.color + '66';
+      tCtx.beginPath();
+      tCtx.moveTo(bx + bw, by);
+      tCtx.lineTo(bx + bw + depth, by - depth);
+      tCtx.lineTo(bx + bw + depth, by + blockH - depth);
+      tCtx.lineTo(bx + bw, by + blockH);
+      tCtx.fill();
+      tCtx.shadowBlur = 0;
+    }
+
+    // Draw moving block
+    const mi = twrStack.length;
+    const mx = twrMoving.x * W, mw = twrMoving.w * W;
+    const my = baseY - (mi + 1) * blockH;
+    const mc = TWR_COLORS[mi % TWR_COLORS.length];
+    const pulse = Math.sin(ms * 4) * 0.15 + 0.85;
+
+    tCtx.globalAlpha = pulse;
+    tCtx.shadowColor = mc;
+    tCtx.shadowBlur = 10;
+    tCtx.fillStyle = mc;
+    tCtx.fillRect(mx, my, mw, blockH);
+    tCtx.fillStyle = mc + 'aa';
+    tCtx.beginPath();
+    tCtx.moveTo(mx, my); tCtx.lineTo(mx + depth, my - depth);
+    tCtx.lineTo(mx + mw + depth, my - depth); tCtx.lineTo(mx + mw, my);
+    tCtx.fill();
+    tCtx.fillStyle = mc + '66';
+    tCtx.beginPath();
+    tCtx.moveTo(mx + mw, my); tCtx.lineTo(mx + mw + depth, my - depth);
+    tCtx.lineTo(mx + mw + depth, my + blockH - depth); tCtx.lineTo(mx + mw, my + blockH);
+    tCtx.fill();
+    tCtx.shadowBlur = 0;
+    tCtx.globalAlpha = 1;
+  }
+
+  // ── Rhythm Pulse card preview ────────────────────────────────
+  const rhythmCvs = document.getElementById('cv-rhythm');
+  const rCtx = rhythmCvs.getContext('2d');
+
+  function resizeRhythm() {
+    const r = rhythmCvs.parentElement.getBoundingClientRect();
+    rhythmCvs.width  = r.width  || 320;
+    rhythmCvs.height = r.height || 190;
+  }
+  resizeRhythm();
+  window.addEventListener('resize', resizeRhythm);
+
+  const RHYTHM_BEATS = [];
+  let rNextSpawn = 0;
+
+  function drawRhythmPreview(t) {
+    const W = rhythmCvs.width, H = rhythmCvs.height;
+    const ms = t * 0.001;
+
+    // bg
+    const bgPulse = Math.pow(Math.max(0, Math.sin(ms * Math.PI * 1.5)), 4) * 0.15;
+    const rr = Math.round(8 + bgPulse * 60);
+    const rg = Math.round(2 + bgPulse * 8);
+    const rb = Math.round(13 + bgPulse * 80);
+    rCtx.fillStyle = `rgb(${rr},${rg},${rb})`;
+    rCtx.fillRect(0, 0, W, H);
+
+    // Lane lines
+    const laneColors = ['#8800ff','#aa44ff','#c864ff'];
+    const hitX = W * 0.18;
+    for (let i = 0; i < 3; i++) {
+      const ly = H * (0.22 + i * 0.28);
+      rCtx.strokeStyle = laneColors[i] + '22';
+      rCtx.lineWidth = 1;
+      rCtx.setLineDash([4, 8]);
+      rCtx.beginPath(); rCtx.moveTo(hitX, ly); rCtx.lineTo(W, ly); rCtx.stroke();
+      rCtx.setLineDash([]);
+
+      // Hit zone ring
+      rCtx.strokeStyle = laneColors[i] + '66';
+      rCtx.lineWidth = 2;
+      rCtx.shadowColor = laneColors[i];
+      rCtx.shadowBlur = 6 + bgPulse * 20;
+      rCtx.beginPath();
+      rCtx.arc(hitX, ly, 14, 0, Math.PI * 2);
+      rCtx.stroke();
+      rCtx.shadowBlur = 0;
+    }
+
+    // Hit zone glow column
+    const grd = rCtx.createLinearGradient(hitX - 30, 0, hitX + 30, 0);
+    grd.addColorStop(0, 'rgba(136,0,255,0)');
+    grd.addColorStop(0.5, 'rgba(136,0,255,' + (0.05 + bgPulse * 0.3) + ')');
+    grd.addColorStop(1, 'rgba(136,0,255,0)');
+    rCtx.fillStyle = grd;
+    rCtx.fillRect(hitX - 30, 0, 60, H);
+
+    // Spawn beats
+    if (ms > rNextSpawn) {
+      const lane = Math.floor(Math.random() * 3);
+      RHYTHM_BEATS.push({ lane, x: W + 12, spawnT: ms });
+      // sometimes double
+      if (Math.random() < 0.3) {
+        const l2 = (lane + 1 + Math.floor(Math.random() * 2)) % 3;
+        RHYTHM_BEATS.push({ lane: l2, x: W + 12, spawnT: ms });
+      }
+      rNextSpawn = ms + 0.44 + Math.random() * 0.3;
+    }
+
+    // Update & draw beats
+    for (let i = RHYTHM_BEATS.length - 1; i >= 0; i--) {
+      const b = RHYTHM_BEATS[i];
+      b.x -= 1.8;
+      const ly = H * (0.22 + b.lane * 0.28);
+      const proximity = 1 - Math.min(Math.abs(b.x - hitX) / (W * 0.4), 1);
+      const pulseR = Math.sin(ms * 6) * 2 * proximity;
+
+      // Trail
+      for (let tr = 1; tr <= 3; tr++) {
+        rCtx.globalAlpha = (1 - tr / 4) * 0.2;
+        rCtx.fillStyle = laneColors[b.lane];
+        rCtx.beginPath();
+        rCtx.arc(b.x + tr * 8, ly, 10 - tr * 2, 0, Math.PI * 2);
+        rCtx.fill();
+      }
+      rCtx.globalAlpha = 1;
+
+      // Main beat
+      rCtx.shadowColor = laneColors[b.lane];
+      rCtx.shadowBlur = 6 + proximity * 10;
+      const grad = rCtx.createRadialGradient(b.x, ly, 0, b.x, ly, 12 + pulseR);
+      grad.addColorStop(0, '#fff');
+      grad.addColorStop(0.4, laneColors[b.lane]);
+      grad.addColorStop(1, laneColors[b.lane] + '44');
+      rCtx.fillStyle = grad;
+      rCtx.beginPath();
+      rCtx.arc(b.x, ly, 12 + pulseR, 0, Math.PI * 2);
+      rCtx.fill();
+      rCtx.strokeStyle = '#fff8';
+      rCtx.lineWidth = 1.5;
+      rCtx.stroke();
+      rCtx.shadowBlur = 0;
+
+      // "Hit" flash when passing zone
+      if (Math.abs(b.x - hitX) < 6) {
+        rCtx.globalAlpha = 0.7;
+        rCtx.fillStyle = '#ffd700';
+        rCtx.shadowColor = '#ffd700';
+        rCtx.shadowBlur = 18;
+        rCtx.font = 'bold 11px "Bebas Neue", cursive';
+        rCtx.textAlign = 'center';
+        rCtx.fillText('PERFECT', hitX, ly - 22);
+        rCtx.shadowBlur = 0;
+        rCtx.globalAlpha = 1;
+      }
+
+      if (b.x < -20) RHYTHM_BEATS.splice(i, 1);
+    }
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -830,6 +1526,11 @@
     drawPongPreview(dt, t);
     drawDashPreview(t);
     drawDicePreview(t);
+    drawSnakePreview(dt, t);
+    drawAsteroidPreview(dt, t);
+    drawMemoryPreview(t);
+    drawTowerPreview(dt, t);
+    drawRhythmPreview(t);
 
     requestAnimationFrame(loop);
   }

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MEMORY MATRIX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:#020810;
+  font-family:'Barlow',sans-serif;
+  color:#cde;
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+#top-bar{
+  position:fixed;top:0;left:0;right:0;
+  height:48px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;
+  background:rgba(2,8,16,0.92);
+  border-bottom:1px solid rgba(0,221,255,0.18);
+  z-index:100;
+  backdrop-filter:blur(6px);
+}
+#top-bar h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;letter-spacing:3px;
+  color:#00ddff;
+  text-shadow:0 0 10px rgba(0,221,255,0.5);
+  position:absolute;left:50%;transform:translateX(-50%);
+  white-space:nowrap;
+}
+#back-btn{
+  font-family:'Barlow',sans-serif;font-weight:700;
+  color:#00ddff;text-decoration:none;font-size:14px;
+  padding:6px 10px;border-radius:4px;
+  border:1px solid rgba(0,221,255,0.3);
+  transition:background 0.2s,box-shadow 0.2s;
+  z-index:2;
+}
+#back-btn:hover{background:rgba(0,221,255,0.1);box-shadow:0 0 8px rgba(0,221,255,0.3);}
+#top-spacer{display:flex;align-items:center;z-index:2;}
+#fs-btn{
+  background:none;border:1px solid rgba(0,221,255,0.3);
+  color:#00ddff;font-size:18px;
+  width:34px;height:34px;border-radius:4px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.2s,box-shadow 0.2s;
+}
+#fs-btn:hover{background:rgba(0,221,255,0.1);box-shadow:0 0 8px rgba(0,221,255,0.3);}
+#game-canvas{
+  display:block;
+  position:fixed;top:48px;left:0;
+  width:100%;
+  height:calc(100% - 48px);
+}
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <a id="back-btn" href="/">&#8592; HUB</a>
+  <h1>MEMORY MATRIX</h1>
+  <div id="top-spacer">
+    <button id="fs-btn" title="Fullscreen">&#9974;</button>
+  </div>
+</div>
+<canvas id="game-canvas"></canvas>
+
+<script>
+"use strict";
+// ─── FULLSCREEN ─────────────────────────────────────────────
+document.getElementById('fs-btn').addEventListener('click',()=>{
+  if(!document.fullscreenElement){
+    (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||function(){}).call(document.documentElement);
+  }else{
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  }
+});
+
+// ─── CANVAS SETUP ───────────────────────────────────────────
+const canvas=document.getElementById('game-canvas');
+const ctx=canvas.getContext('2d');
+let W,H,dpr;
+function resize(){
+  dpr=window.devicePixelRatio||1;
+  W=canvas.clientWidth;
+  H=canvas.clientHeight;
+  canvas.width=W*dpr;
+  canvas.height=H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize',resize);
+resize();
+
+// ─── CONSTANTS ──────────────────────────────────────────────
+const ACCENT='#00ddff';
+const ACCENT_RGB=[0,221,255];
+const GREEN='#00ff88';
+const RED='#ff3355';
+const BG='#020810';
+const CELL_BG='#0a1828';
+const CELL_BORDER='rgba(0,221,255,0.15)';
+
+// ─── MATRIX RAIN BACKGROUND ────────────────────────────────
+const RAIN_CHARS='01アイウエオカキクケコサシスセソタチツテトナニヌネノMATRIX';
+const rainCols=Math.ceil(1920/14);
+const rainDrops=new Float32Array(rainCols);
+for(let i=0;i<rainCols;i++) rainDrops[i]=Math.random()*60;
+function drawRain(){
+  ctx.save();
+  ctx.font='12px monospace';
+  ctx.fillStyle='rgba(0,221,255,0.035)';
+  for(let i=0;i<rainCols;i++){
+    const ch=RAIN_CHARS[Math.floor(Math.random()*RAIN_CHARS.length)];
+    ctx.fillText(ch,i*14,rainDrops[i]*14);
+    if(rainDrops[i]*14>H && Math.random()>0.975) rainDrops[i]=0;
+    rainDrops[i]+=0.3;
+  }
+  ctx.restore();
+}
+
+// ─── PARTICLES ──────────────────────────────────────────────
+let particles=[];
+function spawnParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2;
+    const speed=1+Math.random()*4;
+    particles.push({
+      x,y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      life:1,
+      decay:0.01+Math.random()*0.025,
+      size:2+Math.random()*3,
+      color
+    });
+  }
+}
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.vy+=0.05;
+    p.life-=p.decay;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+function drawParticles(){
+  for(const p of particles){
+    ctx.save();
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.shadowColor=p.color;
+    ctx.shadowBlur=8;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ─── ANIMATED SCORE ─────────────────────────────────────────
+let displayScore=0;
+let targetScore=0;
+function animateScore(){
+  if(displayScore<targetScore){
+    displayScore+=Math.ceil((targetScore-displayScore)*0.12);
+    if(displayScore>targetScore) displayScore=targetScore;
+  }
+}
+
+// ─── GAME STATE ─────────────────────────────────────────────
+const STATE={MENU:0,WATCH:1,RECALL:2,RESULT:3,GAMEOVER:4};
+let state=STATE.MENU;
+let gridSize=3;
+let round=1;
+let lives=3;
+let score=0;
+let combo=0;
+let highScore=parseInt(localStorage.getItem('memoryMatrixHigh'))||0;
+
+// Pattern & player
+let pattern=[];      // indices of lit cells
+let playerPicks=[];  // indices player has selected
+let cellStates=[];   // per-cell animation state
+
+// Timing
+let watchTimer=0;
+let watchDuration=1500;
+let resultTimer=0;
+let resultDuration=1200;
+let fadePhase=0; // 0=fadein, 1=hold, 2=fadeout
+let fadeAlpha=0;
+
+// Grid layout (computed each frame)
+let gridX,gridY,cellSize,gap;
+
+// ─── DIFFICULTY ─────────────────────────────────────────────
+function getGridSize(r){
+  if(r<=3) return 3;
+  if(r<=7) return 4;
+  if(r<=12) return 5;
+  return 6;
+}
+function getLitCount(r){
+  if(r<=1) return 3;
+  if(r<=3) return 4;
+  if(r<=5) return 5;
+  if(r<=7) return 6;
+  if(r<=9) return 7;
+  if(r<=12) return 8;
+  return Math.min(9+Math.floor((r-12)/2),18);
+}
+function getWatchDuration(r){
+  return Math.max(600, 1800 - r*80);
+}
+
+// ─── START ROUND ────────────────────────────────────────────
+function startRound(){
+  gridSize=getGridSize(round);
+  const total=gridSize*gridSize;
+  const litCount=Math.min(getLitCount(round),total-1);
+  watchDuration=getWatchDuration(round);
+
+  // Generate random pattern
+  pattern=[];
+  const indices=[...Array(total).keys()];
+  for(let i=indices.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [indices[i],indices[j]]=[indices[j],indices[i]];
+  }
+  pattern=indices.slice(0,litCount);
+
+  playerPicks=[];
+  cellStates=new Array(total).fill(0); // 0=neutral
+  state=STATE.WATCH;
+  watchTimer=0;
+  fadePhase=0;
+  fadeAlpha=0;
+}
+
+function startGame(){
+  round=1;
+  lives=3;
+  score=0;
+  targetScore=0;
+  displayScore=0;
+  combo=0;
+  startRound();
+}
+
+// ─── INPUT ──────────────────────────────────────────────────
+function getInputPos(e){
+  let cx,cy;
+  if(e.touches){
+    cx=e.touches[0].clientX;
+    cy=e.touches[0].clientY;
+  }else{
+    cx=e.clientX;
+    cy=e.clientY;
+  }
+  const rect=canvas.getBoundingClientRect();
+  return {x:cx-rect.left, y:cy-rect.top};
+}
+
+function getCellFromPos(px,py){
+  if(!gridX && gridX!==0) return -1;
+  const step=cellSize+gap;
+  const col=Math.floor((px-gridX)/step);
+  const row=Math.floor((py-gridY)/step);
+  if(col<0||col>=gridSize||row<0||row>=gridSize) return -1;
+  // Check if within cell bounds (not in gap)
+  const localX=(px-gridX)-col*step;
+  const localY=(py-gridY)-row*step;
+  if(localX>cellSize||localY>cellSize) return -1;
+  return row*gridSize+col;
+}
+
+function handleInput(e){
+  e.preventDefault();
+  const pos=getInputPos(e);
+
+  if(state===STATE.MENU){
+    // Check start button
+    const bx=W/2, by=H*0.62, bw=200, bh=50;
+    if(pos.x>=bx-bw/2 && pos.x<=bx+bw/2 && pos.y>=by-bh/2 && pos.y<=by+bh/2){
+      startGame();
+    }
+    return;
+  }
+
+  if(state===STATE.GAMEOVER){
+    const bx=W/2, by=H*0.66, bw=200, bh=50;
+    if(pos.x>=bx-bw/2 && pos.x<=bx+bw/2 && pos.y>=by-bh/2 && pos.y<=by+bh/2){
+      startGame();
+    }
+    return;
+  }
+
+  if(state===STATE.RECALL){
+    const idx=getCellFromPos(pos.x,pos.y);
+    if(idx<0) return;
+    if(playerPicks.includes(idx)) return;
+    playerPicks.push(idx);
+
+    if(pattern.includes(idx)){
+      cellStates[idx]=1; // correct
+    }else{
+      cellStates[idx]=-1; // wrong
+      lives--;
+      combo=0;
+      // Show result immediately on wrong
+      checkResult();
+      return;
+    }
+
+    // Check if all pattern cells found
+    if(playerPicks.filter(i=>pattern.includes(i)).length===pattern.length){
+      checkResult();
+    }
+  }
+}
+
+function checkResult(){
+  const correctPicks=playerPicks.filter(i=>pattern.includes(i)).length;
+  const wrongPicks=playerPicks.filter(i=>!pattern.includes(i)).length;
+
+  // Mark remaining pattern cells
+  for(const idx of pattern){
+    if(!playerPicks.includes(idx)){
+      cellStates[idx]=2; // missed (show as dim accent)
+    }
+  }
+
+  if(wrongPicks===0 && correctPicks===pattern.length){
+    // Perfect round
+    combo++;
+    const basePoints=round*10+pattern.length*5;
+    const comboBonus=combo>1?(combo-1)*15:0;
+    const roundScore=basePoints+comboBonus;
+    score+=roundScore;
+    targetScore=score;
+
+    // Particles!
+    spawnParticles(W/2,H/2,ACCENT,40);
+    if(combo>1) spawnParticles(W/2,H/2,GREEN,20);
+  }else{
+    combo=0;
+    // Partial credit
+    score+=correctPicks*5;
+    targetScore=score;
+  }
+
+  if(score>highScore){
+    highScore=score;
+    localStorage.setItem('memoryMatrixHigh',highScore);
+  }
+
+  state=STATE.RESULT;
+  resultTimer=0;
+}
+
+canvas.addEventListener('mousedown',handleInput);
+canvas.addEventListener('touchstart',handleInput,{passive:false});
+
+// ─── DRAW HELPERS ───────────────────────────────────────────
+function drawRoundedRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function drawButton(text,bx,by,bw,bh,hovered){
+  ctx.save();
+  drawRoundedRect(bx-bw/2,by-bh/2,bw,bh,6);
+  ctx.fillStyle=hovered?'rgba(0,221,255,0.2)':'rgba(0,221,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle=ACCENT;
+  ctx.lineWidth=2;
+  ctx.shadowColor=ACCENT;
+  ctx.shadowBlur=12;
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle=ACCENT;
+  ctx.font='700 18px Barlow, sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(text,bx,by);
+  ctx.restore();
+}
+
+// ─── GRID COMPUTE ───────────────────────────────────────────
+function computeGrid(){
+  const maxGridPx=Math.min(W-40, H-140, 420);
+  gap=Math.max(4, Math.floor(maxGridPx*0.03));
+  cellSize=Math.floor((maxGridPx - gap*(gridSize-1))/gridSize);
+  const totalW=cellSize*gridSize+gap*(gridSize-1);
+  const totalH=totalW;
+  gridX=Math.floor((W-totalW)/2);
+  gridY=Math.floor((H-totalH)/2)-10;
+}
+
+// ─── DRAW GRID ──────────────────────────────────────────────
+function drawGrid(time){
+  computeGrid();
+  const step=cellSize+gap;
+
+  // Subtle pulsing border around grid area
+  const totalW=cellSize*gridSize+gap*(gridSize-1);
+  const pulse=0.15+0.08*Math.sin(time*0.003);
+  ctx.save();
+  ctx.strokeStyle=`rgba(0,221,255,${pulse})`;
+  ctx.lineWidth=1.5;
+  ctx.shadowColor=ACCENT;
+  ctx.shadowBlur=10;
+  drawRoundedRect(gridX-8,gridY-8,totalW+16,totalW+16,8);
+  ctx.stroke();
+  ctx.restore();
+
+  for(let r=0;r<gridSize;r++){
+    for(let c=0;c<gridSize;c++){
+      const idx=r*gridSize+c;
+      const cx=gridX+c*step;
+      const cy=gridY+r*step;
+
+      ctx.save();
+      drawRoundedRect(cx,cy,cellSize,cellSize,5);
+
+      // Determine fill based on state
+      let fillColor=CELL_BG;
+      let glowColor=null;
+      let glowAmount=0;
+      let borderColor=CELL_BORDER;
+
+      if(state===STATE.WATCH && pattern.includes(idx)){
+        // Animate fade
+        const a=fadeAlpha;
+        fillColor=`rgba(0,221,255,${0.25*a})`;
+        glowColor=ACCENT;
+        glowAmount=15*a;
+        borderColor=`rgba(0,221,255,${0.6*a})`;
+      }else if(state===STATE.RECALL){
+        if(cellStates[idx]===1){
+          fillColor='rgba(0,255,136,0.3)';
+          glowColor=GREEN;
+          glowAmount=12;
+          borderColor='rgba(0,255,136,0.6)';
+        }else if(cellStates[idx]===-1){
+          fillColor='rgba(255,51,85,0.3)';
+          glowColor=RED;
+          glowAmount=12;
+          borderColor='rgba(255,51,85,0.6)';
+        }
+      }else if(state===STATE.RESULT){
+        if(cellStates[idx]===1){
+          fillColor='rgba(0,255,136,0.25)';
+          glowColor=GREEN;
+          glowAmount=10;
+          borderColor='rgba(0,255,136,0.5)';
+        }else if(cellStates[idx]===-1){
+          fillColor='rgba(255,51,85,0.25)';
+          glowColor=RED;
+          glowAmount=10;
+          borderColor='rgba(255,51,85,0.5)';
+        }else if(cellStates[idx]===2){
+          // Missed
+          fillColor='rgba(0,221,255,0.1)';
+          glowColor=ACCENT;
+          glowAmount=6;
+          borderColor='rgba(0,221,255,0.3)';
+        }
+      }
+
+      // Fill
+      ctx.fillStyle=fillColor;
+      if(glowColor){
+        ctx.shadowColor=glowColor;
+        ctx.shadowBlur=glowAmount;
+      }
+      ctx.fill();
+
+      // Border
+      ctx.shadowBlur=0;
+      ctx.strokeStyle=borderColor;
+      ctx.lineWidth=1.2;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+}
+
+// ─── DRAW HUD ───────────────────────────────────────────────
+function drawHUD(){
+  ctx.save();
+
+  // Score
+  ctx.font='700 16px Barlow, sans-serif';
+  ctx.textAlign='left';
+  ctx.textBaseline='top';
+  ctx.fillStyle='#8899aa';
+  ctx.fillText('SCORE',14,10);
+  ctx.font='600 28px "Bebas Neue", sans-serif';
+  ctx.fillStyle=ACCENT;
+  ctx.shadowColor=ACCENT;
+  ctx.shadowBlur=6;
+  ctx.fillText(displayScore.toString(),14,28);
+  ctx.shadowBlur=0;
+
+  // High Score
+  ctx.font='700 12px Barlow, sans-serif';
+  ctx.fillStyle='#556677';
+  ctx.fillText('BEST: '+highScore,14,58);
+
+  // Lives (right side)
+  ctx.textAlign='right';
+  ctx.font='700 16px Barlow, sans-serif';
+  ctx.fillStyle='#8899aa';
+  ctx.fillText('LIVES',W-14,10);
+  for(let i=0;i<3;i++){
+    const hx=W-14-(2-i)*24;
+    ctx.font='20px sans-serif';
+    ctx.fillStyle=i<lives?'#ff3355':'#223344';
+    ctx.shadowColor=i<lives?RED:'transparent';
+    ctx.shadowBlur=i<lives?8:0;
+    ctx.fillText('♥',hx,30);
+  }
+  ctx.shadowBlur=0;
+
+  // Round + Combo (center top area)
+  ctx.textAlign='center';
+  ctx.font='700 14px Barlow, sans-serif';
+  ctx.fillStyle='#6688aa';
+  ctx.fillText('ROUND '+round,W/2,10);
+  if(combo>1){
+    ctx.fillStyle='#00ff88';
+    ctx.shadowColor=GREEN;
+    ctx.shadowBlur=6;
+    ctx.font='700 13px Barlow, sans-serif';
+    ctx.fillText('COMBO x'+combo,W/2,28);
+    ctx.shadowBlur=0;
+  }
+
+  // State indicator
+  let stateText='';
+  if(state===STATE.WATCH) stateText='WATCH';
+  else if(state===STATE.RECALL) stateText='RECALL';
+  else if(state===STATE.RESULT) stateText='';
+
+  if(stateText){
+    const totalH=cellSize*gridSize+gap*(gridSize-1);
+    const labelY=gridY+totalH+28;
+    ctx.font='700 18px Barlow, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillStyle=state===STATE.WATCH?ACCENT:'#aabbcc';
+    ctx.shadowColor=state===STATE.WATCH?ACCENT:'transparent';
+    ctx.shadowBlur=state===STATE.WATCH?10:0;
+    ctx.fillText(stateText,W/2,labelY);
+    ctx.shadowBlur=0;
+
+    if(state===STATE.RECALL){
+      const remaining=pattern.length-playerPicks.filter(i=>pattern.includes(i)).length;
+      ctx.font='600 13px Barlow, sans-serif';
+      ctx.fillStyle='#556677';
+      ctx.fillText(remaining+' remaining',W/2,labelY+22);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ─── MENU SCREEN ────────────────────────────────────────────
+function drawMenu(time){
+  ctx.save();
+
+  // Title
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font='600 48px "Bebas Neue", sans-serif';
+  ctx.fillStyle=ACCENT;
+  ctx.shadowColor=ACCENT;
+  ctx.shadowBlur=20;
+  ctx.fillText('MEMORY MATRIX',W/2,H*0.28);
+  ctx.shadowBlur=0;
+
+  // Subtitle
+  ctx.font='600 16px Barlow, sans-serif';
+  ctx.fillStyle='#6688aa';
+  ctx.fillText('Remember the pattern. Tap the cells.',W/2,H*0.37);
+
+  // Decorative grid preview
+  const previewSize=3;
+  const pCellSize=28;
+  const pGap=4;
+  const pTotal=previewSize*(pCellSize+pGap)-pGap;
+  const pX=W/2-pTotal/2;
+  const pY=H*0.43;
+  for(let r=0;r<previewSize;r++){
+    for(let c=0;c<previewSize;c++){
+      const lit=((r+c+Math.floor(time/800))%3===0);
+      ctx.save();
+      drawRoundedRect(pX+c*(pCellSize+pGap),pY+r*(pCellSize+pGap),pCellSize,pCellSize,3);
+      ctx.fillStyle=lit?`rgba(0,221,255,${0.15+0.1*Math.sin(time*0.004)})`:CELL_BG;
+      if(lit){ctx.shadowColor=ACCENT;ctx.shadowBlur=10;}
+      ctx.fill();
+      ctx.strokeStyle=lit?`rgba(0,221,255,${0.5+0.2*Math.sin(time*0.004)})`:CELL_BORDER;
+      ctx.lineWidth=1;
+      ctx.shadowBlur=0;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // High score
+  if(highScore>0){
+    ctx.font='600 14px Barlow, sans-serif';
+    ctx.fillStyle='#556677';
+    ctx.fillText('HIGH SCORE: '+highScore,W/2,H*0.56);
+  }
+
+  // Start button
+  drawButton('START GAME',W/2,H*0.62,200,50);
+
+  ctx.restore();
+}
+
+// ─── GAME OVER SCREEN ───────────────────────────────────────
+function drawGameOver(time){
+  ctx.save();
+
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  ctx.font='600 44px "Bebas Neue", sans-serif';
+  ctx.fillStyle=RED;
+  ctx.shadowColor=RED;
+  ctx.shadowBlur=15;
+  ctx.fillText('GAME OVER',W/2,H*0.25);
+  ctx.shadowBlur=0;
+
+  ctx.font='700 16px Barlow, sans-serif';
+  ctx.fillStyle='#8899aa';
+  ctx.fillText('FINAL SCORE',W/2,H*0.37);
+
+  ctx.font='600 52px "Bebas Neue", sans-serif';
+  ctx.fillStyle=ACCENT;
+  ctx.shadowColor=ACCENT;
+  ctx.shadowBlur=12;
+  ctx.fillText(score.toString(),W/2,H*0.44);
+  ctx.shadowBlur=0;
+
+  ctx.font='600 14px Barlow, sans-serif';
+  ctx.fillStyle='#556677';
+  ctx.fillText('ROUND REACHED: '+round,W/2,H*0.52);
+
+  if(score>=highScore && score>0){
+    ctx.font='700 16px Barlow, sans-serif';
+    ctx.fillStyle='#ffaa00';
+    ctx.shadowColor='#ffaa00';
+    ctx.shadowBlur=8;
+    ctx.fillText('★ NEW HIGH SCORE ★',W/2,H*0.58);
+    ctx.shadowBlur=0;
+  }else{
+    ctx.font='600 13px Barlow, sans-serif';
+    ctx.fillStyle='#445566';
+    ctx.fillText('BEST: '+highScore,W/2,H*0.58);
+  }
+
+  drawButton('PLAY AGAIN',W/2,H*0.66,200,50);
+
+  ctx.restore();
+}
+
+// ─── MAIN LOOP ──────────────────────────────────────────────
+let lastTime=0;
+function loop(time){
+  requestAnimationFrame(loop);
+  const dt=Math.min(time-lastTime,50);
+  lastTime=time;
+
+  // Resize check
+  if(canvas.clientWidth!==W||canvas.clientHeight!==H) resize();
+
+  // Clear
+  ctx.fillStyle=BG;
+  ctx.fillRect(0,0,W,H);
+
+  // Matrix rain
+  drawRain();
+
+  // Animate score
+  animateScore();
+
+  // State logic
+  if(state===STATE.MENU){
+    drawMenu(time);
+  }else if(state===STATE.WATCH){
+    watchTimer+=dt;
+
+    // Fade phases: in(200ms) -> hold -> out(200ms)
+    const fadeInDur=250;
+    const fadeOutDur=250;
+    const holdDur=watchDuration;
+    const totalDur=fadeInDur+holdDur+fadeOutDur;
+
+    if(watchTimer<fadeInDur){
+      fadeAlpha=watchTimer/fadeInDur;
+    }else if(watchTimer<fadeInDur+holdDur){
+      fadeAlpha=1;
+    }else if(watchTimer<totalDur){
+      fadeAlpha=1-(watchTimer-fadeInDur-holdDur)/fadeOutDur;
+    }else{
+      fadeAlpha=0;
+      state=STATE.RECALL;
+    }
+
+    drawHUD();
+    drawGrid(time);
+  }else if(state===STATE.RECALL){
+    drawHUD();
+    drawGrid(time);
+  }else if(state===STATE.RESULT){
+    resultTimer+=dt;
+    drawHUD();
+    drawGrid(time);
+
+    if(resultTimer>=resultDuration){
+      if(lives<=0){
+        state=STATE.GAMEOVER;
+      }else{
+        round++;
+        startRound();
+      }
+    }
+  }else if(state===STATE.GAMEOVER){
+    drawGameOver(time);
+  }
+
+  // Particles
+  updateParticles(dt);
+  drawParticles();
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
