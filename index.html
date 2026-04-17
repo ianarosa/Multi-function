@@ -199,6 +199,22 @@
   .card-pong .play-btn     { color: #0df; background: rgba(0,220,255,0.08); border-color: rgba(0,220,255,0.4); }
   .card-pong:hover .play-btn { background: rgba(0,220,255,0.2); }
 
+  /* ── Escape Room theme ── */
+  .card-escape {
+    background: #100800;
+    border: 1px solid rgba(255,153,51,0.25);
+    box-shadow: 0 2px 24px rgba(255,153,51,0.05);
+  }
+  .card-escape:hover {
+    box-shadow: 0 10px 44px rgba(255,153,51,0.22);
+    border-color: rgba(255,153,51,0.55);
+  }
+  .card-escape .card-preview { background: linear-gradient(160deg, #180b00 0%, #080400 100%); }
+  .card-escape .card-genre   { color: rgba(255,153,51,0.65); }
+  .card-escape .card-name    { color: #ff9933; }
+  .card-escape .play-btn     { color: #ff9933; background: rgba(255,153,51,0.08); border-color: rgba(255,153,51,0.4); }
+  .card-escape:hover .play-btn { background: rgba(255,153,51,0.2); }
+
   footer {
     margin-top: 60px;
     text-align: center;
@@ -265,6 +281,18 @@
         <div class="card-genre">Side-Scroller &middot; Skill</div>
         <div class="card-name">STELLAR DASH</div>
         <div class="card-desc">Hold to fly, release to fall. Navigate your ship through endless gates that get faster and tighter every level.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-escape" href="/escape-room/">
+      <div class="card-preview">
+        <canvas id="cv-escape"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Puzzle &middot; Mystery</div>
+        <div class="card-name">ESCAPE ROOM</div>
+        <div class="card-desc">Search each room for the hidden code. Inspect objects, crack the secret, and escape before the door stays locked forever.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -655,6 +683,89 @@
     dCtx.restore();
   }
 
+  // ── Escape Room card preview ──────────────────────────────────
+  const escCvs = document.getElementById('cv-escape');
+  const eCtx = escCvs.getContext('2d');
+
+  function resizeEsc() {
+    const r = escCvs.parentElement.getBoundingClientRect();
+    escCvs.width  = r.width  || 320;
+    escCvs.height = r.height || 190;
+  }
+  resizeEsc();
+  window.addEventListener('resize', resizeEsc);
+
+  // Static room objects for preview
+  const escObjs = [
+    { rx:0.04, ry:0.12, rw:0.14, rh:0.72 }, // bookshelf
+    { rx:0.37, ry:0.08, rw:0.26, rh:0.33, secret:true }, // painting
+    { rx:0.35, ry:0.55, rw:0.30, rh:0.32 }, // desk
+    { rx:0.75, ry:0.08, rw:0.12, rh:0.20 }, // clock
+    { rx:0.83, ry:0.18, rw:0.14, rh:0.68 }, // door
+  ];
+
+  function drawEscapePreview(t) {
+    const W = escCvs.width, H = escCvs.height;
+    const ms = t * 0.001;
+
+    eCtx.fillStyle = '#100800';
+    eCtx.fillRect(0, 0, W, H);
+
+    // Floor
+    const floorY = H * 0.84;
+    eCtx.fillStyle = '#180a00';
+    eCtx.fillRect(0, floorY, W, H - floorY);
+    eCtx.strokeStyle = 'rgba(255,153,51,0.18)';
+    eCtx.lineWidth = 1;
+    eCtx.beginPath(); eCtx.moveTo(0, floorY); eCtx.lineTo(W, floorY); eCtx.stroke();
+
+    // Wall lines
+    eCtx.strokeStyle = 'rgba(255,255,255,0.02)';
+    for (let i = 1; i < 8; i++) {
+      eCtx.beginPath(); eCtx.moveTo(W/8*i,0); eCtx.lineTo(W/8*i, floorY); eCtx.stroke();
+    }
+
+    // Objects
+    for (const o of escObjs) {
+      const x = o.rx*W, y = o.ry*H, w = o.rw*W, h = o.rh*H;
+      const secretPulse = o.secret ? (0.18 + Math.sin(ms*2)*0.1) : 0.1;
+      eCtx.fillStyle = `rgba(255,153,51,${o.secret ? secretPulse : 0.04})`;
+      eCtx.strokeStyle = `rgba(255,153,51,${o.secret ? secretPulse+0.15 : 0.22})`;
+      eCtx.lineWidth = o.secret ? 1.5 : 1;
+      eCtx.shadowColor = o.secret ? '#ff9933' : 'transparent';
+      eCtx.shadowBlur  = o.secret ? 10 + Math.sin(ms*2)*4 : 0;
+      eCtx.beginPath();
+      eCtx.roundRect(x, y, w, h, 4);
+      eCtx.fill(); eCtx.stroke();
+      eCtx.shadowBlur = 0;
+
+      // Secret sparkle dot
+      if (o.secret) {
+        const dA = 0.4 + Math.sin(ms*3)*0.3;
+        eCtx.fillStyle = `rgba(255,153,51,${dA})`;
+        eCtx.beginPath(); eCtx.arc(x+w-6, y+6, 3, 0, Math.PI*2); eCtx.fill();
+      }
+    }
+
+    // Pulsing keypad on door
+    const kx = escObjs[4].rx*W + escObjs[4].rw*W*0.25;
+    const ky = H * 0.5;
+    const kpulse = 0.5 + Math.sin(ms*2.5)*0.4;
+    eCtx.fillStyle = `rgba(255,153,51,${kpulse*0.7})`;
+    eCtx.shadowColor = '#ff9933'; eCtx.shadowBlur = 8;
+    eCtx.beginPath(); eCtx.roundRect(kx-6, ky-8, 12, 16, 2); eCtx.fill();
+    eCtx.shadowBlur = 0;
+
+    // "?" hint text over secret
+    const sx = escObjs[1].rx*W + escObjs[1].rw*W*0.5;
+    const sy = escObjs[1].ry*H + escObjs[1].rh*H*0.5;
+    const qA = 0.25 + Math.sin(ms*1.8)*0.2;
+    eCtx.fillStyle = `rgba(255,153,51,${qA})`;
+    eCtx.font = `bold ${Math.min(W,H)*0.1}px 'Barlow', sans-serif`;
+    eCtx.textAlign = 'center'; eCtx.textBaseline = 'middle';
+    eCtx.fillText('?', sx, sy);
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -667,6 +778,7 @@
     drawFootball(t);
     drawPongPreview(dt, t);
     drawDashPreview(t);
+    drawEscapePreview(t);
 
     requestAnimationFrame(loop);
   }
