@@ -212,21 +212,21 @@ function generateLevel(lvl){
 
   // Pick source on left edge, drain on right edge
   const sy=rngInt(rng,0,gridH-1);
-  sources.push({x:0,y:sy,dir:3}); // source comes from left
-  grid[sy][0].type=4;grid[sy][0].rot=3; // end cap facing left
+  sources.push({x:0,y:sy,dir:1}); // source connects right into grid
+  grid[sy][0].type=4;grid[sy][0].rot=1; // end cap facing right
 
   const dy=rngInt(rng,0,gridH-1);
-  drains.push({x:gridW-1,y:dy,dir:1}); // drain exits right
-  grid[dy][gridW-1].type=4;grid[dy][gridW-1].rot=1; // end cap facing right
+  drains.push({x:gridW-1,y:dy,dir:3}); // drain connects left into grid
+  grid[dy][gridW-1].type=4;grid[dy][gridW-1].rot=3; // end cap facing left
 
   if(L.multiSrc){
     // Add second source/drain pair top/bottom
     const sx2=rngInt(rng,1,gridW-2);
-    sources.push({x:sx2,y:0,dir:0});
-    grid[0][sx2].type=4;grid[0][sx2].rot=0;
+    sources.push({x:sx2,y:0,dir:2}); // source connects down into grid
+    grid[0][sx2].type=4;grid[0][sx2].rot=2;
     const dx2=rngInt(rng,1,gridW-2);
-    drains.push({x:dx2,y:gridH-1,dir:2});
-    grid[gridH-1][dx2].type=4;grid[gridH-1][dx2].rot=2;
+    drains.push({x:dx2,y:gridH-1,dir:0}); // drain connects up into grid
+    grid[gridH-1][dx2].type=4;grid[gridH-1][dx2].rot=0;
   }
 
   // Generate solvable puzzle using path carving
