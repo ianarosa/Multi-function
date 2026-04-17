@@ -550,10 +550,14 @@
 
       if (i === 0) {
         // Head - brighter, bigger glow
-        glow('#00ff66', 18);
+        glow('#00ff66', 24);
         ctx.fillStyle = '#00ff66';
         drawRoundRect(px - 1, py - 1, sz + 2, sz + 2, 5);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 1.5;
+        drawRoundRect(px - 1, py - 1, sz + 2, sz + 2, 5);
+        ctx.stroke();
         noGlow();
 
         // Eyes
@@ -572,13 +576,18 @@
         }
       } else {
         // Body segments - gradient from bright to dimmer
-        const frac = 1 - (i / snake.length) * 0.5;
+        const frac = 1 - (i / snake.length) * 0.4;
         const g = Math.round(255 * frac);
-        const color = `rgb(0,${g},${Math.round(g * 0.4)})`;
-        glow('#00ff66', 8 * frac);
+        const color = `rgb(0,${g},${Math.round(g * 0.45)})`;
+        glow('#00ff66', 14 * frac);
         ctx.fillStyle = color;
-        drawRoundRect(px, py, sz, sz, 3);
+        drawRoundRect(px, py, sz, sz, 4);
         ctx.fill();
+        // Bright border for visibility
+        ctx.strokeStyle = `rgba(0,255,102,${0.5 * frac})`;
+        ctx.lineWidth = 1.5;
+        drawRoundRect(px, py, sz, sz, 4);
+        ctx.stroke();
         noGlow();
       }
     }

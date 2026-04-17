@@ -295,8 +295,11 @@ function spawnObject() {
   const color = type.colors[Math.floor(Math.random() * type.colors.length)];
   const margin = 60;
   const x = margin + Math.random() * (W - margin * 2);
-  const launchSpeed = 10 + d * 0.8 + Math.random() * 3;
-  const vx = (Math.random() - 0.5) * 5;
+  // Scale launch speed to screen height so objects reach 60-80% up
+  const targetHeight = H * (0.6 + Math.random() * 0.2);
+  const baseSpeed = Math.sqrt(2 * GRAVITY * targetHeight);
+  const launchSpeed = baseSpeed + d * 0.3;
+  const vx = (Math.random() - 0.5) * 6;
 
   objects.push({
     x, y: H + 30,
