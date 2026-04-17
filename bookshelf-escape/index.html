@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BOOKSHELF ESCAPE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:#1a0e08;
+  font-family:'Barlow',sans-serif;
+  color:#fff5e0;
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+#top-bar{
+  position:fixed;top:0;left:0;right:0;
+  height:48px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;
+  background:rgba(42,24,16,0.94);
+  border-bottom:2px solid rgba(255,153,68,0.35);
+  z-index:100;
+  backdrop-filter:blur(6px);
+}
+#top-bar h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;letter-spacing:3px;
+  color:#ff9944;
+  text-shadow:0 0 10px rgba(255,153,68,0.5);
+  position:absolute;left:50%;transform:translateX(-50%);
+  white-space:nowrap;
+}
+#back-btn{
+  font-family:'Barlow',sans-serif;font-weight:700;
+  color:#ff9944;text-decoration:none;font-size:14px;
+  padding:6px 10px;border-radius:4px;
+  border:1px solid rgba(255,153,68,0.3);
+  transition:background 0.2s,box-shadow 0.2s;
+  z-index:2;
+}
+#back-btn:hover{background:rgba(255,153,68,0.1);box-shadow:0 0 8px rgba(255,153,68,0.3);}
+#top-spacer{display:flex;align-items:center;gap:8px;z-index:2;}
+#fs-btn{
+  background:none;border:1px solid rgba(255,153,68,0.3);
+  color:#ff9944;font-size:18px;
+  width:34px;height:34px;border-radius:4px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.2s,box-shadow 0.2s;
+}
+#fs-btn:hover{background:rgba(255,153,68,0.1);box-shadow:0 0 8px rgba(255,153,68,0.3);}
+
+#game-area{
+  position:fixed;top:48px;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;
+  overflow:hidden;
+  background:linear-gradient(180deg,#1a0e08 0%,#2a1810 40%,#1a0e08 100%);
+}
+
+/* Dust particles */
+.dust{
+  position:absolute;width:3px;height:3px;border-radius:50%;
+  background:rgba(255,245,224,0.3);pointer-events:none;
+  animation:dustFloat linear infinite;
+}
+@keyframes dustFloat{
+  0%{transform:translateY(0) translateX(0);opacity:0;}
+  10%{opacity:0.4;}
+  90%{opacity:0.3;}
+  100%{transform:translateY(-120px) translateX(30px);opacity:0;}
+}
+
+/* HUD */
+#hud{
+  width:100%;max-width:700px;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px;
+  font-family:'Barlow',sans-serif;
+  font-size:14px;color:#cdb89a;
+}
+#hud .level-label{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px;letter-spacing:2px;color:#ff9944;
+}
+#hud .timer{font-size:16px;color:#9a8060;}
+#hint-btn{
+  background:none;border:1px solid rgba(255,153,68,0.3);
+  color:#ff9944;font-family:'Bebas Neue',sans-serif;
+  font-size:20px;width:36px;height:36px;border-radius:50%;
+  cursor:pointer;transition:all 0.2s;
+}
+#hint-btn:hover{background:rgba(255,153,68,0.15);box-shadow:0 0 12px rgba(255,153,68,0.3);}
+
+/* Bookshelf */
+#shelf-container{
+  position:relative;
+  width:90%;max-width:660px;
+  flex:1;
+  display:flex;flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  margin-bottom:10px;
+}
+#bookshelf{
+  position:relative;
+  width:100%;
+  background:linear-gradient(180deg,#3d2215 0%,#2a1810 100%);
+  border:3px solid #4a2a18;
+  border-radius:6px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6),inset 0 2px 8px rgba(255,153,68,0.08);
+  padding:12px 10px 18px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:4px;
+  min-height:180px;
+}
+/* Shelf plank */
+#bookshelf::after{
+  content:'';position:absolute;bottom:0;left:-3px;right:-3px;
+  height:14px;
+  background:linear-gradient(180deg,#5a3a22,#3d2215);
+  border-radius:0 0 6px 6px;
+  border-top:1px solid #6a4a30;
+  box-shadow:0 4px 12px rgba(0,0,0,0.5);
+}
+/* Lamp glow */
+#lamp-glow{
+  position:absolute;top:-60px;right:-30px;
+  width:120px;height:120px;
+  background:radial-gradient(circle,rgba(255,180,80,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* Books */
+.book{
+  position:relative;
+  cursor:grab;
+  border-radius:3px 4px 4px 3px;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  font-family:'Barlow',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:0.5px;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  transition:transform 0.15s,box-shadow 0.15s;
+  z-index:1;
+  flex-shrink:0;
+}
+.book::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:rgba(0,0,0,0.25);border-radius:3px 0 0 3px;
+}
+.book::after{
+  content:'';position:absolute;right:0;top:2px;bottom:2px;width:1px;
+  background:rgba(255,255,255,0.1);
+}
+.book:hover{transform:translateY(-4px);box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+.book.dragging{
+  opacity:0.5;transform:scale(0.95);
+}
+.book.drop-target-left{
+  border-left:3px solid #ff9944;
+}
+.book.drop-target-right{
+  border-right:3px solid #ff9944;
+}
+.book.correct-pos{
+  box-shadow:0 0 12px rgba(255,153,68,0.5);
+}
+
+/* Drag ghost for touch */
+#drag-ghost{
+  position:fixed;pointer-events:none;z-index:500;
+  border-radius:3px 4px 4px 3px;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-family:'Barlow',sans-serif;font-weight:700;font-size:11px;
+  letter-spacing:0.5px;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  opacity:0.85;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6);
+  display:none;
+}
+
+/* Code input area */
+#code-area{
+  width:90%;max-width:660px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:8px;
+  padding:8px 0 12px;
+}
+#code-hint{
+  font-size:13px;color:#9a8060;text-align:center;
+  font-style:italic;min-height:18px;
+}
+#code-row{
+  display:flex;gap:8px;align-items:center;
+}
+#code-input{
+  background:rgba(42,24,16,0.8);
+  border:2px solid #4a2a18;
+  border-radius:6px;
+  color:#ff9944;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;letter-spacing:4px;
+  padding:8px 16px;
+  width:220px;text-align:center;
+  outline:none;
+  transition:border-color 0.2s;
+}
+#code-input:focus{border-color:#ff9944;}
+#code-input::placeholder{color:#6a4a30;letter-spacing:2px;font-size:16px;}
+#submit-btn{
+  background:linear-gradient(180deg,#ff9944,#cc7722);
+  border:none;border-radius:6px;
+  color:#2a1810;font-family:'Bebas Neue',sans-serif;
+  font-size:20px;letter-spacing:2px;
+  padding:10px 20px;cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 2px 10px rgba(255,153,68,0.3);
+}
+#submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(255,153,68,0.5);}
+#submit-btn:active{transform:translateY(1px);}
+#feedback{
+  font-size:14px;min-height:20px;
+  transition:color 0.3s;
+}
+.feedback-wrong{color:#ff4444;animation:shake 0.4s;}
+.feedback-correct{color:#44ff88;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-6px);}
+  75%{transform:translateX(6px);}
+}
+
+/* Hint popup */
+#hint-popup{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(42,24,16,0.96);
+  border:2px solid #ff9944;
+  border-radius:12px;padding:24px 32px;
+  max-width:360px;text-align:center;
+  z-index:200;
+  box-shadow:0 0 40px rgba(255,153,68,0.2);
+  display:none;
+}
+#hint-popup p{font-size:15px;color:#fff5e0;line-height:1.5;margin-bottom:16px;}
+#hint-popup button{
+  background:#ff9944;border:none;border-radius:6px;
+  color:#2a1810;font-family:'Bebas Neue',sans-serif;
+  font-size:18px;padding:8px 24px;cursor:pointer;
+}
+#hint-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199;display:none;
+}
+
+/* Level complete overlay */
+#level-complete{
+  position:fixed;inset:0;z-index:300;
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(26,14,8,0.92);
+  backdrop-filter:blur(8px);
+}
+#level-complete h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:48px;letter-spacing:4px;
+  color:#ff9944;
+  text-shadow:0 0 30px rgba(255,153,68,0.5);
+  margin-bottom:10px;
+}
+#level-complete p{
+  font-size:16px;color:#cdb89a;margin-bottom:24px;
+}
+#next-btn{
+  background:linear-gradient(180deg,#ff9944,#cc7722);
+  border:none;border-radius:8px;
+  color:#2a1810;font-family:'Bebas Neue',sans-serif;
+  font-size:24px;letter-spacing:3px;
+  padding:14px 40px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(255,153,68,0.4);
+  transition:all 0.2s;
+}
+#next-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(255,153,68,0.6);}
+
+/* Win screen */
+#win-screen{
+  position:fixed;inset:0;z-index:300;
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(26,14,8,0.95);
+  backdrop-filter:blur(10px);
+}
+#win-screen h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:52px;letter-spacing:4px;
+  color:#ff9944;
+  text-shadow:0 0 40px rgba(255,153,68,0.6);
+  margin-bottom:10px;
+}
+#win-screen p{color:#cdb89a;font-size:18px;margin-bottom:24px;}
+#replay-btn{
+  background:linear-gradient(180deg,#ff9944,#cc7722);
+  border:none;border-radius:8px;
+  color:#2a1810;font-family:'Bebas Neue',sans-serif;
+  font-size:22px;letter-spacing:3px;
+  padding:12px 36px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(255,153,68,0.4);
+  transition:all 0.2s;
+}
+#replay-btn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(255,153,68,0.6);}
+
+/* Particles canvas for celebration */
+#particles{
+  position:fixed;inset:0;pointer-events:none;z-index:250;
+}
+
+@media(max-width:480px){
+  #bookshelf{padding:8px 6px 14px;gap:2px;min-height:150px;}
+  .book{font-size:9px;}
+  #code-input{width:160px;font-size:18px;}
+  #hud .level-label{font-size:20px;}
+}
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <a id="back-btn" href="/">&#8592; HUB</a>
+  <h1>BOOKSHELF ESCAPE</h1>
+  <div id="top-spacer">
+    <button id="fs-btn" title="Fullscreen">&#x26F6;</button>
+  </div>
+</div>
+
+<div id="game-area">
+  <div id="hud">
+    <span class="level-label" id="level-label">LEVEL 1</span>
+    <button id="hint-btn" title="Hint">?</button>
+    <span class="timer" id="timer">0:00</span>
+  </div>
+
+  <div id="shelf-container">
+    <div id="lamp-glow"></div>
+    <div id="bookshelf" id="shelf"></div>
+  </div>
+
+  <div id="code-area">
+    <div id="code-hint"></div>
+    <div id="code-row">
+      <input id="code-input" type="text" placeholder="ENTER CODE" autocomplete="off" spellcheck="false">
+      <button id="submit-btn">UNLOCK</button>
+    </div>
+    <div id="feedback"></div>
+  </div>
+</div>
+
+<div id="hint-overlay"></div>
+<div id="hint-popup">
+  <p id="hint-text"></p>
+  <button id="hint-close">GOT IT</button>
+</div>
+
+<div id="level-complete">
+  <h2>LEVEL COMPLETE</h2>
+  <p id="lc-msg"></p>
+  <button id="next-btn">NEXT LEVEL</button>
+</div>
+
+<div id="win-screen">
+  <h2>FREEDOM!</h2>
+  <p>You escaped all 10 shelves. Master librarian!</p>
+  <button id="replay-btn">PLAY AGAIN</button>
+</div>
+
+<canvas id="particles"></canvas>
+<div id="drag-ghost"></div>
+
+<script>
+(function(){
+"use strict";
+
+// ---- Fullscreen ----
+const fsBtn=document.getElementById('fs-btn');
+fsBtn.onclick=()=>{
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+};
+
+// ---- Dust particles ----
+(function spawnDust(){
+  const area=document.getElementById('game-area');
+  for(let i=0;i<15;i++){
+    const d=document.createElement('div');
+    d.className='dust';
+    d.style.left=Math.random()*100+'%';
+    d.style.top=(50+Math.random()*50)+'%';
+    d.style.animationDuration=(4+Math.random()*6)+'s';
+    d.style.animationDelay=(Math.random()*6)+'s';
+    d.style.width=d.style.height=(1.5+Math.random()*2.5)+'px';
+    area.appendChild(d);
+  }
+})();
+
+// ---- Level definitions ----
+const BOOK_COLORS=[
+  '#c0392b','#2980b9','#27ae60','#8e44ad','#d35400',
+  '#16a085','#e74c3c','#3498db','#f39c12','#1abc9c',
+  '#9b59b6','#e67e22','#2ecc71','#e91e63','#00bcd4'
+];
+
+const levels=[
+  // Level 1: Alphabetical by title, code = first letters
+  {
+    books:[
+      {title:'Amber',height:140,width:38,color:'#c0392b'},
+      {title:'Beacon',height:130,width:42,color:'#2980b9'},
+      {title:'Crypt',height:150,width:36,color:'#27ae60'},
+      {title:'Dawn',height:125,width:40,color:'#8e44ad'},
+      {title:'Echo',height:145,width:34,color:'#d35400'},
+    ],
+    sortKey:b=>b.title,
+    code:'ABCDE',
+    codeHint:'First letter of each title in order...',
+    hint:'Try sorting the books alphabetically by their title.',
+    ruleDesc:'Alphabetical order'
+  },
+  // Level 2: By height (shortest to tallest), code = numbers on spines
+  {
+    books:[
+      {title:'Vol 7',height:110,width:38,color:'#e74c3c',num:7},
+      {title:'Vol 3',height:125,width:36,color:'#3498db',num:3},
+      {title:'Vol 1',height:140,width:42,color:'#f39c12',num:1},
+      {title:'Vol 5',height:155,width:34,color:'#1abc9c',num:5},
+      {title:'Vol 9',height:170,width:40,color:'#9b59b6',num:9},
+    ],
+    sortKey:b=>b.height,
+    code:'73159',
+    codeHint:'The numbers on the spines reveal a sequence...',
+    hint:'Arrange books from shortest to tallest.',
+    ruleDesc:'Height order (short to tall)'
+  },
+  // Level 3: By color spectrum (ROYGBV), code = first letters spell ROSES
+  {
+    books:[
+      {title:'Roads',height:135,width:40,color:'#e74c3c'},
+      {title:'Ocean',height:145,width:36,color:'#f39c12'},
+      {title:'Solar',height:125,width:42,color:'#f1c40f'},
+      {title:'Elms',height:140,width:38,color:'#27ae60'},
+      {title:'Sky',height:150,width:35,color:'#2980b9'},
+    ],
+    sortKey:b=>{
+      const order={'#e74c3c':0,'#f39c12':1,'#f1c40f':2,'#27ae60':3,'#2980b9':4};
+      return order[b.color];
+    },
+    code:'ROSES',
+    codeHint:'Read the first letter of each title...',
+    hint:'Think about the rainbow. Arrange by color spectrum: red, orange, yellow, green, blue.',
+    ruleDesc:'Color spectrum order'
+  },
+  // Level 4: By number hidden in title, code = those numbers
+  {
+    books:[
+      {title:'Room 4',height:140,width:40,color:'#8e44ad',num:4},
+      {title:'Gate 2',height:130,width:36,color:'#16a085',num:2},
+      {title:'Floor 6',height:150,width:42,color:'#c0392b',num:6},
+      {title:'Hall 1',height:135,width:38,color:'#d35400',num:1},
+      {title:'Vault 3',height:145,width:34,color:'#2980b9',num:3},
+      {title:'Wing 5',height:125,width:40,color:'#27ae60',num:5},
+    ],
+    sortKey:b=>b.num,
+    code:'HGVRWF',
+    codeHint:'First letter of each title once sorted...',
+    hint:'Each title hides a number. Sort by those numbers ascending.',
+    ruleDesc:'Number in title (ascending)'
+  },
+  // Level 5: By word length of title, code = consonant count per title
+  {
+    books:[
+      {title:'Ax',height:110,width:34,color:'#e67e22'},
+      {title:'Fog',height:125,width:38,color:'#3498db'},
+      {title:'Dusk',height:135,width:40,color:'#9b59b6'},
+      {title:'Flame',height:145,width:42,color:'#e74c3c'},
+      {title:'Riddle',height:155,width:36,color:'#1abc9c'},
+      {title:'Mystery',height:165,width:44,color:'#2980b9'},
+    ],
+    sortKey:b=>b.title.length,
+    code:'AFDFRM',
+    codeHint:'Sorted first letters spell the code...',
+    hint:'Count the letters in each title. Shorter books go first.',
+    ruleDesc:'Title length (shortest to longest)'
+  },
+  // Level 6: By author last name alphabetical
+  {
+    books:[
+      {title:'The Cave',author:'Zara Nix',height:140,width:42,color:'#c0392b'},
+      {title:'Tides',author:'Kai Elm',height:130,width:38,color:'#27ae60'},
+      {title:'Roots',author:'Pia Ash',height:150,width:36,color:'#8e44ad'},
+      {title:'Gloom',author:'Leo Ray',height:135,width:40,color:'#d35400'},
+      {title:'Veil',author:'Mia Fox',height:145,width:34,color:'#2980b9'},
+      {title:'Haze',author:'Jon Day',height:125,width:42,color:'#16a085'},
+    ],
+    sortKey:b=>b.author.split(' ').pop(),
+    code:'ROOTS',
+    codeHint:'Look at the titles of books 1-5 once sorted...',
+    hint:'Look at the author names. Sort by their LAST name, A to Z.',
+    ruleDesc:'Author last name (A-Z)'
+  },
+  // Level 7: By publication year on spine
+  {
+    books:[
+      {title:'Myth 1954',year:1954,height:150,width:40,color:'#9b59b6'},
+      {title:'Code 1987',year:1987,height:135,width:38,color:'#e74c3c'},
+      {title:'Dawn 1901',year:1901,height:140,width:42,color:'#f39c12'},
+      {title:'Rust 2003',year:2003,height:130,width:36,color:'#2980b9'},
+      {title:'Void 1932',year:1932,height:145,width:34,color:'#27ae60'},
+      {title:'Flux 2019',year:2019,height:125,width:40,color:'#16a085'},
+      {title:'Zinc 1978',year:1978,height:155,width:38,color:'#d35400'},
+    ],
+    sortKey:b=>b.year,
+    code:'DVMZCRF',
+    codeHint:'First letters of the titles once in chronological order...',
+    hint:'Each book has a year. Arrange from oldest to newest.',
+    ruleDesc:'Publication year (oldest first)'
+  },
+  // Level 8: Reverse alphabetical, code = last letters
+  {
+    books:[
+      {title:'Wren',height:130,width:38,color:'#e67e22'},
+      {title:'Storm',height:145,width:42,color:'#3498db'},
+      {title:'Prism',height:140,width:36,color:'#e74c3c'},
+      {title:'Opal',height:135,width:40,color:'#1abc9c'},
+      {title:'Knell',height:150,width:34,color:'#8e44ad'},
+      {title:'Glyph',height:125,width:42,color:'#27ae60'},
+      {title:'Frost',height:155,width:38,color:'#c0392b'},
+    ],
+    sortKey:b=>b.title,
+    sortReverse:true,
+    code:'NMMLHHT',
+    codeHint:'Last letter of each title in reverse-sorted order...',
+    hint:'Like Level 1, but backwards. Sort from Z to A.',
+    ruleDesc:'Reverse alphabetical (Z-A)'
+  },
+  // Level 9: By width (narrowest to widest), code = vowel count in each title
+  {
+    books:[
+      {title:'Shrine',height:140,width:30,color:'#9b59b6'},
+      {title:'Beacon',height:135,width:34,color:'#f39c12'},
+      {title:'Candle',height:150,width:38,color:'#e74c3c'},
+      {title:'Aurora',height:130,width:42,color:'#2980b9'},
+      {title:'Plinth',height:145,width:46,color:'#27ae60'},
+      {title:'Mosaic',height:125,width:50,color:'#16a085'},
+      {title:'Quartz',height:155,width:54,color:'#d35400'},
+      {title:'Emblem',height:140,width:58,color:'#8e44ad'},
+    ],
+    sortKey:b=>b.width,
+    code:'SBCAPMEQ',
+    codeHint:'First letter of each title, thinnest to thickest...',
+    hint:'Look at how thick each book is. Thinnest goes first.',
+    ruleDesc:'Width order (thin to thick)'
+  },
+  // Level 10: Combined — sort by number of vowels in title, then alphabetical tiebreak
+  {
+    books:[
+      {title:'Cry',height:115,width:34,color:'#e74c3c'},
+      {title:'Myth',height:130,width:38,color:'#8e44ad'},
+      {title:'Lynx',height:125,width:36,color:'#d35400'},
+      {title:'Dune',height:145,width:42,color:'#f39c12'},
+      {title:'Flame',height:140,width:40,color:'#c0392b'},
+      {title:'Rogue',height:150,width:44,color:'#2980b9'},
+      {title:'Alive',height:135,width:38,color:'#27ae60'},
+      {title:'Ocean',height:155,width:46,color:'#1abc9c'},
+      {title:'Amaze',height:160,width:42,color:'#9b59b6'},
+    ],
+    sortKey:b=>{
+      const vc=(b.title.match(/[aeiou]/gi)||[]).length;
+      return vc*1000+b.title.charCodeAt(0);
+    },
+    code:'ESCAPE',
+    codeHint:'Combine letters 3,6,1,8,4,2 from the sorted titles...',
+    hint:'Count the vowels (A,E,I,O,U) in each title. Fewer vowels first, alphabetical tiebreak.',
+    ruleDesc:'Vowel count (fewest first), alphabetical tiebreak'
+  },
+];
+
+// Precompute codes for levels that use first-letter patterns
+// (codes are already hardcoded above for reliability)
+
+// ---- Game state ----
+let currentLevel=0;
+let timerSec=0;
+let timerInterval=null;
+let currentBooks=[];
+let dragIdx=-1;
+let dragBook=null;
+let touchId=null;
+
+// Load progress
+const saved=localStorage.getItem('bookshelf-escape-progress');
+if(saved){
+  const s=parseInt(saved,10);
+  if(s>=0&&s<levels.length)currentLevel=s;
+}
+
+// ---- DOM refs ----
+const shelf=document.getElementById('bookshelf');
+const levelLabel=document.getElementById('level-label');
+const timerEl=document.getElementById('timer');
+const codeInput=document.getElementById('code-input');
+const submitBtn=document.getElementById('submit-btn');
+const feedbackEl=document.getElementById('feedback');
+const codeHintEl=document.getElementById('code-hint');
+const hintBtn=document.getElementById('hint-btn');
+const hintPopup=document.getElementById('hint-popup');
+const hintOverlay=document.getElementById('hint-overlay');
+const hintText=document.getElementById('hint-text');
+const hintClose=document.getElementById('hint-close');
+const levelComplete=document.getElementById('level-complete');
+const lcMsg=document.getElementById('lc-msg');
+const nextBtn=document.getElementById('next-btn');
+const winScreen=document.getElementById('win-screen');
+const replayBtn=document.getElementById('replay-btn');
+const ghost=document.getElementById('drag-ghost');
+const particlesCanvas=document.getElementById('particles');
+const pCtx=particlesCanvas.getContext('2d');
+
+// ---- Timer ----
+function startTimer(){
+  timerSec=0;
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    timerSec++;
+    const m=Math.floor(timerSec/60);
+    const s=timerSec%60;
+    timerEl.textContent=m+':'+(s<10?'0':'')+s;
+  },1000);
+}
+function stopTimer(){clearInterval(timerInterval);}
+
+// ---- Render level ----
+function loadLevel(idx){
+  currentLevel=idx;
+  localStorage.setItem('bookshelf-escape-progress',idx);
+  const lv=levels[idx];
+  levelLabel.textContent='LEVEL '+(idx+1);
+  codeHintEl.textContent='';
+  codeInput.value='';
+  feedbackEl.textContent='';
+  feedbackEl.className='';
+
+  // Shuffle books
+  currentBooks=[...lv.books];
+  // Fisher-Yates shuffle, ensure not already sorted
+  let sorted=false;
+  while(!sorted){
+    for(let i=currentBooks.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [currentBooks[i],currentBooks[j]]=[currentBooks[j],currentBooks[i]];
+    }
+    // Check not accidentally sorted
+    const correctOrder=getCorrectOrder();
+    sorted=!currentBooks.every((b,i)=>b===correctOrder[i]);
+  }
+
+  renderBooks();
+  startTimer();
+}
+
+function getCorrectOrder(){
+  const lv=levels[currentLevel];
+  const sorted=[...lv.books].sort((a,b)=>{
+    const ka=typeof lv.sortKey(a)==='string'?lv.sortKey(a):lv.sortKey(a);
+    const kb=typeof lv.sortKey(b)==='string'?lv.sortKey(b):lv.sortKey(b);
+    if(ka<kb)return lv.sortReverse?1:-1;
+    if(ka>kb)return lv.sortReverse?-1:1;
+    return 0;
+  });
+  return sorted;
+}
+
+function renderBooks(){
+  shelf.innerHTML='';
+  const maxH=Math.max(...currentBooks.map(b=>b.height));
+  currentBooks.forEach((book,i)=>{
+    const el=document.createElement('div');
+    el.className='book';
+    el.style.height=book.height+'px';
+    el.style.width=book.width+'px';
+    el.style.background=`linear-gradient(90deg,${book.color},${lighten(book.color,15)})`;
+    el.style.boxShadow=`inset -2px 0 4px rgba(0,0,0,0.3),2px 2px 8px rgba(0,0,0,0.4)`;
+    el.dataset.idx=i;
+
+    let label=book.title;
+    if(book.author)label+='\n'+book.author;
+    el.textContent=label;
+
+    // Mouse drag
+    el.addEventListener('mousedown',onDragStart);
+    // Touch drag
+    el.addEventListener('touchstart',onTouchStart,{passive:false});
+
+    shelf.appendChild(el);
+  });
+}
+
+function lighten(hex,pct){
+  let r=parseInt(hex.slice(1,3),16);
+  let g=parseInt(hex.slice(3,5),16);
+  let b=parseInt(hex.slice(5,7),16);
+  r=Math.min(255,r+pct);
+  g=Math.min(255,g+pct);
+  b=Math.min(255,b+pct);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+// ---- Drag and drop (mouse) ----
+function onDragStart(e){
+  e.preventDefault();
+  dragIdx=parseInt(e.target.closest('.book').dataset.idx);
+  const el=e.target.closest('.book');
+  el.classList.add('dragging');
+  document.addEventListener('mousemove',onDragMove);
+  document.addEventListener('mouseup',onDragEnd);
+}
+
+function onDragMove(e){
+  if(dragIdx<0)return;
+  const bookEls=shelf.querySelectorAll('.book');
+  bookEls.forEach(el=>el.classList.remove('drop-target-left','drop-target-right'));
+
+  const target=getDropTarget(e.clientX,e.clientY);
+  if(target!==null&&target!==dragIdx){
+    const tel=bookEls[target];
+    const rect=tel.getBoundingClientRect();
+    if(e.clientX<rect.left+rect.width/2){
+      tel.classList.add('drop-target-left');
+    }else{
+      tel.classList.add('drop-target-right');
+    }
+  }
+}
+
+function onDragEnd(e){
+  document.removeEventListener('mousemove',onDragMove);
+  document.removeEventListener('mouseup',onDragEnd);
+  const bookEls=shelf.querySelectorAll('.book');
+  bookEls.forEach(el=>el.classList.remove('dragging','drop-target-left','drop-target-right'));
+
+  if(dragIdx<0)return;
+  const target=getDropTarget(e.clientX,e.clientY);
+  if(target!==null&&target!==dragIdx){
+    moveBook(dragIdx,target,e.clientX);
+  }
+  dragIdx=-1;
+}
+
+function getDropTarget(x,y){
+  const bookEls=shelf.querySelectorAll('.book');
+  for(let i=0;i<bookEls.length;i++){
+    const r=bookEls[i].getBoundingClientRect();
+    if(x>=r.left&&x<=r.right&&y>=r.top-20&&y<=r.bottom+20){
+      return i;
+    }
+  }
+  return null;
+}
+
+function moveBook(fromIdx,toIdx,clientX){
+  // Determine insert position based on cursor position relative to target
+  const bookEls=shelf.querySelectorAll('.book');
+  const targetRect=bookEls[toIdx].getBoundingClientRect();
+  let insertIdx=toIdx;
+  if(clientX>targetRect.left+targetRect.width/2)insertIdx=toIdx+1;
+  if(fromIdx<insertIdx)insertIdx--;
+
+  const book=currentBooks.splice(fromIdx,1)[0];
+  currentBooks.splice(insertIdx,0,book);
+  renderBooks();
+  checkOrder();
+}
+
+// ---- Touch drag ----
+function onTouchStart(e){
+  if(touchId!==null)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  touchId=t.identifier;
+  const el=e.target.closest('.book');
+  dragIdx=parseInt(el.dataset.idx);
+  el.classList.add('dragging');
+
+  // Show ghost
+  ghost.style.display='flex';
+  ghost.textContent=el.textContent;
+  ghost.style.width=el.style.width;
+  ghost.style.height=el.style.height;
+  ghost.style.background=el.style.background;
+  positionGhost(t.clientX,t.clientY);
+
+  document.addEventListener('touchmove',onTouchMove,{passive:false});
+  document.addEventListener('touchend',onTouchEnd);
+  document.addEventListener('touchcancel',onTouchEnd);
+}
+
+function onTouchMove(e){
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier===touchId){
+      positionGhost(t.clientX,t.clientY);
+      const bookEls=shelf.querySelectorAll('.book');
+      bookEls.forEach(el=>el.classList.remove('drop-target-left','drop-target-right'));
+      const target=getDropTarget(t.clientX,t.clientY);
+      if(target!==null&&target!==dragIdx){
+        const tel=bookEls[target];
+        const rect=tel.getBoundingClientRect();
+        if(t.clientX<rect.left+rect.width/2){
+          tel.classList.add('drop-target-left');
+        }else{
+          tel.classList.add('drop-target-right');
+        }
+      }
+    }
+  }
+}
+
+function onTouchEnd(e){
+  for(const t of e.changedTouches){
+    if(t.identifier===touchId){
+      ghost.style.display='none';
+      document.removeEventListener('touchmove',onTouchMove);
+      document.removeEventListener('touchend',onTouchEnd);
+      document.removeEventListener('touchcancel',onTouchEnd);
+      const bookEls=shelf.querySelectorAll('.book');
+      bookEls.forEach(el=>el.classList.remove('dragging','drop-target-left','drop-target-right'));
+
+      const target=getDropTarget(t.clientX,t.clientY);
+      if(target!==null&&target!==dragIdx){
+        moveBook(dragIdx,target,t.clientX);
+      }
+      dragIdx=-1;
+      touchId=null;
+    }
+  }
+}
+
+function positionGhost(x,y){
+  ghost.style.left=(x-25)+'px';
+  ghost.style.top=(y-60)+'px';
+}
+
+// ---- Check order ----
+function checkOrder(){
+  const correct=getCorrectOrder();
+  const isCorrect=currentBooks.every((b,i)=>b===correct[i]);
+  if(isCorrect){
+    codeHintEl.textContent=levels[currentLevel].codeHint;
+    // Highlight correct books
+    shelf.querySelectorAll('.book').forEach(el=>el.classList.add('correct-pos'));
+  }
+}
+
+// ---- Code submission ----
+submitBtn.addEventListener('click',submitCode);
+codeInput.addEventListener('keydown',e=>{if(e.key==='Enter')submitCode();});
+
+function submitCode(){
+  const code=codeInput.value.trim().toUpperCase();
+  const answer=levels[currentLevel].code.toUpperCase();
+  if(code===answer){
+    feedbackEl.textContent='';
+    feedbackEl.className='';
+    stopTimer();
+    showLevelComplete();
+  }else{
+    feedbackEl.textContent='Wrong code. Try again!';
+    feedbackEl.className='feedback-wrong';
+    // Re-trigger animation
+    feedbackEl.style.animation='none';
+    void feedbackEl.offsetHeight;
+    feedbackEl.style.animation='';
+  }
+}
+
+// ---- Hints ----
+hintBtn.addEventListener('click',()=>{
+  hintText.textContent=levels[currentLevel].hint;
+  hintPopup.style.display='block';
+  hintOverlay.style.display='block';
+});
+hintClose.addEventListener('click',closeHint);
+hintOverlay.addEventListener('click',closeHint);
+function closeHint(){
+  hintPopup.style.display='none';
+  hintOverlay.style.display='none';
+}
+
+// ---- Level complete ----
+function showLevelComplete(){
+  spawnCelebration();
+  if(currentLevel>=levels.length-1){
+    winScreen.style.display='flex';
+    return;
+  }
+  lcMsg.textContent='Solved in '+timerEl.textContent+' — '+levels[currentLevel].ruleDesc;
+  levelComplete.style.display='flex';
+}
+
+nextBtn.addEventListener('click',()=>{
+  levelComplete.style.display='none';
+  loadLevel(currentLevel+1);
+});
+
+replayBtn.addEventListener('click',()=>{
+  winScreen.style.display='none';
+  localStorage.removeItem('bookshelf-escape-progress');
+  loadLevel(0);
+});
+
+// ---- Celebration particles ----
+let particles=[];
+function spawnCelebration(){
+  particlesCanvas.width=window.innerWidth;
+  particlesCanvas.height=window.innerHeight;
+  particles=[];
+  for(let i=0;i<80;i++){
+    particles.push({
+      x:window.innerWidth/2+Math.random()*200-100,
+      y:window.innerHeight/2,
+      vx:(Math.random()-0.5)*8,
+      vy:-(2+Math.random()*6),
+      size:3+Math.random()*5,
+      color:BOOK_COLORS[Math.floor(Math.random()*BOOK_COLORS.length)],
+      life:1,
+      decay:0.008+Math.random()*0.012,
+      gravity:0.1
+    });
+  }
+  animateParticles();
+}
+
+function animateParticles(){
+  pCtx.clearRect(0,0,particlesCanvas.width,particlesCanvas.height);
+  let alive=false;
+  particles.forEach(p=>{
+    if(p.life<=0)return;
+    alive=true;
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.vy+=p.gravity;
+    p.life-=p.decay;
+    pCtx.globalAlpha=Math.max(0,p.life);
+    pCtx.fillStyle=p.color;
+    pCtx.fillRect(p.x,p.y,p.size,p.size);
+  });
+  pCtx.globalAlpha=1;
+  if(alive)requestAnimationFrame(animateParticles);
+}
+
+// ---- Resize ----
+window.addEventListener('resize',()=>{
+  particlesCanvas.width=window.innerWidth;
+  particlesCanvas.height=window.innerHeight;
+});
+
+// ---- Start ----
+loadLevel(currentLevel);
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>HEX SWEEP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #080812; font-family: 'Barlow', sans-serif; }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  #top-bar {
+    display: flex; align-items: center; width: 100%;
+    padding: 6px 12px 8px; gap: 12px; flex-shrink: 0;
+    background: rgba(8,8,18,0.9); border-bottom: 2px solid rgba(68,255,136,0.3);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  #back-btn {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(68,255,136,0.3);
+    color: rgba(68,255,136,0.7); font-family: 'Barlow', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 1px; padding: 5px 12px;
+    cursor: pointer; text-decoration: none; border-radius: 4px;
+    white-space: nowrap; flex-shrink: 0; transition: background 0.15s, color 0.15s;
+  }
+  #back-btn:hover { background: rgba(68,255,136,0.15); color: #4f8; }
+
+  h1 {
+    font-family: 'Bebas Neue', cursive; color: #44ff88; font-size: 2rem;
+    letter-spacing: 0.15em; text-shadow: 0 0 20px rgba(68,255,136,0.4); flex: 1; text-align: center;
+  }
+  #top-spacer { width: 70px; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; }
+  #fs-btn {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(68,255,136,0.3);
+    color: rgba(68,255,136,0.7); border-radius: 4px; cursor: pointer;
+    width: 32px; height: 28px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0;
+  }
+  #fs-btn:hover { background: rgba(68,255,136,0.15); color: #4f8; }
+
+  #info-bar {
+    display: none; width: 100%; padding: 4px 16px;
+    justify-content: space-between; align-items: center; flex-shrink: 0;
+    font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 14px;
+    color: #44ff88; letter-spacing: 1px;
+  }
+  #info-bar.active { display: flex; }
+  .info-item { display: flex; align-items: center; gap: 6px; }
+  .info-icon { font-size: 16px; opacity: 0.7; }
+
+  #wrap {
+    position: relative; flex: 1; min-height: 0; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  canvas {
+    display: block; cursor: pointer;
+  }
+
+  /* Start screen overlay */
+  #start-screen {
+    position: absolute; inset: 0; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(8,8,18,0.95);
+  }
+  #start-screen.hidden { display: none; }
+
+  .start-title {
+    font-family: 'Bebas Neue', cursive; font-size: 3.5rem; color: #44ff88;
+    letter-spacing: 0.2em; text-shadow: 0 0 30px rgba(68,255,136,0.5);
+    margin-bottom: 8px;
+  }
+  .start-sub {
+    color: rgba(255,255,255,0.4); font-size: 0.8rem; letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 32px;
+  }
+
+  .diff-btn {
+    width: 220px; padding: 14px 0; margin: 6px 0;
+    background: rgba(68,255,136,0.06); border: 1.5px solid rgba(68,255,136,0.25);
+    color: #44ff88; font-family: 'Bebas Neue', cursive; font-size: 1.5rem;
+    letter-spacing: 0.15em; cursor: pointer; border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .diff-btn:hover {
+    background: rgba(68,255,136,0.15); border-color: rgba(68,255,136,0.5);
+    box-shadow: 0 0 20px rgba(68,255,136,0.2);
+  }
+  .diff-info {
+    color: rgba(255,255,255,0.3); font-family: 'Barlow', sans-serif;
+    font-size: 0.65rem; letter-spacing: 0.1em; margin-top: -2px; margin-bottom: 8px;
+  }
+  .best-time {
+    color: rgba(68,255,136,0.4); font-family: 'Barlow', sans-serif;
+    font-size: 0.7rem; margin-bottom: 6px;
+  }
+
+  #hint {
+    flex-shrink: 0; padding: 4px 0 6px;
+    color: rgba(255,255,255,0.18); font-size: 0.68rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <a id="back-btn" href="/">&#8592; HUB</a>
+  <h1>HEX SWEEP</h1>
+  <div id="top-spacer">
+    <div id="fs-btn" onclick="toggleFS()" title="Fullscreen">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div id="info-bar">
+  <div class="info-item"><span class="info-icon">&#9881;</span><span id="mine-count">0</span></div>
+  <div class="info-item"><span class="info-icon">&#9201;</span><span id="timer">0:00</span></div>
+</div>
+
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="start-screen">
+    <div class="start-title">HEX SWEEP</div>
+    <div class="start-sub">Minesweeper on a hex grid</div>
+    <div id="best-easy" class="best-time"></div>
+    <button class="diff-btn" onclick="startGame('easy')">EASY</button>
+    <div class="diff-info">Radius 7 &middot; 10 mines</div>
+    <div id="best-med" class="best-time"></div>
+    <button class="diff-btn" onclick="startGame('medium')">MEDIUM</button>
+    <div class="diff-info">Radius 9 &middot; 25 mines</div>
+    <div id="best-hard" class="best-time"></div>
+    <button class="diff-btn" onclick="startGame('hard')">HARD</button>
+    <div class="diff-info">Radius 11 &middot; 50 mines</div>
+  </div>
+</div>
+
+<div id="hint">Click to reveal &middot; Right-click / long-press to flag</div>
+
+<script>
+// ---- Fullscreen ----
+function toggleFS() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+// ---- Constants ----
+const ACCENT = '#44ff88';
+const BG = '#080812';
+const NUM_COLORS = ['', '#44aaff', '#44ff88', '#ff4466', '#aa66ff', '#ff8833', '#ff66aa'];
+
+const DIFFICULTIES = {
+  easy:   { radius: 7,  mines: 10 },
+  medium: { radius: 9,  mines: 25 },
+  hard:   { radius: 11, mines: 50 }
+};
+
+// ---- State ----
+let canvas, ctx;
+let hexes = [];         // array of hex objects
+let hexMap = new Map();  // "q,r" -> hex
+let gridRadius, mineCount, difficulty;
+let hexSize;             // pixel size of each hex
+let offsetX, offsetY;    // canvas center offset
+let gameState = 'menu';  // menu, playing, won, lost
+let firstClick = true;
+let flagCount = 0;
+let timerStart = 0;
+let timerElapsed = 0;
+let timerRAF = null;
+let hoverHex = null;
+let longPressTimer = null;
+let longPressTriggered = false;
+let particles = [];
+let winAnimStart = 0;
+
+// ---- Hex math (axial coordinates) ----
+function hexNeighbors(q, r) {
+  return [
+    [q+1,r], [q-1,r], [q,r+1], [q,r-1], [q+1,r-1], [q-1,r+1]
+  ];
+}
+
+function axialToPixel(q, r) {
+  const x = hexSize * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+  const y = hexSize * (3/2 * r);
+  return [x + offsetX, y + offsetY];
+}
+
+function pixelToAxial(px, py) {
+  const x = px - offsetX;
+  const y = py - offsetY;
+  const q = (Math.sqrt(3)/3 * x - 1/3 * y) / hexSize;
+  const r = (2/3 * y) / hexSize;
+  // Round to nearest hex
+  let rq = Math.round(q), rr = Math.round(r), rs = Math.round(-q-r);
+  const dq = Math.abs(rq - q), dr = Math.abs(rr - r), ds = Math.abs(rs - (-q-r));
+  if (dq > dr && dq > ds) rq = -rr - rs;
+  else if (dr > ds) rr = -rq - rs;
+  return [rq, rr];
+}
+
+function hexDist(q1, r1, q2, r2) {
+  return (Math.abs(q1-q2) + Math.abs(q1+r1-q2-r2) + Math.abs(r1-r2)) / 2;
+}
+
+// ---- Grid setup ----
+function buildGrid() {
+  hexes = [];
+  hexMap.clear();
+  for (let q = -gridRadius; q <= gridRadius; q++) {
+    for (let r = -gridRadius; r <= gridRadius; r++) {
+      if (hexDist(q, r, 0, 0) <= gridRadius) {
+        const h = { q, r, mine: false, revealed: false, flagged: false, count: 0 };
+        hexes.push(h);
+        hexMap.set(q+','+r, h);
+      }
+    }
+  }
+}
+
+function placeMines(safeQ, safeR) {
+  const safeSet = new Set();
+  safeSet.add(safeQ+','+safeR);
+  for (const [nq, nr] of hexNeighbors(safeQ, safeR)) {
+    safeSet.add(nq+','+nr);
+  }
+  const candidates = hexes.filter(h => !safeSet.has(h.q+','+h.r));
+  // Shuffle and pick
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  for (let i = 0; i < Math.min(mineCount, candidates.length); i++) {
+    candidates[i].mine = true;
+  }
+  // Compute counts
+  for (const h of hexes) {
+    if (h.mine) continue;
+    let c = 0;
+    for (const [nq, nr] of hexNeighbors(h.q, h.r)) {
+      const n = hexMap.get(nq+','+nr);
+      if (n && n.mine) c++;
+    }
+    h.count = c;
+  }
+}
+
+// ---- Reveal / flood fill ----
+function reveal(h) {
+  if (h.revealed || h.flagged) return;
+  h.revealed = true;
+  if (h.mine) return;
+  if (h.count === 0) {
+    for (const [nq, nr] of hexNeighbors(h.q, h.r)) {
+      const n = hexMap.get(nq+','+nr);
+      if (n && !n.revealed && !n.flagged) reveal(n);
+    }
+  }
+}
+
+// ---- Win/lose checks ----
+function checkWin() {
+  return hexes.every(h => h.mine || h.revealed);
+}
+
+// ---- Timer ----
+function updateTimer() {
+  if (gameState !== 'playing') return;
+  timerElapsed = (Date.now() - timerStart) / 1000;
+  const m = Math.floor(timerElapsed / 60);
+  const s = Math.floor(timerElapsed % 60);
+  document.getElementById('timer').textContent = m + ':' + String(s).padStart(2, '0');
+  timerRAF = requestAnimationFrame(updateTimer);
+}
+
+function stopTimer() {
+  if (timerRAF) cancelAnimationFrame(timerRAF);
+  timerRAF = null;
+}
+
+// ---- Particles ----
+function spawnExplosion(px, py, color, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 4;
+    particles.push({
+      x: px, y: py, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+      life: 1, decay: 0.01 + Math.random() * 0.02, size: 2 + Math.random() * 3,
+      color
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.05;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// ---- Drawing ----
+function drawHex(cx, cy, size, fill, stroke, lineWidth) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i - 30);
+    const x = cx + size * Math.cos(angle);
+    const y = cy + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth || 1; ctx.stroke(); }
+}
+
+function render() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (gameState === 'menu') { requestAnimationFrame(render); return; }
+
+  const now = Date.now();
+
+  for (const h of hexes) {
+    const [px, py] = axialToPixel(h.q, h.r);
+    const isHover = hoverHex && hoverHex.q === h.q && hoverHex.r === h.r;
+
+    // Win animation
+    let winColor = null;
+    if (gameState === 'won') {
+      const dist = hexDist(h.q, h.r, 0, 0);
+      const t = (now - winAnimStart) / 1000;
+      const wave = Math.sin(t * 3 - dist * 0.5);
+      if (wave > 0) {
+        const hue = (dist * 30 + t * 100) % 360;
+        winColor = `hsla(${hue}, 100%, 60%, ${wave * 0.5})`;
+      }
+    }
+
+    if (h.revealed) {
+      if (h.mine) {
+        // Mine hex
+        drawHex(px, py, hexSize * 0.92, '#1a0000', '#ff2244', 1.5);
+        // Glowing orb
+        const pulse = 0.7 + 0.3 * Math.sin(now / 200 + h.q * 2 + h.r);
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, hexSize * 0.4);
+        grad.addColorStop(0, `rgba(255,34,68,${pulse})`);
+        grad.addColorStop(1, 'rgba(255,34,68,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(px, py, hexSize * 0.4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff4466';
+        ctx.beginPath(); ctx.arc(px, py, hexSize * 0.15, 0, Math.PI*2); ctx.fill();
+      } else {
+        // Revealed safe hex
+        const bgFill = winColor || 'rgba(20,25,40,0.9)';
+        drawHex(px, py, hexSize * 0.92, bgFill, 'rgba(68,255,136,0.08)', 0.5);
+        if (h.count > 0) {
+          ctx.fillStyle = NUM_COLORS[h.count] || '#fff';
+          ctx.font = `bold ${hexSize * 0.7}px 'Barlow', sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(h.count, px, py + 1);
+        }
+      }
+    } else {
+      // Unrevealed
+      const baseFill = winColor || (isHover ? 'rgba(68,255,136,0.12)' : 'rgba(30,35,55,0.8)');
+      const borderColor = isHover ? 'rgba(68,255,136,0.5)' : 'rgba(68,255,136,0.15)';
+      const bw = isHover ? 1.5 : 0.8;
+      drawHex(px, py, hexSize * 0.92, baseFill, borderColor, bw);
+
+      // Hover glow
+      if (isHover && gameState === 'playing') {
+        const glow = ctx.createRadialGradient(px, py, 0, px, py, hexSize);
+        glow.addColorStop(0, 'rgba(68,255,136,0.1)');
+        glow.addColorStop(1, 'rgba(68,255,136,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(px, py, hexSize, 0, Math.PI*2); ctx.fill();
+      }
+
+      if (h.flagged) {
+        // Flag marker
+        ctx.fillStyle = '#44ff88';
+        ctx.font = `bold ${hexSize * 0.65}px 'Barlow', sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('\u2691', px, py + 1);
+        // Subtle glow
+        const fg = ctx.createRadialGradient(px, py, 0, px, py, hexSize * 0.5);
+        fg.addColorStop(0, 'rgba(68,255,136,0.15)');
+        fg.addColorStop(1, 'rgba(68,255,136,0)');
+        ctx.fillStyle = fg;
+        ctx.beginPath(); ctx.arc(px, py, hexSize * 0.5, 0, Math.PI*2); ctx.fill();
+        // Flag particles
+        if (Math.random() < 0.1) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * hexSize * 0.3;
+          particles.push({
+            x: px + Math.cos(angle)*dist, y: py + Math.sin(angle)*dist,
+            vx: (Math.random()-0.5)*0.5, vy: -0.5 - Math.random()*0.5,
+            life: 1, decay: 0.03, size: 1 + Math.random(), color: '#44ff88'
+          });
+        }
+      }
+    }
+  }
+
+  // Particles
+  updateParticles();
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Game over / win text
+  if (gameState === 'won' || gameState === 'lost') {
+    const msg = gameState === 'won' ? 'YOU WIN!' : 'GAME OVER';
+    const col = gameState === 'won' ? '#44ff88' : '#ff4466';
+    ctx.font = `bold ${Math.min(W * 0.12, 64)}px 'Bebas Neue', cursive`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(msg, W/2 + 2, H/2 + 2);
+    ctx.fillStyle = col;
+    ctx.shadowColor = col; ctx.shadowBlur = 30;
+    ctx.fillText(msg, W/2, H/2);
+    ctx.shadowBlur = 0;
+
+    // Subtitle
+    if (gameState === 'won') {
+      const m = Math.floor(timerElapsed / 60);
+      const s = Math.floor(timerElapsed % 60);
+      ctx.font = `600 ${Math.min(W * 0.04, 20)}px 'Barlow', sans-serif`;
+      ctx.fillStyle = 'rgba(68,255,136,0.7)';
+      ctx.fillText(`Time: ${m}:${String(s).padStart(2,'0')}`, W/2, H/2 + Math.min(W*0.08, 40));
+    }
+
+    ctx.font = `600 ${Math.min(W * 0.03, 16)}px 'Barlow', sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('Click anywhere to return', W/2, H/2 + Math.min(W*0.13, 70));
+  }
+
+  requestAnimationFrame(render);
+}
+
+// ---- Sizing ----
+function resize() {
+  const wrap = document.getElementById('wrap');
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+  if (gameState !== 'menu') {
+    // Compute hex size to fit grid
+    const maxGridW = (gridRadius * 2 + 1) * Math.sqrt(3);
+    const maxGridH = (gridRadius * 2 + 1) * 1.5 + 0.5;
+    const fitW = (W - 20) / maxGridW;
+    const fitH = (H - 20) / maxGridH;
+    hexSize = Math.min(fitW, fitH);
+    hexSize = Math.max(hexSize, 8);
+    offsetX = W / 2;
+    offsetY = H / 2;
+  }
+}
+
+// ---- Input handling ----
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  return [touch.clientX - rect.left, touch.clientY - rect.top];
+}
+
+function handleReveal(px, py) {
+  if (gameState === 'won' || gameState === 'lost') {
+    showMenu(); return;
+  }
+  if (gameState !== 'playing') return;
+
+  const [q, r] = pixelToAxial(px, py);
+  const h = hexMap.get(q+','+r);
+  if (!h || h.flagged || h.revealed) return;
+
+  if (firstClick) {
+    placeMines(q, r);
+    firstClick = false;
+    timerStart = Date.now();
+    updateTimer();
+  }
+
+  reveal(h);
+
+  if (h.mine) {
+    gameState = 'lost';
+    stopTimer();
+    // Reveal all mines with explosion
+    for (const m of hexes) {
+      if (m.mine) {
+        m.revealed = true;
+        const [mx, my] = axialToPixel(m.q, m.r);
+        spawnExplosion(mx, my, '#ff4466', 15);
+      }
+    }
+  } else if (checkWin()) {
+    gameState = 'won';
+    stopTimer();
+    winAnimStart = Date.now();
+    saveBestTime();
+  }
+}
+
+function handleFlag(px, py) {
+  if (gameState !== 'playing') return;
+  const [q, r] = pixelToAxial(px, py);
+  const h = hexMap.get(q+','+r);
+  if (!h || h.revealed) return;
+  h.flagged = !h.flagged;
+  flagCount += h.flagged ? 1 : -1;
+  document.getElementById('mine-count').textContent = mineCount - flagCount;
+}
+
+// Mouse events
+canvas = document.getElementById('c');
+ctx = canvas.getContext('2d');
+
+canvas.addEventListener('mousemove', e => {
+  const [px, py] = getCanvasPos(e);
+  const [q, r] = pixelToAxial(px, py);
+  const h = hexMap.get(q+','+r);
+  hoverHex = h || null;
+});
+canvas.addEventListener('mouseleave', () => { hoverHex = null; });
+
+canvas.addEventListener('click', e => {
+  const [px, py] = getCanvasPos(e);
+  handleReveal(px, py);
+});
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const [px, py] = getCanvasPos(e);
+  handleFlag(px, py);
+});
+
+// Touch events
+let touchStartPos = null;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  longPressTriggered = false;
+  const [px, py] = getCanvasPos(e);
+  touchStartPos = [px, py];
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true;
+    handleFlag(px, py);
+    // Visual feedback - brief flash
+    if (hoverHex) {
+      const [hx, hy] = axialToPixel(hoverHex.q, hoverHex.r);
+      spawnExplosion(hx, hy, '#44ff88', 5);
+    }
+  }, 400);
+  // Update hover
+  const [q, r] = pixelToAxial(px, py);
+  hoverHex = hexMap.get(q+','+r) || null;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+  const [px, py] = getCanvasPos(e);
+  const [q, r] = pixelToAxial(px, py);
+  hoverHex = hexMap.get(q+','+r) || null;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+  if (!longPressTriggered && touchStartPos) {
+    handleReveal(touchStartPos[0], touchStartPos[1]);
+  }
+  hoverHex = null;
+  touchStartPos = null;
+}, { passive: false });
+
+// ---- Best times ----
+function getBestTime(diff) {
+  const v = localStorage.getItem('hexsweep_best_' + diff);
+  return v ? parseFloat(v) : null;
+}
+function saveBestTime() {
+  const prev = getBestTime(difficulty);
+  if (prev === null || timerElapsed < prev) {
+    localStorage.setItem('hexsweep_best_' + difficulty, timerElapsed.toFixed(1));
+  }
+}
+function updateBestTimes() {
+  for (const d of ['easy', 'med', 'hard']) {
+    const key = d === 'med' ? 'medium' : d;
+    const el = document.getElementById('best-' + d);
+    const t = getBestTime(key);
+    if (t !== null) {
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60);
+      el.textContent = `Best: ${m}:${String(s).padStart(2,'0')}`;
+    } else {
+      el.textContent = '';
+    }
+  }
+}
+
+// ---- Game flow ----
+function startGame(diff) {
+  difficulty = diff;
+  const cfg = DIFFICULTIES[diff];
+  gridRadius = cfg.radius;
+  mineCount = cfg.mines;
+  firstClick = true;
+  flagCount = 0;
+  timerElapsed = 0;
+  particles = [];
+  gameState = 'playing';
+
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('info-bar').classList.add('active');
+  document.getElementById('mine-count').textContent = mineCount;
+  document.getElementById('timer').textContent = '0:00';
+
+  buildGrid();
+  resize();
+  render();
+}
+
+function showMenu() {
+  gameState = 'menu';
+  stopTimer();
+  particles = [];
+  document.getElementById('start-screen').classList.remove('hidden');
+  document.getElementById('info-bar').classList.remove('active');
+  updateBestTimes();
+}
+
+// ---- Init ----
+window.addEventListener('resize', resize);
+resize();
+updateBestTimes();
+</script>
+</body>
+</html>

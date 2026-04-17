@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pipe Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#080810;font-family:'Barlow',sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+#topBar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(8,8,16,0.92);border-bottom:2px solid #2288ff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:100}
+#topBar a,#topBar button{background:none;border:1px solid rgba(34,136,255,0.4);color:#2288ff;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;text-decoration:none;transition:background 0.2s}
+#topBar a:hover,#topBar button:hover{background:rgba(34,136,255,0.15)}
+#topBar h1{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:#2288ff;text-shadow:0 0 20px rgba(34,136,255,0.4)}
+#gameArea{position:fixed;top:52px;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+canvas{display:block;touch-action:none}
+#uiOverlay{position:fixed;top:52px;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:none}
+#uiOverlay.active{pointer-events:all;background:rgba(8,8,16,0.85)}
+.screen{display:none;flex-direction:column;align-items:center;gap:16px;max-height:90vh;overflow-y:auto}
+.screen.visible{display:flex}
+.btn{font-family:'Barlow',sans-serif;font-size:16px;font-weight:700;padding:12px 32px;border:2px solid #2288ff;background:rgba(34,136,255,0.1);color:#2288ff;border-radius:8px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px}
+.btn:hover{background:rgba(34,136,255,0.25);box-shadow:0 0 20px rgba(34,136,255,0.3)}
+.btn.small{font-size:13px;padding:8px 18px}
+#levelGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-width:340px;padding:10px}
+.lvlBtn{width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:24px;border-radius:8px;border:2px solid rgba(34,136,255,0.3);background:rgba(34,136,255,0.05);color:#557;cursor:pointer;transition:all 0.2s}
+.lvlBtn.unlocked{color:#2288ff;border-color:#2288ff;background:rgba(34,136,255,0.1)}
+.lvlBtn.completed{color:#fff;border-color:#2288ff;background:rgba(34,136,255,0.25)}
+.lvlBtn.unlocked:hover,.lvlBtn.completed:hover{background:rgba(34,136,255,0.35);box-shadow:0 0 15px rgba(34,136,255,0.3)}
+#hud{position:fixed;top:58px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:20px;padding:8px 16px;z-index:30;font-family:'Barlow',sans-serif;font-weight:600;font-size:14px;color:#aac}
+#timerBarWrap{width:200px;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden}
+#timerBar{height:100%;width:100%;background:#2288ff;border-radius:4px;transition:width 0.1s linear}
+#hudInfo{display:flex;gap:16px;align-items:center}
+</style>
+</head>
+<body>
+<div id="topBar">
+  <a href="/">&#8592; HUB</a>
+  <h1>PIPE FLOW</h1>
+  <button onclick="toggleFS()" id="fsBtn">&#x26F6;</button>
+</div>
+
+<div id="hud" style="display:none">
+  <span id="hudLevel">LEVEL 1</span>
+  <div id="timerBarWrap"><div id="timerBar"></div></div>
+  <div id="hudInfo">
+    <span id="hudMoves">MOVES: 0</span>
+    <span id="hudScore">SCORE: 0</span>
+  </div>
+</div>
+
+<div id="gameArea">
+  <canvas id="c"></canvas>
+</div>
+
+<div id="uiOverlay" class="active">
+  <div id="menuScreen" class="screen visible">
+    <h2 style="font-family:'Bebas Neue';font-size:48px;color:#2288ff;letter-spacing:4px;text-shadow:0 0 30px rgba(34,136,255,0.5)">PIPE FLOW</h2>
+    <p style="color:#668;font-size:14px;margin-bottom:10px">Rotate pipes to connect the flow</p>
+    <button class="btn" onclick="showLevelSelect()">PLAY</button>
+  </div>
+  <div id="levelScreen" class="screen">
+    <h2 style="font-family:'Bebas Neue';font-size:32px;color:#2288ff;letter-spacing:3px">SELECT LEVEL</h2>
+    <div id="levelGrid"></div>
+    <button class="btn small" onclick="showMenu()">BACK</button>
+  </div>
+  <div id="winScreen" class="screen">
+    <h2 style="font-family:'Bebas Neue';font-size:42px;color:#2288ff;letter-spacing:3px" id="winTitle">LEVEL COMPLETE</h2>
+    <p id="winScore" style="font-size:18px;color:#aac"></p>
+    <p id="winBonus" style="font-size:14px;color:#668"></p>
+    <div style="display:flex;gap:12px">
+      <button class="btn small" onclick="nextLevel()">NEXT LEVEL</button>
+      <button class="btn small" onclick="showLevelSelect()">LEVELS</button>
+    </div>
+  </div>
+  <div id="loseScreen" class="screen">
+    <h2 style="font-family:'Bebas Neue';font-size:42px;color:#f44;letter-spacing:3px">TIME'S UP</h2>
+    <div style="display:flex;gap:12px">
+      <button class="btn small" onclick="startLevel(currentLevel)">RETRY</button>
+      <button class="btn small" onclick="showLevelSelect()">LEVELS</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const ACCENT='#2288ff';
+const BG='#080810';
+
+// Pipe types: 0=straight, 1=elbow, 2=T-junction, 3=cross, 4=end
+// Directions: 0=up,1=right,2=down,3=left
+// Each pipe type defines connections relative to rotation=0
+const PIPE_CONNS={
+  0:[0,2],       // straight: up-down
+  1:[0,1],       // elbow: up-right
+  2:[0,1,2],     // T: up-right-down
+  3:[0,1,2,3],   // cross: all
+  4:[0]           // end: up only
+};
+
+function getConns(type,rot){
+  return PIPE_CONNS[type].map(d=>(d+rot)%4);
+}
+
+const DIR_DX=[0,1,0,-1];
+const DIR_DY=[-1,0,1,0];
+const OPP=[2,3,0,1];
+
+let save={maxLevel:1,scores:{}};
+function loadSave(){try{const s=localStorage.getItem('pipeflow_save');if(s)save=JSON.parse(s)}catch(e){}}
+function saveSave(){try{localStorage.setItem('pipeflow_save',JSON.stringify(save))}catch(e){}}
+loadSave();
+
+// Level definitions
+const LEVELS=[];
+function defLevel(cols,rows,time,locked,multiSrc){
+  LEVELS.push({cols,rows,time,lockedCount:locked||0,multiSrc:multiSrc||false});
+}
+// 15 levels with increasing difficulty
+defLevel(4,4,45,0);defLevel(4,4,40,1);defLevel(5,4,45,1);
+defLevel(5,5,50,2);defLevel(5,5,45,2);defLevel(5,5,40,3);
+defLevel(6,5,55,3);defLevel(6,6,55,3);defLevel(6,6,50,4);
+defLevel(6,6,45,4,true);defLevel(7,6,55,4,true);defLevel(7,7,55,5,true);
+defLevel(7,7,50,5,true);defLevel(8,7,55,6,true);defLevel(8,8,60,7,true);
+
+let currentLevel=1;
+let grid=[];
+let gridW,gridH;
+let cellSize;
+let gridOffX,gridOffY;
+let sources=[],drains=[];
+let timer=0,maxTime=0;
+let moves=0,score=0;
+let playing=false;
+let flowCells=new Set();
+let flowProgress=0;
+let flowAnimating=false;
+let flowComplete=false;
+let particles=[];
+let winParticles=[];
+let animFrame;
+
+function showMenu(){
+  hideAllScreens();
+  document.getElementById('uiOverlay').classList.add('active');
+  document.getElementById('menuScreen').classList.add('visible');
+  document.getElementById('hud').style.display='none';
+  playing=false;
+}
+
+function hideAllScreens(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('visible'));
+}
+
+function showLevelSelect(){
+  hideAllScreens();
+  document.getElementById('uiOverlay').classList.add('active');
+  document.getElementById('levelScreen').classList.add('visible');
+  document.getElementById('hud').style.display='none';
+  playing=false;
+  buildLevelGrid();
+}
+
+function buildLevelGrid(){
+  const g=document.getElementById('levelGrid');
+  g.innerHTML='';
+  for(let i=1;i<=LEVELS.length;i++){
+    const b=document.createElement('div');
+    b.className='lvlBtn';
+    b.textContent=i;
+    if(i<=save.maxLevel){
+      b.classList.add('unlocked');
+      if(save.scores[i])b.classList.add('completed');
+      b.onclick=()=>startLevel(i);
+    }
+    g.appendChild(b);
+  }
+}
+
+function startLevel(lvl){
+  currentLevel=lvl;
+  hideAllScreens();
+  document.getElementById('uiOverlay').classList.remove('active');
+  document.getElementById('hud').style.display='flex';
+  generateLevel(lvl);
+  moves=0;score=0;
+  timer=maxTime=LEVELS[lvl-1].time;
+  playing=true;
+  flowCells.clear();flowProgress=0;flowAnimating=false;flowComplete=false;
+  particles=[];winParticles=[];
+  updateHUD();
+}
+
+function nextLevel(){
+  if(currentLevel<LEVELS.length)startLevel(currentLevel+1);
+  else showLevelSelect();
+}
+
+function generateLevel(lvl){
+  const L=LEVELS[lvl-1];
+  gridW=L.cols;gridH=L.rows;
+  grid=[];
+  for(let y=0;y<gridH;y++){
+    grid[y]=[];
+    for(let x=0;x<gridW;x++){
+      grid[y][x]={type:0,rot:0,locked:false,connected:false};
+    }
+  }
+  // Place source and drain on edges
+  sources=[];drains=[];
+  const rng=seedRng(lvl*31337);
+
+  // Pick source on left edge, drain on right edge
+  const sy=rngInt(rng,0,gridH-1);
+  sources.push({x:0,y:sy,dir:3}); // source comes from left
+  grid[sy][0].type=4;grid[sy][0].rot=3; // end cap facing left
+
+  const dy=rngInt(rng,0,gridH-1);
+  drains.push({x:gridW-1,y:dy,dir:1}); // drain exits right
+  grid[dy][gridW-1].type=4;grid[dy][gridW-1].rot=1; // end cap facing right
+
+  if(L.multiSrc){
+    // Add second source/drain pair top/bottom
+    const sx2=rngInt(rng,1,gridW-2);
+    sources.push({x:sx2,y:0,dir:0});
+    grid[0][sx2].type=4;grid[0][sx2].rot=0;
+    const dx2=rngInt(rng,1,gridW-2);
+    drains.push({x:dx2,y:gridH-1,dir:2});
+    grid[gridH-1][dx2].type=4;grid[gridH-1][dx2].rot=2;
+  }
+
+  // Generate solvable puzzle using path carving
+  for(let si=0;si<sources.length;si++){
+    carvePath(rng,sources[si],drains[si]);
+  }
+
+  // Fill remaining empty cells with random pipes
+  for(let y=0;y<gridH;y++){
+    for(let x=0;x<gridW;x++){
+      if(grid[y][x].type===0 && !isSourceOrDrain(x,y)){
+        grid[y][x].type=rngInt(rng,0,2);
+        grid[y][x].rot=rngInt(rng,0,3);
+      }
+    }
+  }
+
+  // Store solution rotations, then scramble
+  const solution=[];
+  for(let y=0;y<gridH;y++){
+    solution[y]=[];
+    for(let x=0;x<gridW;x++){
+      solution[y][x]=grid[y][x].rot;
+    }
+  }
+
+  // Scramble non-source/drain pipes
+  for(let y=0;y<gridH;y++){
+    for(let x=0;x<gridW;x++){
+      if(!isSourceOrDrain(x,y)){
+        const rotations=rngInt(rng,1,3);
+        grid[y][x].rot=(grid[y][x].rot+rotations)%4;
+      }
+    }
+  }
+
+  // Add locked pipes
+  let lockCount=L.lockedCount;
+  let attempts=0;
+  while(lockCount>0 && attempts<100){
+    const lx=rngInt(rng,0,gridW-1);
+    const ly=rngInt(rng,0,gridH-1);
+    if(!grid[ly][lx].locked && !isSourceOrDrain(lx,ly)){
+      grid[ly][lx].locked=true;
+      grid[ly][lx].rot=solution[ly][lx]; // locked pipes are in correct rotation
+      lockCount--;
+    }
+    attempts++;
+  }
+
+  resizeCanvas();
+  checkConnections();
+}
+
+function isSourceOrDrain(x,y){
+  for(const s of sources)if(s.x===x&&s.y===y)return true;
+  for(const d of drains)if(d.x===x&&d.y===y)return true;
+  return false;
+}
+
+function carvePath(rng,src,drn){
+  // Simple pathfinding: walk from source to drain
+  let cx=src.x,cy=src.y;
+  const tx=drn.x,ty=drn.y;
+  let path=[{x:cx,y:cy}];
+  let maxSteps=gridW*gridH*2;
+
+  while((cx!==tx||cy!==ty)&&maxSteps-->0){
+    let dx=tx-cx,dy=ty-cy;
+    let moved=false;
+    // Prefer moving toward target with some randomness
+    let dirs=[];
+    if(dx>0)dirs.push(1);
+    if(dx<0)dirs.push(3);
+    if(dy>0)dirs.push(2);
+    if(dy<0)dirs.push(0);
+    // Add random perpendicular sometimes
+    if(rngFloat(rng)<0.3){
+      const perp=[0,1,2,3].filter(d=>!dirs.includes(d));
+      if(perp.length)dirs.push(perp[rngInt(rng,0,perp.length-1)]);
+    }
+
+    for(const d of dirs){
+      const nx=cx+DIR_DX[d],ny=cy+DIR_DY[d];
+      if(nx>=0&&nx<gridW&&ny>=0&&ny<gridH&&!path.some(p=>p.x===nx&&p.y===ny)){
+        cx=nx;cy=ny;
+        path.push({x:cx,y:cy});
+        moved=true;
+        break;
+      }
+    }
+    if(!moved){
+      // Force move toward target
+      const d=Math.abs(dx)>=Math.abs(dy)?(dx>0?1:3):(dy>0?2:0);
+      const nx=cx+DIR_DX[d],ny=cy+DIR_DY[d];
+      if(nx>=0&&nx<gridW&&ny>=0&&ny<gridH){
+        cx=nx;cy=ny;
+        path.push({x:cx,y:cy});
+      } else break;
+    }
+  }
+
+  // Set pipe types along path based on connections needed
+  for(let i=0;i<path.length;i++){
+    const p=path[i];
+    if(isSourceOrDrain(p.x,p.y))continue;
+
+    const connsNeeded=[];
+    if(i>0){
+      const prev=path[i-1];
+      for(let d=0;d<4;d++){
+        if(prev.x===p.x+DIR_DX[d]&&prev.y===p.y+DIR_DY[d])connsNeeded.push(d);
+      }
+    }
+    if(i<path.length-1){
+      const next=path[i+1];
+      for(let d=0;d<4;d++){
+        if(next.x===p.x+DIR_DX[d]&&next.y===p.y+DIR_DY[d])connsNeeded.push(d);
+      }
+    }
+
+    // Find pipe type and rotation that provides these connections
+    const result=findPipeFor(connsNeeded);
+    if(result){
+      grid[p.y][p.x].type=result.type;
+      grid[p.y][p.x].rot=result.rot;
+    }
+  }
+}
+
+function findPipeFor(needed){
+  if(needed.length===0)return{type:0,rot:0};
+  if(needed.length===1)return{type:4,rot:needed[0]};
+
+  // Try each pipe type and rotation
+  for(let t=0;t<=3;t++){
+    for(let r=0;r<4;r++){
+      const conns=getConns(t,r);
+      if(needed.every(n=>conns.includes(n))&&conns.length>=needed.length){
+        // Prefer exact match
+        if(conns.length===needed.length)return{type:t,rot:r};
+      }
+    }
+  }
+  // Accept superset
+  for(let t=0;t<=3;t++){
+    for(let r=0;r<4;r++){
+      const conns=getConns(t,r);
+      if(needed.every(n=>conns.includes(n)))return{type:t,rot:r};
+    }
+  }
+  return{type:3,rot:0}; // cross as fallback
+}
+
+// Simple seeded RNG
+function seedRng(s){return{s:s};}
+function rngNext(r){r.s=(r.s*1103515245+12345)&0x7fffffff;return r.s;}
+function rngInt(r,min,max){return min+Math.abs(rngNext(r))%(max-min+1);}
+function rngFloat(r){return Math.abs(rngNext(r))/0x7fffffff;}
+
+function checkConnections(){
+  // BFS from each source
+  for(let y=0;y<gridH;y++)for(let x=0;x<gridW;x++)grid[y][x].connected=false;
+
+  const allConnected=[];
+
+  for(let si=0;si<sources.length;si++){
+    const src=sources[si];
+    const drn=drains[si];
+    const visited=new Set();
+    const queue=[{x:src.x,y:src.y}];
+    visited.add(src.y*gridW+src.x);
+    grid[src.y][src.x].connected=true;
+
+    while(queue.length){
+      const{x,y}=queue.shift();
+      const cell=grid[y][x];
+      const conns=getConns(cell.type,cell.rot);
+
+      for(const d of conns){
+        const nx=x+DIR_DX[d],ny=y+DIR_DY[d];
+        if(nx<0||nx>=gridW||ny<0||ny>=gridH)continue;
+        const key=ny*gridW+nx;
+        if(visited.has(key))continue;
+
+        const neighbor=grid[ny][nx];
+        const nConns=getConns(neighbor.type,neighbor.rot);
+        if(nConns.includes(OPP[d])){
+          visited.add(key);
+          neighbor.connected=true;
+          queue.push({x:nx,y:ny});
+        }
+      }
+    }
+
+    allConnected.push(grid[drn.y][drn.x].connected);
+  }
+
+  return allConnected.every(c=>c);
+}
+
+function resizeCanvas(){
+  const area=document.getElementById('gameArea');
+  const w=area.clientWidth;
+  const h=area.clientHeight-10;
+
+  const maxCellW=Math.floor((w-40)/gridW);
+  const maxCellH=Math.floor((h-40)/gridH);
+  cellSize=Math.min(maxCellW,maxCellH,80);
+
+  const cw=gridW*cellSize+20;
+  const ch=gridH*cellSize+20;
+  canvas.width=cw*2;canvas.height=ch*2;
+  canvas.style.width=cw+'px';canvas.style.height=ch+'px';
+  ctx.scale(2,2);
+  gridOffX=10;gridOffY=10;
+}
+
+function drawPipe(x,y,cell,cx,cy,size){
+  const half=size/2;
+  const pw=size*0.22; // pipe width
+  const conns=getConns(cell.type,cell.rot);
+
+  const isSource=sources.some(s=>s.x===x&&s.y===y);
+  const isDrain=drains.some(d=>d.x===x&&d.y===y);
+
+  let baseColor=cell.connected?ACCENT:'#334';
+  let glowColor=cell.connected?'rgba(34,136,255,0.4)':'none';
+
+  if(isSource){baseColor='#22cc66';glowColor='rgba(34,204,102,0.5)';}
+  if(isDrain){baseColor='#ff4444';glowColor='rgba(255,68,68,0.5)';}
+
+  ctx.save();
+  ctx.translate(cx,cy);
+
+  // Background
+  ctx.fillStyle='rgba(15,15,25,0.8)';
+  ctx.strokeStyle='rgba(255,255,255,0.04)';
+  ctx.lineWidth=1;
+  const pad=2;
+  ctx.beginPath();
+  ctx.roundRect(-half+pad,-half+pad,size-pad*2,size-pad*2,4);
+  ctx.fill();ctx.stroke();
+
+  // Draw pipe segments
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+
+  // Glow
+  if(cell.connected||isSource||isDrain){
+    ctx.shadowColor=glowColor;
+    ctx.shadowBlur=12;
+  }
+
+  // Pipe body - metallic
+  ctx.strokeStyle=baseColor;
+  ctx.lineWidth=pw;
+
+  if(cell.type===3){
+    // Cross: draw full cross
+    ctx.beginPath();
+    ctx.moveTo(0,-half+2);ctx.lineTo(0,half-2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-half+2,0);ctx.lineTo(half-2,0);
+    ctx.stroke();
+  } else {
+    // Draw from center to each connection direction
+    ctx.beginPath();
+    for(const d of conns){
+      ctx.moveTo(0,0);
+      ctx.lineTo(DIR_DX[d]*(half-2),DIR_DY[d]*(half-2));
+    }
+    ctx.stroke();
+
+    // If only one connection (end cap), draw cap circle
+    if(conns.length===1){
+      ctx.fillStyle=baseColor;
+      ctx.beginPath();
+      ctx.arc(0,0,pw*0.6,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Highlight reflection
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(255,255,255,0.15)';
+  ctx.lineWidth=pw*0.3;
+  if(cell.type===3){
+    ctx.beginPath();
+    ctx.moveTo(-1,-half+4);ctx.lineTo(-1,half-4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-half+4,-1);ctx.lineTo(half-4,-1);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    for(const d of conns){
+      ctx.moveTo(-1*(d===0||d===2?1:0),-1*(d===1||d===3?1:0));
+      ctx.lineTo(DIR_DX[d]*(half-4)-1*(d===0||d===2?1:0),DIR_DY[d]*(half-4)-1*(d===1||d===3?1:0));
+    }
+    ctx.stroke();
+  }
+
+  // Lock icon
+  if(cell.locked){
+    ctx.fillStyle='rgba(255,200,50,0.7)';
+    ctx.font='bold '+(size*0.22)+'px Barlow';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('\u{1F512}',0,0);
+  }
+
+  // Source/drain pulse
+  if(isSource||isDrain){
+    const pulse=0.3+Math.sin(Date.now()*0.005)*0.2;
+    ctx.fillStyle=isSource?`rgba(34,204,102,${pulse})`:`rgba(255,68,68,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(0,0,pw*0.8,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawFlowParticles(){
+  if(!flowComplete)return;
+
+  const t=Date.now()*0.002;
+  for(let y=0;y<gridH;y++){
+    for(let x=0;x<gridW;x++){
+      if(!grid[y][x].connected)continue;
+      const cx=gridOffX+x*cellSize+cellSize/2;
+      const cy=gridOffY+y*cellSize+cellSize/2;
+      const conns=getConns(grid[y][x].type,grid[y][x].rot);
+
+      for(const d of conns){
+        const progress=(t+x*0.3+y*0.2+d*0.5)%1;
+        const px=cx+DIR_DX[d]*(cellSize/2-4)*progress;
+        const py=cy+DIR_DY[d]*(cellSize/2-4)*progress;
+
+        ctx.fillStyle=`rgba(34,180,255,${0.8-progress*0.6})`;
+        ctx.beginPath();
+        ctx.arc(px,py,2+progress,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawWinParticles(){
+  for(let i=winParticles.length-1;i>=0;i--){
+    const p=winParticles[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.life-=0.015;
+    if(p.life<=0){winParticles.splice(i,1);continue;}
+    ctx.fillStyle=`rgba(34,136,255,${p.life})`;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function draw(){
+  const cw=canvas.width/2,ch=canvas.height/2;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.fillStyle=BG;
+  ctx.fillRect(0,0,cw,ch);
+
+  // Draw grid
+  for(let y=0;y<gridH;y++){
+    for(let x=0;x<gridW;x++){
+      const cx=gridOffX+x*cellSize+cellSize/2;
+      const cy=gridOffY+y*cellSize+cellSize/2;
+      drawPipe(x,y,grid[y][x],cx,cy,cellSize);
+    }
+  }
+
+  drawFlowParticles();
+  drawWinParticles();
+
+  animFrame=requestAnimationFrame(draw);
+}
+
+let lastTick=0;
+function tick(ts){
+  if(!playing){requestAnimationFrame(tick);return;}
+  if(!lastTick)lastTick=ts;
+  const dt=(ts-lastTick)/1000;
+  lastTick=ts;
+
+  timer-=dt;
+  if(timer<=0){
+    timer=0;
+    playing=false;
+    showLose();
+  }
+
+  updateHUD();
+  requestAnimationFrame(tick);
+}
+
+function updateHUD(){
+  document.getElementById('hudLevel').textContent='LEVEL '+currentLevel;
+  document.getElementById('hudMoves').textContent='MOVES: '+moves;
+  document.getElementById('hudScore').textContent='SCORE: '+score;
+
+  const pct=maxTime>0?timer/maxTime:0;
+  const bar=document.getElementById('timerBar');
+  bar.style.width=(pct*100)+'%';
+  if(pct>0.5)bar.style.background='#22cc66';
+  else if(pct>0.25)bar.style.background='#ccaa22';
+  else bar.style.background='#ff4444';
+}
+
+function showWin(bonus){
+  hideAllScreens();
+  document.getElementById('uiOverlay').classList.add('active');
+  document.getElementById('winScreen').classList.add('visible');
+  document.getElementById('winScore').textContent='Score: '+score;
+  document.getElementById('winBonus').textContent=bonus>0?('Time bonus: +'+bonus+' | Moves: '+moves):'Moves: '+moves;
+
+  // Spawn celebration particles
+  for(let i=0;i<60;i++){
+    winParticles.push({
+      x:canvas.width/4*Math.random(),
+      y:canvas.height/4*Math.random(),
+      vx:(Math.random()-0.5)*3,
+      vy:-Math.random()*3-1,
+      r:Math.random()*4+2,
+      life:1
+    });
+  }
+}
+
+function showLose(){
+  hideAllScreens();
+  document.getElementById('uiOverlay').classList.add('active');
+  document.getElementById('loseScreen').classList.add('visible');
+}
+
+// Input handling
+canvas.addEventListener('click',function(e){
+  if(!playing)return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)-gridOffX;
+  const my=(e.clientY-rect.top)-gridOffY;
+  const gx=Math.floor(mx/cellSize);
+  const gy=Math.floor(my/cellSize);
+
+  if(gx<0||gx>=gridW||gy<0||gy>=gridH)return;
+  const cell=grid[gy][gx];
+  if(cell.locked||isSourceOrDrain(gx,gy))return;
+
+  cell.rot=(cell.rot+1)%4;
+  moves++;
+
+  const solved=checkConnections();
+  if(solved&&!flowComplete){
+    flowComplete=true;
+    playing=false;
+    const timeBonus=Math.floor(timer*10);
+    const moveBonus=Math.max(0,50-moves);
+    score=100+timeBonus+moveBonus;
+
+    if(!save.scores[currentLevel]||score>save.scores[currentLevel]){
+      save.scores[currentLevel]=score;
+    }
+    if(currentLevel>=save.maxLevel&&currentLevel<LEVELS.length){
+      save.maxLevel=currentLevel+1;
+    }
+    saveSave();
+
+    setTimeout(()=>showWin(timeBonus),800);
+  }
+});
+
+function toggleFS(){
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+
+window.addEventListener('resize',()=>{
+  if(gridW)resizeCanvas();
+});
+
+// Start
+draw();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
