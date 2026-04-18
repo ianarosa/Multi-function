@@ -10,7 +10,9 @@
   html, body { width: 100%; height: 100%; overflow: hidden; background: #020d02; font-family: 'Barlow', sans-serif; }
   body {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    touch-action: none; user-select: none; -webkit-user-select: none;
+    touch-action: none;
+    user-select: none; -webkit-user-select: none; -ms-user-select: none; -moz-user-select: none;
+    -webkit-touch-callout: none;
     height: 100dvh;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -242,9 +244,10 @@
     const dist = Math.sqrt(dx*dx + dy*dy);
     const elapsed = Date.now() - touchStartTime;
 
-    // Tap (no swipe) - start/restart game
-    if (dist < 20 && elapsed < 300) {
-      if (gameState === 'menu' || gameState === 'gameover') startGame();
+    // Tap (no swipe) - start/restart game or tap-to-steer
+    if (dist < 20 && elapsed < 400) {
+      if (gameState === 'menu' || gameState === 'gameover') { startGame(); return; }
+      if (gameState === 'playing') { tapSteer(t.clientX, t.clientY); return; }
       return;
     }
 
@@ -260,9 +263,30 @@
     if (gameState === 'menu' || gameState === 'gameover') startGame();
   }, {passive: false});
 
-  /* Also handle click for desktop start/restart */
-  cvs.addEventListener('click', () => {
-    if (gameState === 'menu' || gameState === 'gameover') startGame();
+  /* Tap-to-steer: convert client coords to logical canvas coords,
+     pick direction from delta to snake head (larger axis wins). */
+  function tapSteer(clientX, clientY) {
+    if (!snake || !snake.length) return;
+    const rect = cvs.getBoundingClientRect();
+    const lx = (clientX - rect.left) * (W / rect.width);
+    const ly = (clientY - rect.top)  * (H / rect.height);
+    const head = snake[0];
+    const hx = head.x * CELL + CELL / 2;
+    const hy = head.y * CELL + CELL / 2;
+    const dx = lx - hx;
+    const dy = ly - hy;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDir(dx > 0 ? DIR.RIGHT : DIR.LEFT);
+    } else {
+      setDir(dy > 0 ? DIR.DOWN : DIR.UP);
+    }
+  }
+
+  /* Also handle click for desktop start/restart + tap-to-steer */
+  cvs.addEventListener('click', e => {
+    if (gameState === 'menu' || gameState === 'gameover') { startGame(); return; }
+    if (gameState === 'playing') tapSteer(e.clientX, e.clientY);
   });
 
   /* ════════════════════════════════════════════════════════

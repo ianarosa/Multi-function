@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:'Barlow',sans-serif;color:#fff;touch-action:none;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:'Barlow',sans-serif;color:#fff;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-ms-user-select:none;-moz-user-select:none;-webkit-touch-callout:none;}
 
 #top-bar{position:fixed;top:0;left:0;width:100%;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:rgba(8,2,13,0.92);border-bottom:2px solid #aa44ff44;z-index:100;backdrop-filter:blur(6px);}
 #back-btn{color:#aa44ff;text-decoration:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;white-space:nowrap;}
@@ -30,7 +30,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
 .ui-right{align-items:flex-end;}
 
 #mobile-lanes{position:fixed;bottom:0;left:0;width:100%;display:none;z-index:90;pointer-events:auto;}
-#mobile-lanes .lane-btn{flex:1;height:80px;border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#mobile-lanes.active{display:flex;}
+#mobile-lanes .lane-btn{flex:1;height:80px;border:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
 #mobile-lanes .lane-btn:nth-child(1){background:rgba(136,0,255,0.25);border-right:1px solid #aa44ff44;}
 #mobile-lanes .lane-btn:nth-child(2){background:rgba(170,68,255,0.25);border-right:1px solid #aa44ff44;}
 #mobile-lanes .lane-btn:nth-child(3){background:rgba(200,100,255,0.25);}
@@ -46,7 +47,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
 .hidden{display:none!important;}
 
 @media(max-width:768px){
-  #mobile-lanes{display:flex!important;}
+  #mobile-lanes.active{display:flex;}
   #score-display{font-size:22px;}
   #combo-display{font-size:18px;}
 }
@@ -75,7 +76,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
   </div>
 </div>
 
-<div id="mobile-lanes" class="hidden">
+<div id="mobile-lanes">
   <button class="lane-btn" data-lane="0">D</button>
   <button class="lane-btn" data-lane="1">F</button>
   <button class="lane-btn" data-lane="2">J</button>
@@ -140,7 +141,10 @@ const PERFECT_MS = 30;
 const GREAT_MS = 80;
 const GOOD_MS = 150;
 const MISS_MS = 200;
-const TRAVEL_TIME_BEATS = 4;     // how many beats to fall down screen
+const TRAVEL_TIME_BEATS = 6;     // how many beats to fall down screen
+const START_BPM = 70;
+const BPM_RAMP_PER_SEC = 0.08;   // gentler ramp
+const PREROLL_BEATS = 4;         // "get ready" beats before first hit
 const HEALTH_MAX = 100;
 const HEALTH_MISS_PENALTY = 28;
 const HEALTH_GOOD_REGEN = 2;
@@ -158,7 +162,7 @@ let score = 0;
 let combo = 0;
 let maxCombo = 0;
 let health = HEALTH_MAX;
-let bpm = 90;
+let bpm = START_BPM;
 let beatInterval = 60000 / bpm;   // ms per beat
 let gameTime = 0;                  // ms since game start
 let lastFrameTime = 0;
@@ -271,7 +275,6 @@ function showGrade(lane, grade){
 /* ── Input handling ── */
 function hitLane(laneIdx){
   if(!running) return;
-  const hx = hitZoneX();
   const now = gameTime;
   // find closest unhit beat in this lane
   let best = null;
@@ -331,8 +334,29 @@ document.addEventListener('keydown', e => {
 /* Mobile lane buttons */
 document.querySelectorAll('.lane-btn').forEach(btn => {
   const lane = parseInt(btn.dataset.lane);
-  btn.addEventListener('touchstart', e => { e.preventDefault(); hitLane(lane); }, {passive:false});
-  btn.addEventListener('mousedown', e => { e.preventDefault(); hitLane(lane); });
+  btn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); hitLane(lane); }, {passive:false});
+  btn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); hitLane(lane); });
+});
+
+/* Canvas tap fallback — maps tap X position to a lane so playfield taps count too */
+function laneFromX(x){
+  const sidePad = W * 0.15;
+  const usable = W - sidePad * 2;
+  const rel = (x - sidePad) / usable;
+  if(rel < 0) return 0;
+  if(rel > 1) return LANE_COUNT - 1;
+  return Math.min(LANE_COUNT - 1, Math.max(0, Math.floor(rel * LANE_COUNT)));
+}
+canvas.addEventListener('touchstart', e => {
+  if(!running) return;
+  e.preventDefault();
+  for(let i = 0; i < e.changedTouches.length; i++){
+    hitLane(laneFromX(e.changedTouches[i].clientX));
+  }
+}, {passive:false});
+canvas.addEventListener('mousedown', e => {
+  if(!running) return;
+  hitLane(laneFromX(e.clientX));
 });
 
 /* ── UI updates ── */
@@ -351,15 +375,15 @@ function updateUI(){
 /* ── Game flow ── */
 function startGame(){
   score = 0; combo = 0; maxCombo = 0; health = HEALTH_MAX;
-  bpm = 90; beatInterval = 60000/bpm;
+  bpm = START_BPM; beatInterval = 60000/bpm;
   gameTime = 0; lastFrameTime = 0;
   beats = []; particles = []; gradeTexts = [];
-  patternQueue = []; nextBeatTime = beatInterval * 2;
+  patternQueue = []; nextBeatTime = beatInterval * PREROLL_BEATS;
   beatsSpawned = 0; consecutiveMisses = 0;
   running = true;
   startScreen.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
-  if(window.innerWidth <= 768) mobileLanes.classList.remove('hidden');
+  mobileLanes.classList.add('active');
   updateUI();
   lastFrameTime = performance.now();
   requestAnimationFrame(loop);
@@ -374,7 +398,7 @@ function endGame(){
   finalScoreEl.textContent = score;
   hiScoreText.textContent = 'HIGH SCORE: ' + highScore;
   gameoverScreen.classList.remove('hidden');
-  mobileLanes.classList.add('hidden');
+  mobileLanes.classList.remove('active');
 }
 
 startBtn.addEventListener('click', startGame);
@@ -387,8 +411,8 @@ function loop(ts){
   lastFrameTime = ts;
   gameTime += dt;
 
-  // Increase BPM over time
-  bpm = 90 + gameTime / 1000 * 0.15;  // +0.15 bpm per second
+  // Increase BPM over time (gently)
+  bpm = START_BPM + gameTime / 1000 * BPM_RAMP_PER_SEC;
   beatInterval = 60000 / bpm;
 
   // BG pulse synced to BPM

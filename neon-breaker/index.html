@@ -8,7 +8,15 @@
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: 'Barlow', sans-serif; }
-  body { display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; user-select: none; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-touch-callout: none;
+  }
 
   #top-bar {
     display: flex; align-items: center; width: 100%; max-width: 660px;
@@ -456,35 +464,53 @@ window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 // Touch controls
 let touchX = null;
-let touchStartPaddleX = null;
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  const t = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  touchX = t.clientX - rect.left;
-  touchStartPaddleX = paddle.x;
-  if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }
-  if (gameState === 'playing') balls.forEach(b => launchBall(b));
-}, { passive: false });
-canvas.addEventListener('touchmove', e => {
+function onTouchMove(e) {
   e.preventDefault();
   if (touchX === null) return;
   const t = e.touches[0];
+  if (!t) return;
   const rect = canvas.getBoundingClientRect();
   const nx = t.clientX - rect.left;
   const dx = nx - touchX;
   touchX = nx;
   paddle.x += dx;
   paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, paddle.x));
+}
+function onTouchEnd() {
+  touchX = null;
+  window.removeEventListener('touchmove', onTouchMove);
+  window.removeEventListener('touchend', onTouchEnd);
+  window.removeEventListener('touchcancel', onTouchEnd);
+}
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  touchX = t.clientX - rect.left;
+  window.addEventListener('touchmove', onTouchMove, { passive: false });
+  window.addEventListener('touchend', onTouchEnd);
+  window.addEventListener('touchcancel', onTouchEnd);
+  if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }
+  if (gameState === 'playing') balls.forEach(b => launchBall(b));
 }, { passive: false });
-canvas.addEventListener('touchend', () => { touchX = null; });
 
 // Mouse controls
-canvas.addEventListener('mousemove', e => {
+let mouseDown = false;
+function onMouseMove(e) {
   if (gameState !== 'playing') return;
   const rect = canvas.getBoundingClientRect();
   paddle.x = e.clientX - rect.left;
   paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, paddle.x));
+}
+function onMouseUp() {
+  mouseDown = false;
+  window.removeEventListener('mouseup', onMouseUp);
+}
+canvas.addEventListener('mousemove', onMouseMove);
+canvas.addEventListener('mousedown', () => {
+  mouseDown = true;
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
 });
 canvas.addEventListener('click', () => {
   if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }

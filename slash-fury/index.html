@@ -8,7 +8,11 @@
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0008; font-family: 'Barlow', sans-serif; }
-  body { display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; }
+  body {
+    display: flex; flex-direction: column; align-items: center; touch-action: none;
+    user-select: none; -webkit-user-select: none; -ms-user-select: none; -moz-user-select: none;
+    -webkit-touch-callout: none;
+  }
 
   #top-bar {
     display: flex; align-items: center; width: 100%;
@@ -281,7 +285,7 @@ function spawnObject() {
   // Weighted random type selection
   let roll = Math.random();
   let type;
-  const bombChance = Math.min(0.08 + d * 0.015, 0.3);
+  const bombChance = Math.min(0.08 + d * 0.01, 0.2);
   const freezeChance = 0.05;
   const starChance = 0.04;
   const diamondChance = 0.12;
@@ -672,17 +676,18 @@ function loop(timestamp) {
     difficulty = Math.min(totalTime / 10, 20);
 
     // Spawn
+    const MAX_OBJECTS = 14;
     let spawnRate = 1.2 - difficulty * 0.04;
-    if (spawnRate < 0.25) spawnRate = 0.25;
+    if (spawnRate < 0.35) spawnRate = 0.35;
     if (frenzyTimer > 0) {
-      spawnRate = 0.15;
+      spawnRate = 0.3;
       frenzyTimer -= dt;
     }
     spawnTimer -= dt;
-    if (spawnTimer <= 0) {
+    if (spawnTimer < 0) spawnTimer = 0;
+    if (spawnTimer <= 0 && objects.length < MAX_OBJECTS) {
       spawnTimer = spawnRate + Math.random() * spawnRate * 0.3;
-      const count = frenzyTimer > 0 ? 2 + Math.floor(Math.random() * 3) : 1 + (Math.random() < 0.3 + difficulty * 0.02 ? 1 : 0);
-      for (let i = 0; i < count; i++) spawnObject();
+      spawnObject();
     }
 
     // Combo timer
