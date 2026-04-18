@@ -332,6 +332,22 @@
   .card-breaker .play-btn     { color: #00ffcc; background: rgba(0,255,204,0.1); border-color: rgba(0,255,204,0.4); }
   .card-breaker:hover .play-btn { background: rgba(0,255,204,0.22); }
 
+  /* ── River Run theme ── */
+  .card-river {
+    background: #071408;
+    border: 1px solid rgba(68,255,102,0.25);
+    box-shadow: 0 2px 24px rgba(68,255,102,0.05);
+  }
+  .card-river:hover {
+    box-shadow: 0 10px 44px rgba(68,255,102,0.28);
+    border-color: rgba(68,255,102,0.55);
+  }
+  .card-river .card-preview { background: linear-gradient(180deg, #081a14 0%, #050f0a 100%); }
+  .card-river .card-genre   { color: rgba(68,255,102,0.7); }
+  .card-river .card-name    { color: #44ff66; }
+  .card-river .play-btn     { color: #44ff66; background: rgba(68,255,102,0.1); border-color: rgba(68,255,102,0.4); }
+  .card-river:hover .play-btn { background: rgba(68,255,102,0.22); }
+
   /* ── Hex Sweep theme ── */
   .card-hexsweep {
     background: #020d06;
@@ -634,6 +650,18 @@
         <div class="card-genre">Incremental &middot; Risk</div>
         <div class="card-name">LUCKY FLIP</div>
         <div class="card-desc">Flip coins and chase heads streaks for exponential payouts. Cash out or risk it all — tails takes everything.</div>
+        <span class="play-btn">PLAY</span>
+      </div>
+    </a>
+
+    <a class="game-card card-river" href="/river-run/">
+      <div class="card-preview">
+        <canvas id="cv-river"></canvas>
+      </div>
+      <div class="card-info">
+        <div class="card-genre">Shooter &middot; Retro</div>
+        <div class="card-name">RIVER RUN</div>
+        <div class="card-desc">Pilot a plane upriver, blast enemies, and refuel mid-flight. Hit a bank or run dry and you're done.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -2106,6 +2134,126 @@
     }
   }
 
+  // ── River Run card preview ────────────────────────────────────
+  const riverCvs = document.getElementById('cv-river');
+  const rvCtx = riverCvs.getContext('2d');
+
+  function resizeRiver() {
+    const r = riverCvs.parentElement.getBoundingClientRect();
+    riverCvs.width  = r.width  || 320;
+    riverCvs.height = r.height || 190;
+  }
+  resizeRiver();
+  window.addEventListener('resize', resizeRiver);
+
+  const RV_ENEMIES = [];
+  let rvSpawnTimer = 0;
+
+  function drawRiverPreview(dt, t) {
+    const W = riverCvs.width, H = riverCvs.height;
+    const ms = t * 0.001;
+
+    // Dark background
+    rvCtx.fillStyle = '#0a1a0a';
+    rvCtx.fillRect(0, 0, W, H);
+
+    // River banks (left and right)
+    const bankW = W * 0.18 + Math.sin(ms * 0.8) * W * 0.04;
+    const rightBankW = W * 0.18 + Math.sin(ms * 0.8 + 1.5) * W * 0.04;
+
+    // Left bank (green)
+    rvCtx.fillStyle = '#3a5528';
+    rvCtx.fillRect(0, 0, bankW, H);
+    // Right bank
+    rvCtx.fillRect(W - rightBankW, 0, rightBankW, H);
+
+    // River (water) -- between banks
+    rvCtx.fillStyle = '#1a4488';
+    rvCtx.fillRect(bankW, 0, W - bankW - rightBankW, H);
+
+    // Water ripple lines scrolling down
+    rvCtx.strokeStyle = 'rgba(100,180,255,0.18)';
+    rvCtx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const y = ((i * 38 + ms * 40) % (H + 20));
+      rvCtx.beginPath();
+      rvCtx.moveTo(bankW + 8, y);
+      rvCtx.lineTo(W - rightBankW - 8, y);
+      rvCtx.stroke();
+    }
+
+    // Spawn enemies
+    rvSpawnTimer -= dt;
+    if (rvSpawnTimer <= 0) {
+      rvSpawnTimer = 0.9 + Math.random() * 0.6;
+      RV_ENEMIES.push({
+        x: bankW + 10 + Math.random() * (W - bankW - rightBankW - 20),
+        y: -12,
+        type: Math.random() < 0.3 ? 'fuel' : 'ship'
+      });
+    }
+
+    // Update & draw enemies
+    for (let i = RV_ENEMIES.length - 1; i >= 0; i--) {
+      const e = RV_ENEMIES[i];
+      e.y += 50 * dt;
+      if (e.y > H + 20) { RV_ENEMIES.splice(i, 1); continue; }
+
+      if (e.type === 'fuel') {
+        // Yellow fuel pump
+        rvCtx.fillStyle = '#ffd24a';
+        rvCtx.shadowColor = '#ffd24a';
+        rvCtx.shadowBlur = 8;
+        rvCtx.fillRect(e.x - 5, e.y - 6, 10, 12);
+        rvCtx.fillStyle = '#000';
+        rvCtx.fillRect(e.x - 3, e.y - 2, 6, 2);
+        rvCtx.shadowBlur = 0;
+      } else {
+        // Red enemy ship (triangle pointing down)
+        rvCtx.fillStyle = '#ff4444';
+        rvCtx.shadowColor = '#ff4444';
+        rvCtx.shadowBlur = 6;
+        rvCtx.beginPath();
+        rvCtx.moveTo(e.x, e.y + 7);
+        rvCtx.lineTo(e.x - 7, e.y - 5);
+        rvCtx.lineTo(e.x + 7, e.y - 5);
+        rvCtx.closePath();
+        rvCtx.fill();
+        rvCtx.shadowBlur = 0;
+      }
+    }
+
+    // Player plane (bottom, fixed position with subtle sway)
+    const px = W / 2 + Math.sin(ms * 1.8) * (W * 0.12);
+    const py = H * 0.82;
+    rvCtx.save();
+    rvCtx.translate(px, py);
+
+    // Plane body (triangle pointing up)
+    rvCtx.fillStyle = '#44ff66';
+    rvCtx.shadowColor = '#44ff66';
+    rvCtx.shadowBlur = 10;
+    rvCtx.beginPath();
+    rvCtx.moveTo(0, -10);
+    rvCtx.lineTo(-8, 8);
+    rvCtx.lineTo(8, 8);
+    rvCtx.closePath();
+    rvCtx.fill();
+    // Wings
+    rvCtx.fillRect(-12, -2, 24, 4);
+    rvCtx.shadowBlur = 0;
+    rvCtx.restore();
+
+    // Muzzle flash / bullets
+    const bulletY = ((ms * 200) % 120);
+    rvCtx.fillStyle = '#fff';
+    rvCtx.shadowColor = '#44ff66';
+    rvCtx.shadowBlur = 6;
+    rvCtx.fillRect(px - 1, py - 16 - bulletY, 2, 6);
+    rvCtx.fillRect(px - 1, py - 16 - (bulletY + 60) % 120, 2, 6);
+    rvCtx.shadowBlur = 0;
+  }
+
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
   function loop(t) {
@@ -2131,6 +2279,7 @@
     drawSlashPreview(dt, t);
     drawPipePreview(dt, t);
     drawFlipPreview(dt, t);
+    drawRiverPreview(dt, t);
 
     requestAnimationFrame(loop);
   }

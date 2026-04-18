@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>RIVER RUN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a1a0a;
+    color: #44ff66;
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(10, 26, 10, 0.95);
+    border-bottom: 2px solid #44ff66;
+    box-shadow: 0 0 12px rgba(68, 255, 102, 0.25);
+    z-index: 10;
+  }
+  .icon-btn {
+    background: transparent;
+    color: #44ff66;
+    border: 2px solid #44ff66;
+    border-radius: 8px;
+    width: 42px; height: 42px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    transition: all 0.15s ease;
+  }
+  .icon-btn:hover, .icon-btn:active { background: #44ff66; color: #0a1a0a; }
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: #44ff66;
+    text-shadow: 0 0 10px rgba(68, 255, 102, 0.6);
+  }
+  #stage {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: #0a1a0a;
+  }
+  #game {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: block;
+    background: #0a1a0a;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(10, 26, 10, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 20;
+    padding: 20px;
+    text-align: center;
+  }
+  .overlay h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 10vw, 96px);
+    letter-spacing: 8px;
+    color: #44ff66;
+    text-shadow: 0 0 16px rgba(68, 255, 102, 0.7), 0 0 30px rgba(68, 255, 102, 0.3);
+    margin-bottom: 10px;
+  }
+  .overlay h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 6vw, 48px);
+    letter-spacing: 3px;
+    color: #ff5544;
+    text-shadow: 0 0 12px rgba(255, 85, 68, 0.6);
+    margin-bottom: 16px;
+  }
+  .overlay p {
+    font-size: 16px;
+    color: #88ffaa;
+    margin: 6px 0;
+    max-width: 360px;
+  }
+  .overlay .score-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    margin: 12px 0;
+    color: #ffee55;
+  }
+  .overlay .hi {
+    font-size: 18px;
+    color: #44ff66;
+    letter-spacing: 2px;
+  }
+  .btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 4px;
+    background: #44ff66;
+    color: #0a1a0a;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 0 18px rgba(68, 255, 102, 0.55);
+    transition: transform 0.1s ease;
+  }
+  .btn:active { transform: scale(0.95); }
+  .hud {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 14px;
+    pointer-events: none;
+    z-index: 5;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+  .hud-left, .hud-right {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .hud-label {
+    font-size: 12px;
+    color: #88ffaa;
+    letter-spacing: 2px;
+  }
+  .hud-value {
+    font-size: 24px;
+    color: #44ff66;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(68, 255, 102, 0.55);
+  }
+  .fuel-container {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: min(260px, 60vw);
+    z-index: 5;
+    pointer-events: none;
+  }
+  .fuel-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 4px;
+    color: #88ffaa;
+  }
+  .fuel-bar {
+    height: 14px;
+    border: 2px solid #44ff66;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #0a1a0a;
+    box-shadow: 0 0 8px rgba(68, 255, 102, 0.4);
+  }
+  .fuel-fill {
+    height: 100%;
+    width: 100%;
+    background: #44ff66;
+    transition: width 0.1s linear, background 0.2s ease;
+  }
+  .lives {
+    display: flex; gap: 6px;
+    margin-top: 4px;
+  }
+  .life {
+    width: 18px; height: 18px;
+    background: #44ff66;
+    clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+  }
+  .touch-fire {
+    position: absolute;
+    right: 18px; bottom: 18px;
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 85, 68, 0.25);
+    border: 3px solid #ff5544;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #ff5544;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    z-index: 6;
+    box-shadow: 0 0 12px rgba(255, 85, 68, 0.45);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-fire.show { display: flex; }
+  .hint {
+    margin-top: 16px;
+    font-size: 14px;
+    color: #66cc88;
+    line-height: 1.6;
+  }
+  .scanline {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0.12) 3px,
+      rgba(0, 0, 0, 0) 4px
+    );
+    z-index: 8;
+    mix-blend-mode: multiply;
+  }
+  @media (max-width: 520px) {
+    .title { font-size: 22px; letter-spacing: 3px; }
+    .icon-btn { width: 38px; height: 38px; font-size: 18px; }
+    .hud-value { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <a href="/" class="icon-btn" title="Back to hub" aria-label="Back">&larr;</a>
+    <div class="title">RIVER RUN</div>
+    <button id="fsBtn" class="icon-btn" title="Fullscreen" aria-label="Fullscreen">&#x26F6;</button>
+  </div>
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div class="hud" id="hud" style="display:none;">
+      <div class="hud-left">
+        <div class="hud-label">SCORE</div>
+        <div class="hud-value" id="scoreVal">0</div>
+      </div>
+      <div class="hud-right" style="align-items:flex-end;">
+        <div class="hud-label">HI</div>
+        <div class="hud-value" id="hiVal">0</div>
+        <div class="lives" id="livesBox"></div>
+      </div>
+    </div>
+    <div class="fuel-container" id="fuelBox" style="display:none;">
+      <div class="fuel-label">FUEL</div>
+      <div class="fuel-bar"><div class="fuel-fill" id="fuelFill"></div></div>
+    </div>
+    <button id="touchFire" class="touch-fire" aria-label="Fire">FIRE</button>
+    <div class="scanline"></div>
+    <div class="overlay" id="startScreen">
+      <h1>RIVER RUN</h1>
+      <p>Pilot your plane up the river. Blast enemies. Don't run out of fuel.</p>
+      <div class="hi">HI SCORE <span id="hiStart">0</span></div>
+      <button class="btn" id="startBtn">START</button>
+      <div class="hint">
+        Arrows / WASD to move &middot; SPACE to shoot<br>
+        Touch: drag to move &middot; tap FIRE
+      </div>
+    </div>
+    <div class="overlay" id="gameOverScreen" style="display:none;">
+      <h2>GAME OVER</h2>
+      <div class="score-display">SCORE <span id="finalScore">0</span></div>
+      <div class="hi">HI SCORE <span id="hiEnd">0</span></div>
+      <button class="btn" id="retryBtn">RETRY</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+  const hud = document.getElementById('hud');
+  const fuelBox = document.getElementById('fuelBox');
+  const fuelFill = document.getElementById('fuelFill');
+  const scoreVal = document.getElementById('scoreVal');
+  const hiVal = document.getElementById('hiVal');
+  const hiStart = document.getElementById('hiStart');
+  const hiEnd = document.getElementById('hiEnd');
+  const finalScore = document.getElementById('finalScore');
+  const livesBox = document.getElementById('livesBox');
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const fsBtn = document.getElementById('fsBtn');
+  const touchFire = document.getElementById('touchFire');
+
+  // Logical resolution — we scale the canvas to fit the stage.
+  const LOGICAL_W = 360;
+  const LOGICAL_H = 640;
+
+  let scale = 1;
+  function resize() {
+    const rect = stage.getBoundingClientRect();
+    const sx = rect.width / LOGICAL_W;
+    const sy = rect.height / LOGICAL_H;
+    scale = Math.max(0.5, Math.min(sx, sy));
+    const w = Math.floor(LOGICAL_W * scale);
+    const h = Math.floor(LOGICAL_H * scale);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  // Detect touch
+  const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouch) touchFire.classList.add('show');
+
+  // High score
+  const HI_KEY = 'riverrun_hi';
+  let hiScore = parseInt(localStorage.getItem(HI_KEY) || '0', 10) || 0;
+  hiStart.textContent = hiScore;
+  hiVal.textContent = hiScore;
+
+  // Input
+  const keys = {};
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Space','a','A','d','D','w','W','s','S'].includes(e.key)) {
+      e.preventDefault();
+    }
+    keys[e.key.toLowerCase()] = true;
+    if (e.code === 'Space') keys[' '] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+    if (e.code === 'Space') keys[' '] = false;
+  });
+
+  // Touch controls
+  let touchActive = false;
+  let touchX = 0, touchY = 0;
+  let touchStartX = 0, touchStartY = 0;
+  let touchFiring = false;
+  stage.addEventListener('touchstart', (e) => {
+    for (const t of e.changedTouches) {
+      const target = t.target;
+      if (target && target.id === 'touchFire') continue;
+      const rect = canvas.getBoundingClientRect();
+      touchStartX = t.clientX - rect.left;
+      touchStartY = t.clientY - rect.top;
+      touchX = touchStartX;
+      touchY = touchStartY;
+      touchActive = true;
+      break;
+    }
+  }, { passive: true });
+  stage.addEventListener('touchmove', (e) => {
+    if (!touchActive) return;
+    for (const t of e.changedTouches) {
+      const rect = canvas.getBoundingClientRect();
+      touchX = t.clientX - rect.left;
+      touchY = t.clientY - rect.top;
+    }
+  }, { passive: true });
+  stage.addEventListener('touchend', () => { touchActive = false; }, { passive: true });
+  stage.addEventListener('touchcancel', () => { touchActive = false; }, { passive: true });
+
+  touchFire.addEventListener('touchstart', (e) => { e.preventDefault(); touchFiring = true; }, { passive: false });
+  touchFire.addEventListener('touchend', (e) => { e.preventDefault(); touchFiring = false; }, { passive: false });
+  touchFire.addEventListener('mousedown', () => { touchFiring = true; });
+  touchFire.addEventListener('mouseup', () => { touchFiring = false; });
+  touchFire.addEventListener('mouseleave', () => { touchFiring = false; });
+
+  // Fullscreen
+  fsBtn.addEventListener('click', () => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement) {
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+    }
+  });
+
+  // ---------- Game state ----------
+  const state = {
+    running: false,
+    time: 0,
+    score: 0,
+    lives: 3,
+    fuel: 1,
+    player: null,
+    bullets: [],
+    enemies: [],
+    fuels: [],
+    particles: [],
+    flashes: [],
+    river: [],
+    scrollY: 0,
+    scrollSpeed: 90,
+    spawnTimer: 0,
+    fuelSpawnTimer: 0,
+    fireCooldown: 0,
+    invul: 0,
+    difficulty: 0,
+    respawnCooldown: 0,
+    riverSegLen: 24,
+  };
+
+  function resetGame() {
+    state.time = 0;
+    state.score = 0;
+    state.lives = 3;
+    state.fuel = 1;
+    state.bullets.length = 0;
+    state.enemies.length = 0;
+    state.fuels.length = 0;
+    state.particles.length = 0;
+    state.flashes.length = 0;
+    state.scrollY = 0;
+    state.scrollSpeed = 90;
+    state.spawnTimer = 1.0;
+    state.fuelSpawnTimer = 4.0;
+    state.fireCooldown = 0;
+    state.invul = 1.5;
+    state.difficulty = 0;
+    state.respawnCooldown = 0;
+
+    state.player = {
+      x: LOGICAL_W / 2,
+      y: LOGICAL_H - 90,
+      w: 18, h: 22,
+      speed: 140,
+    };
+
+    // Build initial river
+    state.river.length = 0;
+    const segs = Math.ceil(LOGICAL_H / state.riverSegLen) + 8;
+    for (let i = 0; i < segs; i++) {
+      state.river.push({ cx: LOGICAL_W / 2, width: 220 });
+    }
+    // Gentle wind
+    for (let i = 1; i < state.river.length; i++) {
+      state.river[i].cx = state.river[i-1].cx + (Math.random() - 0.5) * 4;
+      state.river[i].width = Math.max(160, Math.min(260, state.river[i-1].width + (Math.random() - 0.5) * 4));
+    }
+
+    updateHUD();
+    renderLives();
+  }
+
+  function updateHUD() {
+    scoreVal.textContent = state.score;
+    hiVal.textContent = Math.max(hiScore, state.score);
+    const f = Math.max(0, Math.min(1, state.fuel));
+    fuelFill.style.width = (f * 100) + '%';
+    let color = '#44ff66';
+    if (f < 0.5) color = '#ffee55';
+    if (f < 0.25) color = '#ff8833';
+    if (f < 0.12) {
+      // flashing critical red
+      const flash = (Math.floor(state.time * 6) % 2) === 0;
+      color = flash ? '#ff3322' : '#661100';
+    }
+    fuelFill.style.background = color;
+  }
+
+  function renderLives() {
+    livesBox.innerHTML = '';
+    for (let i = 0; i < state.lives; i++) {
+      const d = document.createElement('div');
+      d.className = 'life';
+      livesBox.appendChild(d);
+    }
+  }
+
+  function startGame() {
+    resetGame();
+    startScreen.style.display = 'none';
+    gameOverScreen.style.display = 'none';
+    hud.style.display = 'flex';
+    fuelBox.style.display = 'block';
+    state.running = true;
+    lastT = performance.now();
+  }
+  function endGame() {
+    state.running = false;
+    if (state.score > hiScore) {
+      hiScore = state.score;
+      localStorage.setItem(HI_KEY, String(hiScore));
+    }
+    finalScore.textContent = state.score;
+    hiEnd.textContent = hiScore;
+    hiStart.textContent = hiScore;
+    gameOverScreen.style.display = 'flex';
+    hud.style.display = 'none';
+    fuelBox.style.display = 'none';
+  }
+
+  startBtn.addEventListener('click', startGame);
+  retryBtn.addEventListener('click', startGame);
+
+  // ---------- Spawning ----------
+  function topRiverSeg() {
+    // The seg that's currently at the top of the visible area.
+    return state.river[state.river.length - 1];
+  }
+
+  function spawnEnemy() {
+    const seg = topRiverSeg();
+    const riverL = seg.cx - seg.width / 2 + 14;
+    const riverR = seg.cx + seg.width / 2 - 14;
+    const x = riverL + Math.random() * (riverR - riverL);
+
+    const roll = Math.random();
+    const diff = state.difficulty;
+    let type;
+    if (roll < 0.35) type = 'fueltank';
+    else if (roll < 0.7 || diff < 0.2) type = 'ship';
+    else type = 'heli';
+
+    if (type === 'fueltank') {
+      state.enemies.push({
+        type, x, y: -30, w: 18, h: 16,
+        vy: 0, vx: 0, hp: 1, score: 80, alive: true,
+      });
+    } else if (type === 'ship') {
+      state.enemies.push({
+        type, x, y: -30, w: 20, h: 14,
+        vy: 30 + diff * 20, vx: 0, hp: 1, score: 30, alive: true,
+      });
+    } else if (type === 'heli') {
+      state.enemies.push({
+        type, x, y: -30, w: 22, h: 14,
+        vy: 12 + diff * 10,
+        vx: (Math.random() < 0.5 ? -1 : 1) * (25 + diff * 20),
+        hp: 1, score: 60, alive: true,
+        fireT: 0.8 + Math.random() * 1.2,
+        rotor: 0,
+      });
+    }
+  }
+
+  function spawnFuelStation() {
+    const seg = topRiverSeg();
+    const riverL = seg.cx - seg.width / 2 + 18;
+    const riverR = seg.cx + seg.width / 2 - 18;
+    const x = riverL + Math.random() * (riverR - riverL);
+    state.fuels.push({ x, y: -30, w: 22, h: 24, alive: true });
+  }
+
+  // ---------- Update ----------
+  function spawnParticles(x, y, color, n, speed) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = speed * (0.3 + Math.random() * 0.8);
+      state.particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 0.4 + Math.random() * 0.4,
+        maxLife: 0.8,
+        color,
+        size: 1 + Math.random() * 2.5,
+      });
+    }
+  }
+
+  function explode(x, y) {
+    spawnParticles(x, y, '#ffcc33', 14, 90);
+    spawnParticles(x, y, '#ff6622', 10, 60);
+    state.flashes.push({ x, y, r: 4, maxR: 28, life: 0.25, maxLife: 0.25 });
+  }
+
+  function circleHit(ax, ay, ar, bx, by, br) {
+    const dx = ax - bx, dy = ay - by;
+    return dx*dx + dy*dy < (ar+br)*(ar+br);
+  }
+
+  function rectHit(a, b) {
+    return a.x - a.w/2 < b.x + b.w/2 &&
+           a.x + a.w/2 > b.x - b.w/2 &&
+           a.y - a.h/2 < b.y + b.h/2 &&
+           a.y + a.h/2 > b.y - b.h/2;
+  }
+
+  function updateRiver(dt) {
+    // scroll the river
+    state.scrollY += state.scrollSpeed * dt;
+    while (state.scrollY >= state.riverSegLen) {
+      state.scrollY -= state.riverSegLen;
+      // remove bottom, add top
+      state.river.shift();
+      const last = state.river[state.river.length - 1];
+      // Procedural winding + narrowing with difficulty
+      const diff = state.difficulty;
+      const minW = 120 - diff * 20;
+      const maxW = 260 - diff * 30;
+      let newW = last.width + (Math.random() - 0.5) * 8;
+      newW = Math.max(Math.max(90, minW), Math.min(Math.max(130, maxW), newW));
+      let newCx = last.cx + (Math.random() - 0.5) * (6 + diff * 4);
+      const margin = newW / 2 + 10;
+      if (newCx < margin) newCx = margin;
+      if (newCx > LOGICAL_W - margin) newCx = LOGICAL_W - margin;
+      state.river.push({ cx: newCx, width: newW });
+    }
+  }
+
+  function riverAtY(y) {
+    // world y — returns {cx, width} interpolated
+    // The bottom segment sits at LOGICAL_H (or above), each seg is riverSegLen tall moving up.
+    // river[0] is bottom-most visible. We scroll content down by scrollY.
+    const idx = (LOGICAL_H - y + state.scrollY) / state.riverSegLen;
+    const i0 = Math.floor(idx);
+    const i1 = i0 + 1;
+    const t = idx - i0;
+    const a = state.river[Math.max(0, Math.min(state.river.length - 1, i0))];
+    const b = state.river[Math.max(0, Math.min(state.river.length - 1, i1))];
+    return {
+      cx: a.cx + (b.cx - a.cx) * t,
+      width: a.width + (b.width - a.width) * t,
+    };
+  }
+
+  let lastT = 0;
+  function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    if (state.running) update(dt);
+    draw();
+  }
+
+  function update(dt) {
+    state.time += dt;
+    state.difficulty = Math.min(1, state.time / 90);
+    state.scrollSpeed = 90 + state.difficulty * 60;
+
+    updateRiver(dt);
+
+    // Fuel drain
+    state.fuel -= dt * (0.025 + state.difficulty * 0.015);
+    if (state.fuel <= 0) {
+      state.fuel = 0;
+      // Out of fuel: crash
+      killPlayer();
+    }
+
+    if (state.invul > 0) state.invul -= dt;
+    if (state.respawnCooldown > 0) {
+      state.respawnCooldown -= dt;
+      updateHUD();
+      return;
+    }
+
+    // Player input
+    const p = state.player;
+    let mx = 0, my = 0;
+    if (keys['arrowleft'] || keys['a']) mx -= 1;
+    if (keys['arrowright'] || keys['d']) mx += 1;
+    if (keys['arrowup'] || keys['w']) my -= 1;
+    if (keys['arrowdown'] || keys['s']) my += 1;
+
+    if (touchActive) {
+      const rect = canvas.getBoundingClientRect();
+      const tLogicalX = touchX / rect.width * LOGICAL_W;
+      const tLogicalY = touchY / rect.height * LOGICAL_H;
+      // Direct drag control: move player toward touch position
+      const dx = tLogicalX - p.x;
+      const dy = tLogicalY - p.y;
+      const absx = Math.abs(dx), absy = Math.abs(dy);
+      mx = absx > 2 ? Math.sign(dx) * Math.min(1, absx / 40) : 0;
+      my = absy > 2 ? Math.sign(dy) * Math.min(1, absy / 40) : 0;
+    }
+
+    p.x += mx * p.speed * dt;
+    p.y += my * p.speed * 0.6 * dt;
+
+    // Clamp to screen
+    if (p.x < 12) p.x = 12;
+    if (p.x > LOGICAL_W - 12) p.x = LOGICAL_W - 12;
+    if (p.y < LOGICAL_H * 0.4) p.y = LOGICAL_H * 0.4;
+    if (p.y > LOGICAL_H - 40) p.y = LOGICAL_H - 40;
+
+    // Collision with banks
+    const riverHere = riverAtY(p.y);
+    const left = riverHere.cx - riverHere.width / 2;
+    const right = riverHere.cx + riverHere.width / 2;
+    if (state.invul <= 0 && (p.x - p.w/2 < left || p.x + p.w/2 > right)) {
+      killPlayer();
+      return;
+    }
+
+    // Firing
+    state.fireCooldown -= dt;
+    const firing = keys[' '] || touchFiring || isTouch; // auto-fire on touch feels better
+    if ((keys[' '] || touchFiring) && state.fireCooldown <= 0) {
+      fireBullet();
+      state.fireCooldown = 0.18;
+    } else if (isTouch && state.fireCooldown <= 0) {
+      // gentle auto-fire so mobile is playable even without fire button
+      fireBullet();
+      state.fireCooldown = 0.28;
+    }
+
+    // Bullets
+    for (const b of state.bullets) {
+      b.y -= 360 * dt;
+    }
+    // Remove offscreen
+    state.bullets = state.bullets.filter(b => b.y > -10);
+
+    // Spawn enemies/fuel
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      spawnEnemy();
+      state.spawnTimer = Math.max(0.35, 1.4 - state.difficulty * 0.9) * (0.7 + Math.random() * 0.6);
+    }
+    state.fuelSpawnTimer -= dt;
+    if (state.fuelSpawnTimer <= 0) {
+      spawnFuelStation();
+      state.fuelSpawnTimer = 6.0 + Math.random() * 3.0;
+    }
+
+    // Update enemies
+    for (const e of state.enemies) {
+      if (!e.alive) continue;
+      // All enemies drift down with world scroll
+      e.y += (state.scrollSpeed + e.vy) * dt;
+      if (e.type === 'heli') {
+        e.x += e.vx * dt;
+        e.rotor += dt * 30;
+        // stay inside river
+        const r = riverAtY(e.y);
+        const margin = e.w/2 + 6;
+        if (e.x < r.cx - r.width/2 + margin) { e.x = r.cx - r.width/2 + margin; e.vx = Math.abs(e.vx); }
+        if (e.x > r.cx + r.width/2 - margin) { e.x = r.cx + r.width/2 - margin; e.vx = -Math.abs(e.vx); }
+        e.fireT -= dt;
+        if (e.fireT <= 0) {
+          // enemy bullet (we'll stash in bullets with friendly=false)
+          state.bullets.push({ x: e.x, y: e.y + 10, vy: 200, w: 3, h: 6, enemy: true });
+          e.fireT = 1.2 + Math.random() * 0.8;
+        }
+      }
+      if (e.y > LOGICAL_H + 30) e.alive = false;
+    }
+
+    // Update fuel stations
+    for (const f of state.fuels) {
+      if (!f.alive) continue;
+      f.y += state.scrollSpeed * dt;
+      if (f.y > LOGICAL_H + 30) f.alive = false;
+    }
+
+    // Bullets vs enemies (friendly bullets only)
+    for (const b of state.bullets) {
+      if (b.enemy) continue;
+      for (const e of state.enemies) {
+        if (!e.alive) continue;
+        if (Math.abs(b.x - e.x) < e.w/2 + 2 && Math.abs(b.y - e.y) < e.h/2 + 4) {
+          e.alive = false;
+          b.y = -999;
+          explode(e.x, e.y);
+          state.score += e.score;
+        }
+      }
+      // bullet vs fuel stations (shooting fuel is allowed but gives less points, no refuel)
+      for (const f of state.fuels) {
+        if (!f.alive) continue;
+        if (Math.abs(b.x - f.x) < f.w/2 + 2 && Math.abs(b.y - f.y) < f.h/2 + 4) {
+          f.alive = false;
+          b.y = -999;
+          explode(f.x, f.y);
+          state.score += 20;
+        }
+      }
+    }
+
+    // Enemy bullets vs player
+    if (state.invul <= 0) {
+      for (const b of state.bullets) {
+        if (!b.enemy) continue;
+        if (Math.abs(b.x - p.x) < p.w/2 + 2 && Math.abs(b.y - p.y) < p.h/2 + 2) {
+          b.y = 9999;
+          killPlayer();
+          return;
+        }
+      }
+      // Enemy bodies vs player
+      for (const e of state.enemies) {
+        if (!e.alive) continue;
+        if (Math.abs(e.x - p.x) < (e.w + p.w)/2 - 2 && Math.abs(e.y - p.y) < (e.h + p.h)/2 - 2) {
+          e.alive = false;
+          explode(e.x, e.y);
+          killPlayer();
+          return;
+        }
+      }
+    }
+
+    // Fuel pickup: flying over
+    for (const f of state.fuels) {
+      if (!f.alive) continue;
+      if (Math.abs(f.x - p.x) < (f.w + p.w)/2 - 2 && Math.abs(f.y - p.y) < (f.h + p.h)/2 - 2) {
+        state.fuel = Math.min(1, state.fuel + dt * 0.9); // refuel while over
+      }
+    }
+
+    // cleanup enemies/fuel
+    state.enemies = state.enemies.filter(e => e.alive);
+    state.bullets = state.bullets.filter(b => b.y > -10 && b.y < LOGICAL_H + 20);
+    state.fuels = state.fuels.filter(f => f.alive);
+
+    // Particles
+    for (const pt of state.particles) {
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt + state.scrollSpeed * dt * 0.2;
+      pt.vx *= (1 - dt * 1.8);
+      pt.vy *= (1 - dt * 1.8);
+      pt.life -= dt;
+    }
+    state.particles = state.particles.filter(pt => pt.life > 0);
+    for (const fl of state.flashes) {
+      fl.life -= dt;
+      fl.r += (fl.maxR - fl.r) * Math.min(1, dt * 8);
+    }
+    state.flashes = state.flashes.filter(fl => fl.life > 0);
+
+    updateHUD();
+  }
+
+  function fireBullet() {
+    const p = state.player;
+    state.bullets.push({ x: p.x, y: p.y - p.h/2 - 4, w: 3, h: 8, enemy: false });
+  }
+
+  function killPlayer() {
+    if (state.invul > 0) return;
+    const p = state.player;
+    explode(p.x, p.y);
+    spawnParticles(p.x, p.y, '#44ff66', 10, 80);
+    state.lives -= 1;
+    renderLives();
+    if (state.lives <= 0) {
+      setTimeout(endGame, 600);
+      state.respawnCooldown = 999;
+      return;
+    }
+    state.respawnCooldown = 1.0;
+    state.invul = 2.0;
+    state.fuel = Math.max(state.fuel, 0.5);
+    // Reset player position
+    const seg = riverAtY(LOGICAL_H - 90);
+    p.x = seg.cx;
+    p.y = LOGICAL_H - 90;
+    // clear nearby enemies/bullets
+    state.bullets = state.bullets.filter(b => !b.enemy);
+    state.enemies = state.enemies.filter(e => Math.abs(e.y - p.y) > 80);
+  }
+
+  // ---------- Draw ----------
+  function draw() {
+    // Water background
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+    // Banks + river: draw strips per segment
+    const segLen = state.riverSegLen;
+    // We'll draw from top to bottom
+    // The segment at index i in state.river has top-y = LOGICAL_H - (i+1)*segLen + scrollY
+    for (let i = 0; i < state.river.length - 1; i++) {
+      const a = state.river[i];
+      const b = state.river[i + 1];
+      const yBot = LOGICAL_H - i * segLen + state.scrollY;
+      const yTop = yBot - segLen;
+
+      // Banks (left + right)
+      ctx.fillStyle = '#3a5528';
+      ctx.beginPath();
+      ctx.moveTo(0, yTop);
+      ctx.lineTo(b.cx - b.width/2, yTop);
+      ctx.lineTo(a.cx - a.width/2, yBot);
+      ctx.lineTo(0, yBot);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(LOGICAL_W, yTop);
+      ctx.lineTo(b.cx + b.width/2, yTop);
+      ctx.lineTo(a.cx + a.width/2, yBot);
+      ctx.lineTo(LOGICAL_W, yBot);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bank edge (brown)
+      ctx.fillStyle = '#6b4a1f';
+      ctx.beginPath();
+      ctx.moveTo(b.cx - b.width/2, yTop);
+      ctx.lineTo(b.cx - b.width/2 + 3, yTop);
+      ctx.lineTo(a.cx - a.width/2 + 3, yBot);
+      ctx.lineTo(a.cx - a.width/2, yBot);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(b.cx + b.width/2, yTop);
+      ctx.lineTo(b.cx + b.width/2 - 3, yTop);
+      ctx.lineTo(a.cx + a.width/2 - 3, yBot);
+      ctx.lineTo(a.cx + a.width/2, yBot);
+      ctx.closePath();
+      ctx.fill();
+
+      // River water
+      ctx.fillStyle = '#1a4488';
+      ctx.beginPath();
+      ctx.moveTo(b.cx - b.width/2 + 3, yTop);
+      ctx.lineTo(b.cx + b.width/2 - 3, yTop);
+      ctx.lineTo(a.cx + a.width/2 - 3, yBot);
+      ctx.lineTo(a.cx - a.width/2 + 3, yBot);
+      ctx.closePath();
+      ctx.fill();
+
+      // Subtle water ripple every few segments
+      if ((i + Math.floor(state.time * 4)) % 6 === 0) {
+        ctx.fillStyle = 'rgba(120, 180, 230, 0.25)';
+        ctx.fillRect(a.cx - 14, (yTop + yBot) / 2 - 1, 28, 2);
+      }
+    }
+
+    // Fuel stations
+    for (const f of state.fuels) {
+      drawFuelStation(f.x, f.y);
+    }
+    // Enemies
+    for (const e of state.enemies) {
+      if (e.type === 'ship') drawShip(e.x, e.y);
+      else if (e.type === 'heli') drawHeli(e.x, e.y, e.rotor);
+      else if (e.type === 'fueltank') drawFuelTank(e.x, e.y);
+    }
+
+    // Bullets
+    for (const b of state.bullets) {
+      if (b.enemy) {
+        ctx.fillStyle = '#ff4422';
+        ctx.fillRect(b.x - 1.5, b.y - 3, 3, 6);
+      } else {
+        ctx.fillStyle = '#ffee55';
+        ctx.fillRect(b.x - 1.5, b.y - 4, 3, 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(b.x - 0.5, b.y - 4, 1, 3);
+      }
+    }
+
+    // Player
+    if (state.running && state.respawnCooldown <= 0) {
+      drawPlayer(state.player.x, state.player.y);
+    }
+
+    // Particles
+    for (const pt of state.particles) {
+      const a = Math.max(0, pt.life / pt.maxLife);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(pt.x - pt.size/2, pt.y - pt.size/2, pt.size, pt.size);
+    }
+    ctx.globalAlpha = 1;
+
+    // Flashes
+    for (const fl of state.flashes) {
+      const a = Math.max(0, fl.life / fl.maxLife);
+      ctx.globalAlpha = a * 0.6;
+      const grd = ctx.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, fl.r);
+      grd.addColorStop(0, '#ffffff');
+      grd.addColorStop(0.4, '#ffcc33');
+      grd.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- Sprites (drawn with rects for pixel look) ----------
+  function drawPlayer(x, y) {
+    // Flashing when invulnerable
+    if (state.invul > 0 && Math.floor(state.time * 12) % 2 === 0) return;
+    const px = Math.round(x), py = Math.round(y);
+    // camo body
+    ctx.fillStyle = '#3a6b2a';
+    ctx.fillRect(px - 2, py - 10, 4, 18); // fuselage
+    // wings
+    ctx.fillStyle = '#2a5220';
+    ctx.fillRect(px - 9, py - 2, 18, 4);
+    // wing tips
+    ctx.fillStyle = '#1f3d18';
+    ctx.fillRect(px - 9, py - 2, 2, 4);
+    ctx.fillRect(px + 7, py - 2, 2, 4);
+    // tail
+    ctx.fillStyle = '#2a5220';
+    ctx.fillRect(px - 5, py + 6, 10, 3);
+    // nose
+    ctx.fillStyle = '#8ac06f';
+    ctx.fillRect(px - 1, py - 11, 2, 2);
+    // cockpit
+    ctx.fillStyle = '#22382a';
+    ctx.fillRect(px - 1, py - 6, 2, 4);
+    // engine glow
+    ctx.fillStyle = '#ffcc33';
+    ctx.fillRect(px - 2, py + 9, 4, 2);
+    ctx.fillStyle = '#ff6622';
+    ctx.fillRect(px - 1, py + 10, 2, 2 + (Math.sin(state.time * 30) * 1 | 0));
+  }
+
+  function drawShip(x, y) {
+    const px = Math.round(x), py = Math.round(y);
+    // hull
+    ctx.fillStyle = '#8a2222';
+    ctx.fillRect(px - 10, py - 4, 20, 8);
+    ctx.fillStyle = '#661818';
+    ctx.fillRect(px - 10, py + 3, 20, 2);
+    // tower
+    ctx.fillStyle = '#cc3333';
+    ctx.fillRect(px - 3, py - 8, 6, 5);
+    ctx.fillStyle = '#ffddaa';
+    ctx.fillRect(px - 2, py - 7, 4, 2);
+    // gun
+    ctx.fillStyle = '#441111';
+    ctx.fillRect(px - 1, py - 11, 2, 3);
+  }
+
+  function drawHeli(x, y, rotor) {
+    const px = Math.round(x), py = Math.round(y);
+    // body
+    ctx.fillStyle = '#882244';
+    ctx.fillRect(px - 7, py - 4, 14, 8);
+    // cockpit
+    ctx.fillStyle = '#99ddee';
+    ctx.fillRect(px + 2, py - 3, 4, 4);
+    // tail
+    ctx.fillStyle = '#661833';
+    ctx.fillRect(px - 11, py - 1, 5, 2);
+    ctx.fillStyle = '#882244';
+    ctx.fillRect(px - 12, py - 3, 2, 5);
+    // rotor
+    ctx.fillStyle = '#bbbbbb';
+    const r = Math.sin(rotor) * 10;
+    ctx.fillRect(px - 10 + r, py - 6, 4, 1);
+    ctx.fillRect(px + 6 - r, py - 6, 4, 1);
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(px - 1, py - 7, 2, 2);
+  }
+
+  function drawFuelTank(x, y) {
+    const px = Math.round(x), py = Math.round(y);
+    ctx.fillStyle = '#ffdd44';
+    ctx.fillRect(px - 8, py - 7, 16, 14);
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(px - 8, py - 1, 16, 3);
+    ctx.fillStyle = '#ffee77';
+    ctx.fillRect(px - 8, py - 7, 16, 2);
+    ctx.fillStyle = '#8a6a00';
+    ctx.fillRect(px - 8, py + 6, 16, 1);
+  }
+
+  function drawFuelStation(x, y) {
+    const px = Math.round(x), py = Math.round(y);
+    // pump base
+    ctx.fillStyle = '#444444';
+    ctx.fillRect(px - 10, py + 8, 20, 4);
+    // pump body (yellow)
+    ctx.fillStyle = '#ffcc22';
+    ctx.fillRect(px - 8, py - 10, 16, 18);
+    // top screen
+    ctx.fillStyle = '#222222';
+    ctx.fillRect(px - 6, py - 8, 12, 5);
+    ctx.fillStyle = '#44ff66';
+    ctx.fillRect(px - 5, py - 7, 10, 3);
+    // pump letters
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(px - 5, py - 1, 2, 5);
+    ctx.fillRect(px - 1, py - 1, 2, 5);
+    ctx.fillRect(px + 3, py - 1, 2, 5);
+    // hose
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(px - 10, py - 4, 2, 7);
+    ctx.fillStyle = '#ffcc22';
+    ctx.fillRect(px - 11, py + 3, 3, 2);
+  }
+
+  // ---------- Boot ----------
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

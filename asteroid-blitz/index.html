@@ -348,15 +348,27 @@ function update() {
   const upKey = keys['ArrowUp'] || keys['KeyW'];
   const shootKey = keys['Space'];
 
-  // Rotation
+  // Rotation (keyboard)
   let turnInput = 0;
   if (leftKey) turnInput -= 1;
   if (rightKey) turnInput += 1;
-  if (joyActive) turnInput += joyX;
   ship.angle += turnInput * TURN_SPEED;
 
+  // Joystick: rotate ship toward push direction, thrust when pushed
+  const joyMag = Math.sqrt(joyX * joyX + joyY * joyY);
+  if (joyActive && joyMag > 0.2) {
+    const targetAngle = Math.atan2(joyY, joyX);
+    let delta = targetAngle - ship.angle;
+    // Wrap delta to [-PI, PI] for shortest rotation path
+    while (delta > Math.PI) delta -= TAU;
+    while (delta < -Math.PI) delta += TAU;
+    const maxTurn = TURN_SPEED * joyMag;
+    if (Math.abs(delta) < maxTurn) ship.angle = targetAngle;
+    else ship.angle += Math.sign(delta) * maxTurn;
+  }
+
   // Thrust
-  ship.thrusting = upKey || (joyActive && joyY < -0.25);
+  ship.thrusting = upKey || (joyActive && joyMag > 0.3);
   if (ship.thrusting) {
     ship.vx += Math.cos(ship.angle) * THRUST_ACCEL;
     ship.vy += Math.sin(ship.angle) * THRUST_ACCEL;
