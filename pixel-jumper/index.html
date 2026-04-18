@@ -360,7 +360,7 @@
     else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { tryHop(-1, 0); e.preventDefault(); }
     else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { tryHop(1, 0); e.preventDefault(); }
     else if (e.key === 'Enter' || e.key === ' ') {
-      if (state.gameOver) { initGame(); }
+      if (state.gameOver) { initGame(); e.preventDefault(); }
     }
   }, { passive: false });
 
@@ -369,12 +369,17 @@
   const stage = document.getElementById('stage');
   stage.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
+    if (state.gameOver) { touchStart = null; return; }
+    if (e.target && e.target.closest('#overlay')) { touchStart = null; return; }
     const t = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     touchStart = { x: t.clientX - rect.left, y: t.clientY - rect.top, t: performance.now(), w: rect.width, h: rect.height };
     e.preventDefault();
   }, { passive: false });
-  stage.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+  stage.addEventListener('touchmove', (e) => {
+    if (!touchStart) return;
+    e.preventDefault();
+  }, { passive: false });
   stage.addEventListener('touchend', (e) => {
     if (!touchStart) return;
     const t = (e.changedTouches[0]);
@@ -409,7 +414,12 @@
     e.preventDefault();
   }, { passive: false });
 
-  retryBtn.addEventListener('click', () => { initGame(); });
+  function restart(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    initGame();
+  }
+  retryBtn.addEventListener('click', restart);
+  retryBtn.addEventListener('touchend', restart, { passive: false });
 
   fsBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {

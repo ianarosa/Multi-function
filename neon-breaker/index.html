@@ -53,6 +53,27 @@
     margin-top: 8px; color: rgba(255,255,255,0.18); font-size: 0.68rem;
     letter-spacing: 0.08em; text-transform: uppercase;
   }
+  #canvas-wrap { position: relative; display: inline-block; }
+  #launch-btn {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: none; min-width: 180px; min-height: 62px; padding: 0 28px;
+    background: rgba(0,20,16,0.85); border: 2px solid #00ffcc; border-radius: 8px;
+    color: #00ffcc; font-family: 'Bebas Neue', cursive; font-size: 1.6rem;
+    letter-spacing: 0.25em; cursor: pointer; z-index: 10;
+    box-shadow: 0 0 20px rgba(0,255,204,0.6), inset 0 0 20px rgba(0,255,204,0.15);
+    text-shadow: 0 0 12px rgba(0,255,204,0.8);
+    animation: launch-pulse 1.2s ease-in-out infinite;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  #launch-btn:active {
+    background: rgba(0,255,204,0.2);
+    box-shadow: 0 0 30px rgba(0,255,204,0.9), inset 0 0 25px rgba(0,255,204,0.3);
+  }
+  @keyframes launch-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0,255,204,0.5), inset 0 0 20px rgba(0,255,204,0.15); }
+    50% { box-shadow: 0 0 35px rgba(0,255,204,0.9), inset 0 0 25px rgba(0,255,204,0.3); }
+  }
 </style>
 </head>
 <body>
@@ -65,7 +86,10 @@
     </button>
   </div>
 </div>
-<canvas id="gameCanvas"></canvas>
+<div id="canvas-wrap">
+  <canvas id="gameCanvas"></canvas>
+  <button id="launch-btn" type="button">LAUNCH</button>
+</div>
 <div id="hint">Arrow keys / A-D to move &bull; Space to launch</div>
 
 <script>
@@ -453,7 +477,7 @@ function loseLife() {
 window.addEventListener('keydown', e => {
   keys[e.key] = true;
   if (e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
-  if (e.key === ' ') {
+  if (e.key === ' ' || e.key === 'Enter') {
     if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }
     if (gameState === 'playing') {
       balls.forEach(b => launchBall(b));
@@ -491,7 +515,6 @@ canvas.addEventListener('touchstart', e => {
   window.addEventListener('touchend', onTouchEnd);
   window.addEventListener('touchcancel', onTouchEnd);
   if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }
-  if (gameState === 'playing') balls.forEach(b => launchBall(b));
 }, { passive: false });
 
 // Mouse controls
@@ -514,8 +537,16 @@ canvas.addEventListener('mousedown', () => {
 });
 canvas.addEventListener('click', () => {
   if (gameState === 'menu' || gameState === 'dead' || gameState === 'win') { initGame(); return; }
-  if (gameState === 'playing') balls.forEach(b => launchBall(b));
 });
+
+// Launch button
+const launchBtn = document.getElementById('launch-btn');
+function pressLaunch(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (gameState === 'playing') balls.forEach(b => launchBall(b));
+}
+launchBtn.addEventListener('click', pressLaunch);
+launchBtn.addEventListener('touchstart', pressLaunch, { passive: false });
 
 // --- Update ---
 function update() {
@@ -979,9 +1010,15 @@ powerups = [];
 lasers = [];
 activePowers = {};
 
+function updateLaunchBtn() {
+  const show = gameState === 'playing' && balls.some(b => b.stuck);
+  launchBtn.style.display = show ? 'block' : 'none';
+}
+
 function loop() {
   update();
   draw();
+  updateLaunchBtn();
   requestAnimationFrame(loop);
 }
 loop();
