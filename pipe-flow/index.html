@@ -545,9 +545,10 @@ function resizeCanvas(){
 
   const cw=gridW*cellSize+20;
   const ch=gridH*cellSize+20;
-  canvas.width=cw*2;canvas.height=ch*2;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=cw*dpr;canvas.height=ch*dpr;
   canvas.style.width=cw+'px';canvas.style.height=ch+'px';
-  ctx.scale(2,2);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
   gridOffX=10;gridOffY=10;
 }
 
@@ -695,7 +696,8 @@ function drawWinParticles(){
 }
 
 function draw(){
-  const cw=canvas.width/2,ch=canvas.height/2;
+  const cw=parseFloat(canvas.style.width)||canvas.clientWidth;
+  const ch=parseFloat(canvas.style.height)||canvas.clientHeight;
   ctx.clearRect(0,0,cw,ch);
   ctx.fillStyle=BG;
   ctx.fillRect(0,0,cw,ch);
@@ -754,10 +756,12 @@ function showWin(bonus){
   document.getElementById('winBonus').textContent=bonus>0?('Time bonus: +'+bonus+' | Moves: '+moves):'Moves: '+moves;
 
   // Spawn celebration particles
+  const pcw=parseFloat(canvas.style.width)||canvas.clientWidth;
+  const pch=parseFloat(canvas.style.height)||canvas.clientHeight;
   for(let i=0;i<60;i++){
     winParticles.push({
-      x:canvas.width/4*Math.random(),
-      y:canvas.height/4*Math.random(),
+      x:pcw*0.5*Math.random(),
+      y:pch*0.5*Math.random(),
       vx:(Math.random()-0.5)*3,
       vy:-Math.random()*3-1,
       r:Math.random()*4+2,

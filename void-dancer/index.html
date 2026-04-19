@@ -273,7 +273,9 @@
   const cvs = document.getElementById('game');
   const ctx = cvs.getContext('2d');
   const W = 400, H = 600;
-  cvs.width = W; cvs.height = H;
+  const DPR = window.devicePixelRatio || 1;
+  cvs.width = W * DPR; cvs.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   const wrapEl = document.getElementById('wrap');
   function fit() {

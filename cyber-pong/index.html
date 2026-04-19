@@ -27,14 +27,14 @@
     font-family: 'Bebas Neue', cursive; color: #0df; font-size: 2rem;
     letter-spacing: 0.15em; text-shadow: 0 0 20px #0df6; flex: 1; text-align: center;
   }
-  #top-spacer { width: 70px; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; }
-  #fs-btn {
+  #top-spacer { width: 70px; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+  #fs-btn, #diff-btn {
     background: rgba(0,0,0,0.5); border: 1px solid rgba(0,220,255,0.3);
     color: rgba(0,220,255,0.7); border-radius: 4px; cursor: pointer;
     width: 32px; height: 28px; display: flex; align-items: center; justify-content: center;
     transition: background 0.15s, color 0.15s; flex-shrink: 0;
   }
-  #fs-btn:hover { background: rgba(0,220,255,0.15); color: #0df; }
+  #fs-btn:hover, #diff-btn:hover { background: rgba(0,220,255,0.15); color: #0df; }
 
   #gameCanvas {
     display: block; max-width: 100%;
@@ -80,7 +80,7 @@
 
   @media (orientation: landscape) {
     #top-bar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       background: rgba(2,8,18,0.55); pointer-events: none;
     }
     #top-bar > * { pointer-events: auto; }
@@ -108,7 +108,7 @@
     -webkit-backdrop-filter: blur(10px) !important;
     flex-shrink: 0 !important;
     position: relative !important;
-    z-index: 100 !important;
+    z-index: 500 !important;
   }
   #top-bar h1, .top-bar h1, .topbar h1, #topBar h1,
   #top-bar .title, .top-bar .title, .topbar .title, #topBar .title,
@@ -158,6 +158,7 @@
   }
   #top-bar #fs-btn, .top-bar #fs-btn, .topbar #fs-btn, #topBar #fs-btn,
   #top-bar #fsBtn, #topBar #fsBtn,
+  #top-bar #diff-btn,
   #top-bar button.icon-btn:not([href="/"]), .topbar button.icon-btn:not([href="/"]) {
     width: 32px !important;
     height: 30px !important;
@@ -188,7 +189,66 @@
     position: fixed !important;
     top: 9px !important;
     left: 12px !important;
-    z-index: 200 !important;
+    z-index: 600 !important;
+  }
+
+  /* ── Difficulty menu overlay (HTML, above canvas, below top-bar) ── */
+  #diff-menu {
+    position: fixed;
+    left: 0; right: 0; top: 48px; bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(2,8,18,0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 400;
+    padding: 20px;
+  }
+  #diff-menu.visible { display: flex; }
+  #diff-menu .menu-title {
+    font-family: 'Bebas Neue', cursive;
+    color: #0df; font-size: 2.4rem; letter-spacing: 0.2em;
+    text-shadow: 0 0 22px #0df8; margin-bottom: 4px;
+  }
+  #diff-menu .menu-sub {
+    font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.55);
+    font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  #diff-menu .diff-grid {
+    display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 640px;
+  }
+  .diff-btn {
+    min-width: 160px; padding: 16px 18px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(0,220,255,0.35);
+    color: #0df; font-family: 'Bebas Neue', cursive;
+    font-size: 1.6rem; letter-spacing: 0.2em;
+    border-radius: 6px; cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .diff-btn:hover { background: rgba(0,220,255,0.1); transform: translateY(-2px); box-shadow: 0 0 24px rgba(0,220,255,0.35); }
+  .diff-btn.selected { border-color: #0df; background: rgba(0,220,255,0.15); box-shadow: 0 0 22px rgba(0,220,255,0.4); }
+  .diff-btn.easy   { color: #0f8; border-color: rgba(0,255,136,0.4); }
+  .diff-btn.easy:hover, .diff-btn.easy.selected { border-color: #0f8; box-shadow: 0 0 22px rgba(0,255,136,0.4); background: rgba(0,255,136,0.1); }
+  .diff-btn.medium { color: #fe0; border-color: rgba(255,238,0,0.4); }
+  .diff-btn.medium:hover, .diff-btn.medium.selected { border-color: #fe0; box-shadow: 0 0 22px rgba(255,238,0,0.4); background: rgba(255,238,0,0.1); }
+  .diff-btn.hard   { color: #f06; border-color: rgba(255,0,102,0.4); }
+  .diff-btn.hard:hover, .diff-btn.hard.selected { border-color: #f06; box-shadow: 0 0 22px rgba(255,0,102,0.4); background: rgba(255,0,102,0.1); }
+  .diff-btn .diff-desc {
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.7rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(255,255,255,0.5);
+    font-weight: 400;
+  }
+  #diff-menu .menu-footer {
+    margin-top: 6px; color: rgba(255,255,255,0.35);
+    font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase;
   }
 </style>
 </head>
@@ -198,6 +258,9 @@
   <a id="back-btn" href="/">&#9664; HUB</a>
   <h1>CYBER PONG</h1>
   <div id="top-spacer">
+    <button id="diff-btn" title="Difficulty">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/></svg>
+    </button>
     <button id="fs-btn" title="Fullscreen">
       <svg id="fs-enter" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/></svg>
       <svg id="fs-exit" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="display:none"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5zm5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5zM0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zm10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4z"/></svg>
@@ -213,11 +276,34 @@
 
 <p id="hint">Joystick / mouse / arrows &nbsp;·&nbsp; catch power-ups &nbsp;·&nbsp; build combos</p>
 
+<div id="diff-menu">
+  <div class="menu-title">SELECT DIFFICULTY</div>
+  <div class="menu-sub">Choose your challenge</div>
+  <div class="diff-grid">
+    <button class="diff-btn easy"   data-diff="easy">EASY<span class="diff-desc">Slow · Forgiving</span></button>
+    <button class="diff-btn medium" data-diff="medium">MEDIUM<span class="diff-desc">Adaptive · Keeps it close</span></button>
+    <button class="diff-btn hard"   data-diff="hard">HARD<span class="diff-desc">Fast · Predictive</span></button>
+  </div>
+  <div class="menu-footer">Click the gear to change anytime</div>
+</div>
+
 <script>
 (() => {
   const cvs = document.getElementById('gameCanvas');
   const ctx = cvs.getContext('2d');
   const W = 620, H = 400;
+
+  // ── Retina scaling: sharp text on high-DPR displays ──
+  let currentDpr = 1;
+  function applyDpr() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    if (dpr === currentDpr && cvs.width === W * dpr) return;
+    currentDpr = dpr;
+    cvs.width  = W * dpr;
+    cvs.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  applyDpr();
 
   function fit() {
     const isLandscape = window.innerWidth > window.innerHeight;
@@ -230,6 +316,7 @@
     const s      = Math.min(availW / W, availH / H) * 0.98;
     cvs.style.width  = (W * s) + 'px';
     cvs.style.height = (H * s) + 'px';
+    applyDpr();
   }
   fit(); window.addEventListener('resize', fit);
 
@@ -241,10 +328,65 @@
   const BASE_SPD = 7.5;
   const PU_INTERVAL = 9; // seconds between power-up spawns
 
+  // ── Difficulty system ─────────────────────────────────────────
+  // AI parameters: baseSpeed(px/frame @60fps), reactionDelay(s), predictionDepth(0..1), missProb(0..1), errorAmp(px)
+  const DIFFICULTIES = {
+    easy:   { label: 'EASY',   baseSpeed: 2.6, reactionDelay: 0.55, prediction: 0.0, missProb: 0.25, errorAmp: 40 },
+    medium: { label: 'MEDIUM', baseSpeed: 4.2, reactionDelay: 0.32, prediction: 0.45, missProb: 0.12, errorAmp: 22 },
+    hard:   { label: 'HARD',   baseSpeed: 6.4, reactionDelay: 0.14, prediction: 0.92, missProb: 0.17, errorAmp: 12 },
+  };
+  let difficulty = 'medium';
+  try {
+    const saved = localStorage.getItem('cp_diff');
+    if (saved && DIFFICULTIES[saved]) difficulty = saved;
+  } catch(e) {}
+
+  // Current AI params (mutable for adaptive medium)
+  const aiParams = { baseSpeed: 4.2, reactionDelay: 0.32, prediction: 0.45, missProb: 0.12, errorAmp: 22 };
+  // Rally history for adaptive medium: 1 = player won rally, 0 = AI won rally
+  const rallyHistory = [];
+  const RALLY_WINDOW = 6;
+  let rallyLengthSum = 0, rallyLengthCount = 0, currentRallyHits = 0;
+
+  function applyDifficulty(diff) {
+    const p = DIFFICULTIES[diff] || DIFFICULTIES.medium;
+    aiParams.baseSpeed = p.baseSpeed;
+    aiParams.reactionDelay = p.reactionDelay;
+    aiParams.prediction = p.prediction;
+    aiParams.missProb = p.missProb;
+    aiParams.errorAmp = p.errorAmp;
+    rallyHistory.length = 0;
+    rallyLengthSum = 0; rallyLengthCount = 0; currentRallyHits = 0;
+  }
+  applyDifficulty(difficulty);
+
+  // Adaptive medium: adjust after each rally
+  function adjustAdaptive() {
+    if (difficulty !== 'medium') return;
+    const n = rallyHistory.length;
+    if (n < 2) return;
+    const winRate = rallyHistory.reduce((a, b) => a + b, 0) / n;
+    const avgLen = rallyLengthCount > 0 ? rallyLengthSum / rallyLengthCount : 2;
+    // Target: win rate ~= 0.5. If player winning too much, make AI harder. Losing? Easier.
+    // Delta scaled by how far from 0.5 we are.
+    const winDelta = winRate - 0.5;    // +0.5 = player dominating, -0.5 = player losing
+    const lenFactor = avgLen > 5 ? 1 : avgLen / 5;  // don't over-correct on short rallies
+    const adjust = winDelta * 2 * lenFactor;        // in [-1, 1] roughly
+    // Baselines
+    const base = DIFFICULTIES.medium;
+    aiParams.baseSpeed     = clamp(base.baseSpeed     + adjust * 2.2, 2.8, 6.2);
+    aiParams.reactionDelay = clamp(base.reactionDelay - adjust * 0.18, 0.14, 0.5);
+    aiParams.prediction    = clamp(base.prediction    + adjust * 0.4,  0.05, 0.9);
+    aiParams.missProb      = clamp(base.missProb      - adjust * 0.08, 0.03, 0.22);
+    aiParams.errorAmp      = clamp(base.errorAmp      - adjust * 14,   6, 38);
+  }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
   // ── Objects ───────────────────────────────────────────────────
   const pl  = { x: 20,          y: H/2 - PH_BASE/2, w: PW, h: PH_BASE };
   const ai  = { x: W - 20 - AIW, y: H/2 - AIH/2,    w: AIW, h: AIH,
-                trackedY: H/2, reactionTimer: 0, errorOffset: 0, errorTimer: 0 };
+                trackedY: H/2, reactionTimer: 0, errorOffset: 0, errorTimer: 0,
+                missThisRally: false };
   let ball, particles, powerUps, floats;
   let score, lives, rally, mult, state, flash, flashColor;
   let effects; // { wide: secs, slow: secs, shield: bool }
@@ -262,14 +404,23 @@
   });
 
   // Keyboard
-  window.addEventListener('keydown', e => { keys[e.key] = true; });
-  window.addEventListener('keyup',   e => { keys[e.key] = false; });
+  window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    // Lower-case alias so Shift+W/S still count as held
+    if (e.key.length === 1) keys[e.key.toLowerCase()] = true;
+  });
+  window.addEventListener('keyup',   e => {
+    keys[e.key] = false;
+    if (e.key.length === 1) keys[e.key.toLowerCase()] = false;
+  });
+  // Clear keys on blur so held keys don't stick when focus changes
+  window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-  // Start / restart on click or canvas tap
-  cvs.addEventListener('click', () => { if (state !== 'playing') startGame(); });
+  // Start / restart on click or canvas tap (only when game is already in a playable state)
+  cvs.addEventListener('click', () => { if (state === 'gameover' || state === 'ready') startGame(); });
   cvs.addEventListener('touchend', e => {
     e.preventDefault();
-    if (state !== 'playing') startGame();
+    if (state === 'gameover' || state === 'ready') startGame();
   }, { passive: false });
 
   // ── Vertical joystick ─────────────────────────────────────────
@@ -315,7 +466,7 @@
   // ── Init ──────────────────────────────────────────────────────
   function makeBall(dir) {
     const a = (Math.random() * 0.5 - 0.25);
-    const spd = BASE_SPD * (effects.slow ? 0.62 : 1);
+    const spd = BASE_SPD * (effects && effects.slow ? 0.62 : 1);
     return { x: W/2, y: H/2,
              vx: dir * spd * Math.cos(a),
              vy: spd * Math.sin(a),
@@ -331,12 +482,17 @@
     ai.trackedY = H/2;
     ai.reactionTimer = 0;
     ai.errorOffset = 0; ai.errorTimer = 0;
+    ai.missThisRally = Math.random() < aiParams.missProb;
     ball     = makeBall(1);
     particles = []; powerUps = []; floats = [];
     score = 0; lives = 5; rally = 0; mult = 1;
     state = 'playing'; flash = 0; flashColor = '#f44';
     puTimer  = PU_INTERVAL;
     lastT    = performance.now();
+    currentRallyHits = 0;
+    rallyHistory.length = 0;
+    rallyLengthSum = 0; rallyLengthCount = 0;
+    applyDifficulty(difficulty);
   }
 
   // Initialise safe defaults so draw() never touches undefined refs on the menu screen
@@ -345,7 +501,7 @@
   particles = []; powerUps = []; floats = [];
   score = 0; lives = 5; rally = 0; mult = 1; flash = 0; flashColor = '#f44';
   puTimer = PU_INTERVAL;
-  state = 'menu';
+  state = 'ready';   // waiting for first tap/click after selecting difficulty
 
   // ── Power-up definitions ──────────────────────────────────────
   const PU_DEFS = [
@@ -398,8 +554,27 @@
     return Math.max(-1, Math.min(1, rel)) * (Math.PI / 3.8);
   }
 
-  function aiSpeed() {
-    return Math.min(2.8 + score * 0.18, 6.8);
+  // Predict where the ball will cross the AI paddle's x, accounting for wall bounces.
+  function predictImpactY() {
+    if (ball.vx <= 0) return H/2;
+    let x = ball.x, y = ball.y, vx = ball.vx, vy = ball.vy;
+    const targetX = ai.x;
+    // Analytical bounce-reflection: unfold wall bounces into a straight line.
+    const t = (targetX - x) / vx;
+    if (t <= 0) return H/2;
+    let yEnd = y + vy * t;
+    // Fold yEnd back into [0, H] via triangle wave
+    const H2 = H * 2;
+    let m = ((yEnd % H2) + H2) % H2;
+    if (m > H) m = H2 - m;
+    return m;
+  }
+
+  function aiTargetY() {
+    // Mix current tracked ball Y with prediction based on difficulty.prediction
+    const predicted = predictImpactY();
+    const tracked = ai.trackedY;
+    return tracked * (1 - aiParams.prediction) + predicted * aiParams.prediction;
   }
 
   // ── Update ────────────────────────────────────────────────────
@@ -410,7 +585,8 @@
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vx *= 0.88; p.vy *= 0.88;
+      p.vx *= Math.pow(0.88, dt * 60);  // FPS-independent damping
+      p.vy *= Math.pow(0.88, dt * 60);
       p.life -= dt;
       if (p.life <= 0) particles.splice(i, 1);
     }
@@ -442,108 +618,160 @@
       }
     }
 
-    // Player paddle
-    if (keys['ArrowUp']   || keys['w']) targetY -= 7 * dt * 60;
-    if (keys['ArrowDown'] || keys['s']) targetY += 7 * dt * 60;
-    if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 7 * dt * 60;
+    // Player paddle — all movement is dt-scaled (frame-rate independent)
+    const upHeld   = keys['ArrowUp']   || keys['w'] || keys['W'];
+    const downHeld = keys['ArrowDown'] || keys['s'] || keys['S'];
+    if (upHeld && !downHeld)   targetY -= 420 * dt;
+    if (downHeld && !upHeld)   targetY += 420 * dt;
+    if (Math.abs(stickVecY) > 0.05) targetY += stickVecY * 420 * dt;
     targetY = Math.max(0, Math.min(H - pl.h, targetY));   // clamp so it never drifts past wall
-    pl.y += (targetY - pl.y) * Math.min(1, 0.22 * dt * 60);
+    // Exponential lerp — correct under variable dt
+    const plAlpha = 1 - Math.pow(1 - 0.22, dt * 60);
+    pl.y += (targetY - pl.y) * plAlpha;
     pl.y  = Math.max(0, Math.min(H - pl.h, pl.y));
 
-    // AI paddle — delayed reaction + small error offset
+    // AI paddle — delayed reaction + small error offset, parameterized by difficulty
     ai.reactionTimer -= dt;
     if (ai.reactionTimer <= 0) {
-      ai.reactionTimer = 0.45 + Math.random() * 0.2;
+      ai.reactionTimer = aiParams.reactionDelay + Math.random() * 0.15;
       ai.trackedY = ball.y;
     }
     ai.errorTimer -= dt;
     if (ai.errorTimer <= 0) {
       ai.errorTimer = 1.2 + Math.random() * 0.8;
-      ai.errorOffset = (Math.random() - 0.5) * 28;
+      ai.errorOffset = (Math.random() - 0.5) * aiParams.errorAmp;
     }
-    const aiTarget = ai.trackedY + ai.errorOffset - ai.h / 2;
-    const aiDy = aiTarget - ai.y;
-    ai.y += Math.sign(aiDy) * Math.min(Math.abs(aiDy), aiSpeed() * dt * 60);
+    // When AI has decided to miss this rally, shift target away from ball on the return leg
+    let missShift = 0;
+    if (ai.missThisRally && ball.vx > 0 && ball.x > W * 0.55) {
+      missShift = (ball.y > H/2 ? -1 : 1) * (ai.h * 0.9);
+    }
+    const tgt = aiTargetY() + ai.errorOffset + missShift - ai.h / 2;
+    const aiDy = tgt - ai.y;
+    const aiStep = aiParams.baseSpeed * dt * 60;
+    ai.y += Math.sign(aiDy) * Math.min(Math.abs(aiDy), aiStep);
     ai.y  = Math.max(0, Math.min(H - ai.h, ai.y));
 
-    // Ball trail
+    // ── Ball movement with swept (CCD) collision to prevent tunneling ──
     ball.trail.push({ x: ball.x, y: ball.y });
     if (ball.trail.length > 14) ball.trail.shift();
 
-    ball.x += ball.vx * dt * 60;
-    ball.y += ball.vy * dt * 60;
+    const frameDx = ball.vx * dt * 60;
+    const frameDy = ball.vy * dt * 60;
+    // Sub-step if movement-per-step > min(paddle width, ball radius). Prevents tunneling at high FPS-independent dt spikes.
+    const maxStep = Math.min(PW, BR) * 0.9;
+    const stepMag = Math.hypot(frameDx, frameDy);
+    const steps = Math.max(1, Math.ceil(stepMag / maxStep));
+    const sx = frameDx / steps;
+    const sy = frameDy / steps;
 
-    // Wall bounce
-    if (ball.y - BR < 0)  { ball.y = BR;    ball.vy =  Math.abs(ball.vy); burst(ball.x, 0,   '#0df', 5); }
-    if (ball.y + BR > H)  { ball.y = H - BR; ball.vy = -Math.abs(ball.vy); burst(ball.x, H,   '#0df', 5); }
+    let scored = false;
+    for (let s = 0; s < steps && !scored; s++) {
+      const prevX = ball.x, prevY = ball.y;
+      ball.x += sx; ball.y += sy;
 
-    // Player paddle hit
-    if (ball.vx < 0 &&
-        ball.x - BR <= pl.x + pl.w && ball.x - BR >= pl.x - 4 &&
-        ball.y >= pl.y && ball.y <= pl.y + pl.h) {
-      const ang = hitAngle(pl, ball.y);
-      const spd = Math.min(Math.hypot(ball.vx, ball.vy) + 0.18, BASE_SPD * 2.2);
-      ball.vx =  spd * Math.cos(ang);
-      ball.vy =  spd * Math.sin(ang);
-      ball.x  = pl.x + pl.w + BR;
-      rally++;
-      mult = 1 + Math.floor(rally / 2);
-      burst(ball.x, ball.y, '#0df', 10);
-    }
+      // Wall bounce
+      if (ball.y - BR < 0)  { ball.y = BR;      ball.vy =  Math.abs(ball.vy); burst(ball.x, 0, '#0df', 5); }
+      if (ball.y + BR > H)  { ball.y = H - BR;  ball.vy = -Math.abs(ball.vy); burst(ball.x, H, '#0df', 5); }
 
-    // AI paddle hit
-    if (ball.vx > 0 &&
-        ball.x + BR >= ai.x && ball.x + BR <= ai.x + ai.w + 4 &&
-        ball.y >= ai.y && ball.y <= ai.y + ai.h) {
-      const ang = hitAngle(ai, ball.y);
-      const spd = Math.hypot(ball.vx, ball.vy);
-      ball.vx = -spd * Math.cos(ang);
-      ball.vy =  spd * Math.sin(ang);
-      ball.x  = ai.x - BR;
-      burst(ball.x, ball.y, '#f06', 10);
-    }
-
-    // Power-up collection
-    for (let i = powerUps.length - 1; i >= 0; i--) {
-      const pu = powerUps[i];
-      pu.pulse += dt * 2.5;
-      if (Math.hypot(ball.x - pu.x, ball.y - pu.y) < PUR + BR) {
-        collectPU(pu);
-        powerUps.splice(i, 1);
+      // Player paddle (swept: ball moving left and crossed paddle's right edge this step)
+      if (ball.vx < 0) {
+        const plRight = pl.x + pl.w;
+        const crossed = (prevX - BR) > plRight && (ball.x - BR) <= plRight;
+        const onFace  = (ball.x - BR) <= plRight && (ball.x - BR) >= pl.x - 4;
+        if ((crossed || onFace) && ball.y >= pl.y - BR && ball.y <= pl.y + pl.h + BR) {
+          const ang = hitAngle(pl, ball.y);
+          const spd = Math.min(Math.hypot(ball.vx, ball.vy) + 0.18, BASE_SPD * 2.2);
+          ball.vx =  spd * Math.cos(ang);
+          ball.vy =  spd * Math.sin(ang);
+          ball.x  = plRight + BR;
+          rally++;
+          currentRallyHits++;
+          mult = 1 + Math.floor(rally / 2);
+          burst(ball.x, ball.y, '#0df', 10);
+          // Power-up collection check happens below each frame
+        }
       }
-    }
 
-    // Ball exits right — player scores
-    if (ball.x - BR > W) {
-      const earned = mult;
-      score += earned;
-      if (score > highScore) { highScore = score; try { localStorage.setItem('cp_hs', highScore); } catch(e) {} }
-      floats.push({ x: W/2, y: H/2 - 20, text: `+${earned}`, color: '#0df', life: 1 });
-      rally = 0; mult = 1;
-      ball = makeBall(-1); // serve toward player
-    }
+      // AI paddle (swept: ball moving right and crossed paddle's left edge this step)
+      if (ball.vx > 0) {
+        const aiLeft = ai.x;
+        const crossed = (prevX + BR) < aiLeft && (ball.x + BR) >= aiLeft;
+        const onFace  = (ball.x + BR) >= aiLeft && (ball.x + BR) <= aiLeft + ai.w + 4;
+        if ((crossed || onFace) && ball.y >= ai.y - BR && ball.y <= ai.y + ai.h + BR) {
+          const ang = hitAngle(ai, ball.y);
+          const spd = Math.hypot(ball.vx, ball.vy);
+          ball.vx = -spd * Math.cos(ang);
+          ball.vy =  spd * Math.sin(ang);
+          ball.x  = aiLeft - BR;
+          burst(ball.x, ball.y, '#f06', 10);
+          // After AI hits, roll for next-rally miss chance
+        }
+      }
 
-    // Ball exits left — player misses
-    if (ball.x + BR < 0) {
-      if (effects.shield) {
-        effects.shield--;
-        if (effects.shield <= 0) delete effects.shield;
-        burst(pl.x + pl.w, pl.y + pl.h/2, '#c0f', 20);
-        floats.push({ x: W/2, y: H/2, text: 'SAVED!', color: '#c0f', life: 1.2 });
-        ball = makeBall(1);
-      } else {
-        lives--;
-        flash = 0.7; flashColor = '#f33';
+      // Power-up collection
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        const pu = powerUps[i];
+        if (Math.hypot(ball.x - pu.x, ball.y - pu.y) < PUR + BR) {
+          collectPU(pu);
+          powerUps.splice(i, 1);
+        }
+      }
+
+      // Scored right (player gets point)
+      if (ball.x - BR > W) {
+        const earned = mult;
+        score += earned;
+        if (score > highScore) { highScore = score; try { localStorage.setItem('cp_hs', highScore); } catch(e) {} }
+        floats.push({ x: W/2, y: H/2 - 20, text: `+${earned}`, color: '#0df', life: 1 });
+        recordRally(true);
         rally = 0; mult = 1;
-        if (lives <= 0) {
-          state = 'gameover';
-        } else {
+        ball = makeBall(-1); // serve toward player
+        ai.missThisRally = Math.random() < aiParams.missProb;
+        scored = true;
+      }
+      // Scored left (AI gets point / player misses)
+      if (!scored && ball.x + BR < 0) {
+        if (effects.shield) {
+          effects.shield--;
+          if (effects.shield <= 0) delete effects.shield;
+          burst(pl.x + pl.w, pl.y + pl.h/2, '#c0f', 20);
+          floats.push({ x: W/2, y: H/2, text: 'SAVED!', color: '#c0f', life: 1.2 });
           ball = makeBall(1);
-          pl.h = PH_BASE; delete effects.wide;
+          scored = true;
+        } else {
+          lives--;
+          flash = 0.7; flashColor = '#f33';
+          recordRally(false);
+          rally = 0; mult = 1;
+          if (lives <= 0) {
+            state = 'gameover';
+          } else {
+            ball = makeBall(1);
+            pl.h = PH_BASE; delete effects.wide;
+            ai.missThisRally = Math.random() < aiParams.missProb;
+          }
+          scored = true;
         }
       }
     }
 
+    // Update power-up pulse animation once per frame
+    for (const pu of powerUps) pu.pulse += dt * 2.5;
+  }
+
+  function recordRally(playerWon) {
+    rallyHistory.push(playerWon ? 1 : 0);
+    if (rallyHistory.length > RALLY_WINDOW) rallyHistory.shift();
+    rallyLengthSum += currentRallyHits;
+    rallyLengthCount++;
+    if (rallyLengthCount > RALLY_WINDOW) {
+      // Keep the average over the window by approximating (simple but sufficient)
+      rallyLengthSum -= rallyLengthSum / rallyLengthCount;
+      rallyLengthCount--;
+    }
+    currentRallyHits = 0;
+    adjustAdaptive();
   }
 
   // ── Draw ──────────────────────────────────────────────────────
@@ -661,11 +889,17 @@
       noGlow();
     }
 
-    // High score
+    // High score + difficulty label
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.font = '10px Barlow';
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.fillText(`BEST ${highScore}`, W - 12, 12);
+    const diffDef = DIFFICULTIES[difficulty];
+    const diffColor = difficulty === 'easy' ? '#0f8' : difficulty === 'hard' ? '#f06' : '#fe0';
+    ctx.fillStyle = diffColor;
+    ctx.globalAlpha = 0.55;
+    ctx.fillText(diffDef.label, W - 12, 28);
+    ctx.globalAlpha = 1;
 
     // Active effects list
     let ey = 68;
@@ -675,7 +909,7 @@
     if (effects.shield) { ctx.fillStyle = '#c0f'; ctx.fillText(`GUARD  x${effects.shield}`,          14, ey); }
 
     // ── Overlays ─────────────────────────────────────────────────
-    if (state === 'menu' || state === 'gameover') {
+    if (state === 'ready' || state === 'gameover') {
       ctx.fillStyle = 'rgba(2,8,18,0.82)';
       ctx.fillRect(0, 0, W, H);
 
@@ -683,29 +917,39 @@
       ctx.fillStyle = '#0df';
       ctx.font = 'bold 60px "Bebas Neue", cursive';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(state === 'menu' ? 'CYBER PONG' : 'GAME OVER', W/2, H/2 - 48);
+      ctx.fillText(state === 'ready' ? 'CYBER PONG' : 'GAME OVER', W/2, H/2 - 60);
       noGlow();
 
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.font = '13px Barlow';
-      if (state === 'menu') {
-        ctx.fillText('Collect power-ups  ·  build combos  ·  beat the AI', W/2, H/2 + 2);
-        ctx.fillText('WIDE pads your paddle  ·  SLOW drags the ball  ·  GUARD blocks one miss', W/2, H/2 + 22);
+      if (state === 'ready') {
+        ctx.fillText('Collect power-ups  ·  build combos  ·  beat the AI', W/2, H/2 - 10);
+        ctx.fillText('WIDE pads your paddle  ·  SLOW drags the ball  ·  GUARD blocks one miss', W/2, H/2 + 10);
       } else {
-        ctx.fillText(`SCORE  ${score}   \u2022   BEST  ${highScore}`, W/2, H/2 + 2);
+        ctx.fillText(`SCORE  ${score}   \u2022   BEST  ${highScore}`, W/2, H/2 - 10);
       }
+
+      // Current difficulty badge
+      ctx.fillStyle = diffColor;
+      ctx.font = 'bold 14px "Bebas Neue", cursive';
+      ctx.fillText(`DIFFICULTY: ${diffDef.label}`, W/2, H/2 + 34);
 
       glow('#0df', 8);
       ctx.fillStyle = '#0df';
       ctx.font = 'bold 18px "Bebas Neue", cursive';
-      ctx.fillText('TAP  OR  CLICK  TO  ' + (state === 'menu' ? 'START' : 'RETRY'), W/2, H/2 + 54);
+      ctx.fillText('TAP  OR  CLICK  TO  ' + (state === 'ready' ? 'START' : 'RETRY'), W/2, H/2 + 62);
       noGlow();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '10px Barlow';
+      ctx.fillText('Tap gear icon (top-right) to change difficulty', W/2, H/2 + 86);
     }
   }
 
   // ── Loop ──────────────────────────────────────────────────────
   function loop(t) {
     if (!lastT) lastT = t;
+    // Cap dt to avoid huge jumps on tab-resume / slow frames
     const dt = Math.min((t - lastT) / 1000, 1/30);
     lastT = t;
     update(dt);
@@ -714,6 +958,32 @@
   }
 
   requestAnimationFrame(loop);
+
+  // ── Difficulty menu wiring ────────────────────────────────────
+  const diffMenu = document.getElementById('diff-menu');
+  const diffBtn  = document.getElementById('diff-btn');
+  function updateSelectedBtn() {
+    diffMenu.querySelectorAll('.diff-btn').forEach(b => {
+      b.classList.toggle('selected', b.dataset.diff === difficulty);
+    });
+  }
+  function showDiffMenu() { updateSelectedBtn(); diffMenu.classList.add('visible'); }
+  function hideDiffMenu() { diffMenu.classList.remove('visible'); }
+  diffMenu.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      difficulty = btn.dataset.diff;
+      try { localStorage.setItem('cp_diff', difficulty); } catch(e) {}
+      applyDifficulty(difficulty);
+      updateSelectedBtn();
+      hideDiffMenu();
+    });
+  });
+  diffBtn.addEventListener('click', showDiffMenu);
+
+  // Show menu on first-ever visit
+  try {
+    if (!localStorage.getItem('cp_diff')) showDiffMenu();
+  } catch(e) {}
 })();
 
 // ── Fullscreen ────────────────────────────────────────────────

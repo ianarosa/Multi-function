@@ -309,6 +309,9 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const WIDTH = 800, HEIGHT = 500;
+  const DPR = window.devicePixelRatio || 1;
+  canvas.width = WIDTH * DPR; canvas.height = HEIGHT * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   function resizeCanvas() {
     const isLandscape = window.innerWidth > window.innerHeight;

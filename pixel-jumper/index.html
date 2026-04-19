@@ -61,8 +61,6 @@
     border: 1px solid rgba(255,51,136,0.2);
     border-radius: 8px;
     box-shadow: 0 0 60px rgba(255,51,136,0.15), 0 0 0 1px rgba(255,51,136,0.05);
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
   }
 
   #overlay {
@@ -76,6 +74,7 @@
     transition: opacity 0.2s;
     padding: 20px;
     text-align: center;
+    z-index: 1;
   }
   #overlay.show { opacity: 1; pointer-events: auto; }
   #overlay h2 {
@@ -131,7 +130,9 @@
     -webkit-backdrop-filter: blur(10px) !important;
     flex-shrink: 0 !important;
     position: relative !important;
-    z-index: 100 !important;
+    z-index: 1000 !important;
+    touch-action: auto !important;
+    pointer-events: auto !important;
   }
   #top-bar h1, .top-bar h1, .topbar h1, #topBar h1,
   #top-bar .title, .top-bar .title, .topbar .title, #topBar .title,
@@ -242,13 +243,25 @@
 (() => {
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
 
-  const W = canvas.width;   // 400
-  const H = canvas.height;  // 600
+  const W = 400;            // logical width
+  const H = 600;            // logical height
   const TILE = 40;          // tile size in px
   const COLS = W / TILE;    // 10 cols
   const VISIBLE_ROWS = H / TILE; // 15
+
+  // Scale canvas bitmap to devicePixelRatio for crisp text and sharp rendering
+  function applyDPR() {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+  }
+  applyDPR();
+  window.addEventListener('resize', applyDPR);
 
   const overlay = document.getElementById('overlay');
   const overTitle = document.getElementById('over-title');
@@ -347,11 +360,14 @@
       const useLilies = Math.random() < 0.35;
       lane.isLily = useLilies;
       if (useLilies) {
+        // Lily pads drift slowly so the player can reliably hop onto them
+        lane.speed *= 0.35;
         const count = 2 + Math.floor(Math.random() * 3);
         const spacing = COLS / count;
         for (let i = 0; i < count; i++) {
+          const col = Math.min(COLS - 1, Math.max(0, Math.round(i * spacing + Math.random() * (spacing - 1))));
           lane.platforms.push({
-            x: i * spacing + Math.random() * (spacing - 1),
+            x: col,
             len: 1,
           });
         }
@@ -677,9 +693,12 @@
   }
 
   function findPlatformAt(lane, col) {
+    // Lily pads (isLily) get a slightly more forgiving hit tolerance so the player
+    // doesn't slip off as the pad drifts underneath them.
+    const tol = lane.isLily ? 0.5 : 0.1;
     for (const pl of lane.platforms) {
       const half = pl.len / 2;
-      if (col >= pl.x - half - 0.1 && col <= pl.x + half + 0.1) return pl;
+      if (col >= pl.x - half - tol && col <= pl.x + half + tol) return pl;
     }
     return null;
   }
@@ -919,7 +938,7 @@
   }
 
   function drawLily(pl, y) {
-    const cx = pl.x * TILE;
+    const cx = pl.x * TILE + TILE / 2;
     const cy = y + TILE / 2;
     const r = TILE / 2 - 4;
     // lily pad

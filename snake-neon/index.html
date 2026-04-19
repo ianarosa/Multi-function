@@ -236,7 +236,9 @@
 
   // Logical canvas size (rendered at this resolution, CSS-scaled to fit)
   const W = 620, H = 620;
-  cvs.width = W; cvs.height = H;
+  const DPR = window.devicePixelRatio || 1;
+  cvs.width = W * DPR; cvs.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   const CELL = 20;              // grid cell size in px
   const COLS = W / CELL;        // 31

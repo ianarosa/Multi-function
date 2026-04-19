@@ -16,7 +16,7 @@
 
   #top-bar {
     display: flex; align-items: center; width: 100%;
-    padding: 6px 8px; gap: 12px; z-index: 20; flex-shrink: 0;
+    padding: 6px 8px; gap: 12px; z-index: 1000; flex-shrink: 0;
   }
   #back-btn {
     background: rgba(0,0,0,0.5); border: 1px solid rgba(255,68,68,0.3);
@@ -255,6 +255,15 @@ const ASTEROID_SPEED = { large: 1.0, medium: 1.6, small: 2.4 };
 const ASTEROID_SCORE = { large: 20, medium: 50, small: 100 };
 const INITIAL_ASTEROIDS = 4;
 
+// Rebalance: mobile players have input friction (virtual stick) + smaller screens.
+// Strategy A+C: detect touch devices, then (1) grant +30% bullet hit radius,
+// (2) +50% invuln frames on respawn, (3) -25% spawn count, (4) asteroid speed
+// and count scale with min(W,H) so small screens don't drown the player.
+const IS_MOBILE = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const MOBILE_BULLET_HIT_BONUS = IS_MOBILE ? 4 : 0;
+const MOBILE_INVULN_MULT = IS_MOBILE ? 1.5 : 1;
+const MOBILE_SPAWN_MULT = IS_MOBILE ? 0.75 : 1;
+
 // ── STATE ────────────────────────────────────────────────
 let ship, bullets, asteroids, particles, stars;
 let score, lives, wave, gameState, invulnTimer, fireCooldown;
@@ -358,7 +367,10 @@ function makeAsteroidShape(r) {
 
 function spawnAsteroid(x, y, size) {
   const r = ASTEROID_SIZES[size];
-  const speed = ASTEROID_SPEED[size] * (0.6 + Math.random() * 0.8) * (1 + wave * 0.05);
+  // Screen-size scaling: small viewports slow asteroids so dodging stays feasible
+  const viewMin = Math.min(W, H);
+  const sizeScale = Math.min(1, Math.max(0.7, viewMin / 700));
+  const speed = ASTEROID_SPEED[size] * (0.6 + Math.random() * 0.8) * (1 + wave * 0.05) * sizeScale;
   const angle = Math.random() * TAU;
   return {
     x: x, y: y,
@@ -373,7 +385,9 @@ function spawnAsteroid(x, y, size) {
 }
 
 function spawnWaveAsteroids() {
-  const count = INITIAL_ASTEROIDS + wave - 1;
+  const viewMin = Math.min(W, H);
+  const countScale = Math.min(1, Math.max(0.7, viewMin / 700));
+  const count = Math.max(2, Math.round((INITIAL_ASTEROIDS + wave - 1) * MOBILE_SPAWN_MULT * countScale));
   for (let i = 0; i < count; i++) {
     let x, y;
     do {
@@ -430,7 +444,7 @@ function initGame() {
   score = 0;
   lives = 3;
   wave = 1;
-  invulnTimer = INVULN_TIME;
+  invulnTimer = INVULN_TIME * MOBILE_INVULN_MULT;
   fireCooldown = 0;
   shakeX = 0; shakeY = 0; shakeDuration = 0;
   gameState = 'playing';
@@ -527,7 +541,7 @@ function update() {
     const b = bullets[bi];
     for (let ai = asteroids.length - 1; ai >= 0; ai--) {
       const a = asteroids[ai];
-      if (dist(b.x, b.y, a.x, a.y) < a.r + 4) {
+      if (dist(b.x, b.y, a.x, a.y) < a.r + 4 + MOBILE_BULLET_HIT_BONUS) {
         // Hit!
         bullets.splice(bi, 1);
         score += ASTEROID_SCORE[a.size];
@@ -572,7 +586,7 @@ function update() {
           ship.vx = 0;
           ship.vy = 0;
           ship.angle = -Math.PI / 2;
-          invulnTimer = INVULN_TIME;
+          invulnTimer = INVULN_TIME * MOBILE_INVULN_MULT;
         }
         break;
       }
