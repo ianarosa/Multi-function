@@ -487,8 +487,12 @@
         const gap = Math.max(110 - diff * 3, 70);
         const gapX = Math.random() * (W - gap - 40) + 20;
         const speed = 75 + diff * 4;
-        for (let x = 0; x < W; x += 22) {
+        // Randomize the column grid offset so no pixel-perfect safe gap persists between walls.
+        const colStep = 22;
+        const xOffset = Math.random() * colStep;
+        for (let x = xOffset - colStep; x < W + colStep; x += colStep) {
           if (x > gapX && x < gapX + gap) continue;
+          if (x < -10 || x > W + 10) continue;
           spawnBullet(x, -10, 0, speed, '#c6f', 6);
         }
       }
