@@ -51,6 +51,46 @@
     border: 1px solid rgba(255,102,34,0.12); border-radius: 6px;
     box-shadow: 0 0 60px rgba(255,102,34,0.08), 0 0 0 1px rgba(255,102,34,0.06);
   }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
@@ -714,7 +754,12 @@ function loop(timestamp) {
     let spawnRate = 1.2 - difficulty * 0.04;
     if (spawnRate < 0.35) spawnRate = 0.35;
     if (frenzyTimer > 0) {
-      spawnRate = 0.3;
+      // Ramp from normal spawnRate down to peak (0.3) over first 3s of frenzy
+      const FRENZY_DURATION = 4;
+      const RAMP = 3;
+      const elapsed = FRENZY_DURATION - frenzyTimer;
+      const t = Math.max(0, Math.min(1, elapsed / RAMP));
+      spawnRate = spawnRate + (0.3 - spawnRate) * t;
       frenzyTimer -= dt;
     }
     spawnTimer -= dt;
@@ -738,6 +783,10 @@ function loop(timestamp) {
       obj.vy += GRAVITY * gdt * 60;
       obj.rotation += obj.rotSpeed * gdt * 60;
       obj.glowPhase += gdt * 4;
+
+      // Bounce off left/right walls so objects stay reachable
+      if (obj.x - obj.radius < 0) { obj.x = obj.radius; obj.vx = Math.abs(obj.vx); }
+      else if (obj.x + obj.radius > W) { obj.x = W - obj.radius; obj.vx = -Math.abs(obj.vx); }
 
       // Fell off screen
       if (obj.y > H + 50 && obj.vy > 0) {

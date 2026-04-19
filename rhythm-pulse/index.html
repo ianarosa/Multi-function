@@ -51,6 +51,46 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
   #score-display{font-size:22px;}
   #combo-display{font-size:18px;}
 }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
@@ -77,14 +117,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
 </div>
 
 <div id="mobile-lanes">
-  <button class="lane-btn" data-lane="0">D</button>
-  <button class="lane-btn" data-lane="1">F</button>
-  <button class="lane-btn" data-lane="2">J</button>
+  <button class="lane-btn" data-lane="0">A</button>
+  <button class="lane-btn" data-lane="1">S</button>
+  <button class="lane-btn" data-lane="2">D</button>
 </div>
 
 <div id="start-screen">
   <h2>RHYTHM PULSE</h2>
-  <p class="sub">Beats fly toward the hit zone. Tap in time!<br>Keyboard: D / F / J for 3 lanes.<br>Mobile: tap the lane buttons.</p>
+  <p class="sub">Beats fly toward the hit zone. Tap in time!<br>Keyboard: A / S / D (or arrow keys) for 3 lanes.<br>Mobile: tap the lane buttons.</p>
   <button class="play-btn" id="start-btn">PLAY</button>
 </div>
 
@@ -323,13 +363,19 @@ function hitLane(laneIdx){
   updateUI();
 }
 
-const KEY_MAP = {'d':0,'D':0,'f':1,'F':1,'j':2,'J':2};
-document.addEventListener('keydown', e => {
-  if(KEY_MAP[e.key] !== undefined){
+const KEY_MAP = {
+  'a':0,'s':1,'d':2,                    // primary A/S/D
+  'arrowleft':0,'arrowdown':1,'arrowright':2,
+  'j':0,'k':1,'l':2,                    // JKL style
+  '1':0,'2':1,'3':2
+};
+window.addEventListener('keydown', e => {
+  const k = (e.key || '').toLowerCase();
+  if(KEY_MAP[k] !== undefined){
     e.preventDefault();
-    hitLane(KEY_MAP[e.key]);
+    hitLane(KEY_MAP[k]);
   }
-});
+}, {passive:false});
 
 /* Mobile lane buttons */
 document.querySelectorAll('.lane-btn').forEach(btn => {
@@ -608,7 +654,7 @@ function render(){
   });
 
   // Lane labels at hit zone (small, subtle)
-  const keys = ['D','F','J'];
+  const keys = ['A','S','D'];
   for(let i = 0; i < LANE_COUNT; i++){
     const lx = laneX(i);
     ctx.save();

@@ -244,12 +244,52 @@
     .icon-btn { width: 38px; height: 38px; font-size: 18px; }
     .hud-value { font-size: 20px; }
   }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="topbar">
-    <a href="/" class="icon-btn" title="Back to hub" aria-label="Back">&larr;</a>
+    <a href="/" class="icon-btn" title="Back to hub" aria-label="Back">&larr; HUB</a>
     <div class="title">RIVER RUN</div>
     <button id="fsBtn" class="icon-btn" title="Fullscreen" aria-label="Fullscreen">&#x26F6;</button>
   </div>
@@ -786,16 +826,7 @@
           state.score += e.score;
         }
       }
-      // bullet vs fuel stations (shooting fuel is allowed but gives less points, no refuel)
-      for (const f of state.fuels) {
-        if (!f.alive) continue;
-        if (Math.abs(b.x - f.x) < f.w/2 + 2 && Math.abs(b.y - f.y) < f.h/2 + 4) {
-          f.alive = false;
-          b.y = -999;
-          explode(f.x, f.y);
-          state.score += 20;
-        }
-      }
+      // Petrol stations are friendly refuel points — bullets pass through harmlessly.
     }
 
     // Enemy bullets vs player

@@ -87,6 +87,46 @@
   @media (min-width: 800px) {
     #stick-zone, #fire-btn { display: none; }
   }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
@@ -354,21 +394,14 @@ function update() {
   if (rightKey) turnInput += 1;
   ship.angle += turnInput * TURN_SPEED;
 
-  // Joystick: rotate ship toward push direction, thrust when pushed
+  // Joystick: twin-stick style — ship snaps to push direction instantly (no turn lag)
   const joyMag = Math.sqrt(joyX * joyX + joyY * joyY);
   if (joyActive && joyMag > 0.2) {
-    const targetAngle = Math.atan2(joyY, joyX);
-    let delta = targetAngle - ship.angle;
-    // Wrap delta to [-PI, PI] for shortest rotation path
-    while (delta > Math.PI) delta -= TAU;
-    while (delta < -Math.PI) delta += TAU;
-    const maxTurn = TURN_SPEED * joyMag;
-    if (Math.abs(delta) < maxTurn) ship.angle = targetAngle;
-    else ship.angle += Math.sign(delta) * maxTurn;
+    ship.angle = Math.atan2(joyY, joyX);
   }
 
-  // Thrust
-  ship.thrusting = upKey || (joyActive && joyMag > 0.3);
+  // Thrust — any meaningful push thrusts, proportional effort via joyMag
+  ship.thrusting = upKey || (joyActive && joyMag > 0.2);
   if (ship.thrusting) {
     ship.vx += Math.cos(ship.angle) * THRUST_ACCEL;
     ship.vy += Math.sin(ship.angle) * THRUST_ACCEL;

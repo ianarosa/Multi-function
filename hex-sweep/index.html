@@ -107,6 +107,46 @@
     color: rgba(255,255,255,0.18); font-size: 0.68rem;
     letter-spacing: 0.08em; text-transform: uppercase;
   }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
@@ -557,29 +597,44 @@ canvas.addEventListener('contextmenu', e => {
 
 // Touch events
 let touchStartPos = null;
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_TOL = 14; // px of finger drift allowed before cancelling long-press
+
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   longPressTriggered = false;
   const [px, py] = getCanvasPos(e);
   touchStartPos = [px, py];
+  // Determine which hex the long-press targets at the moment touch begins
+  const [startQ, startR] = pixelToAxial(px, py);
   longPressTimer = setTimeout(() => {
     longPressTriggered = true;
     handleFlag(px, py);
-    // Visual feedback - brief flash
-    if (hoverHex) {
-      const [hx, hy] = axialToPixel(hoverHex.q, hoverHex.r);
-      spawnExplosion(hx, hy, '#44ff88', 5);
+    // Visual feedback - brief flash on the flagged hex
+    const target = hexMap.get(startQ+','+startR);
+    if (target) {
+      const [hx, hy] = axialToPixel(target.q, target.r);
+      spawnExplosion(hx, hy, '#44ff88', 8);
     }
-  }, 400);
+    // Haptic feedback when available (mobile)
+    if (navigator.vibrate) { try { navigator.vibrate(25); } catch(e) {} }
+  }, LONG_PRESS_MS);
   // Update hover
-  const [q, r] = pixelToAxial(px, py);
-  hoverHex = hexMap.get(q+','+r) || null;
+  hoverHex = hexMap.get(startQ+','+startR) || null;
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
-  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
   const [px, py] = getCanvasPos(e);
+  // Only cancel long-press if finger has drifted beyond tolerance — small wobble is OK
+  if (longPressTimer && touchStartPos) {
+    const ddx = px - touchStartPos[0];
+    const ddy = py - touchStartPos[1];
+    if (ddx*ddx + ddy*ddy > LONG_PRESS_MOVE_TOL * LONG_PRESS_MOVE_TOL) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
   const [q, r] = pixelToAxial(px, py);
   hoverHex = hexMap.get(q+','+r) || null;
 }, { passive: false });

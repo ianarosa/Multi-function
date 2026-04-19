@@ -1896,38 +1896,87 @@
   function resizeJumper() { if (!pjCvs) return; const r = pjCvs.parentElement.getBoundingClientRect(); pjW = pjCvs.width = r.width || 320; pjH = pjCvs.height = r.height || 190; }
   resizeJumper();
   window.addEventListener('resize', resizeJumper);
-  const PJ_PLATS = Array.from({length: 6}, (_, i) => ({ x: Math.random() * 0.7, y: 0.15 + i * 0.15, w: 40 }));
-  let pjPlayer = { x: 0.5, y: 0.5, vy: 0 };
-  const PJ_STARS = Array.from({length: 20}, () => ({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 1.5 }));
+  // Platforms laid out in a clear staircase so preview always shows landing path
+  const PJ_PLATS = [
+    { x: 0.12, y: 0.85, w: 0.22 },
+    { x: 0.50, y: 0.72, w: 0.20 },
+    { x: 0.22, y: 0.58, w: 0.22 },
+    { x: 0.60, y: 0.44, w: 0.22 },
+    { x: 0.20, y: 0.30, w: 0.22 },
+    { x: 0.55, y: 0.18, w: 0.22 }
+  ];
+  let pjPlayer = { x: 0.23, y: 0.78, vy: -260, target: 1 };
+  const PJ_TRAIL = [];
+  const PJ_STARS = Array.from({length: 28}, () => ({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 1.5, tw: Math.random() * 6 }));
   function drawJumperPreview(dt, t) {
     if (!pjCtx) return;
+    const ms = t / 1000;
     pjCtx.clearRect(0, 0, pjW, pjH);
-    // stars parallax
+    // twinkling stars
     for (const s of PJ_STARS) {
-      pjCtx.fillStyle = 'rgba(255,51,136,' + (0.15 + s.s * 0.15) + ')';
-      pjCtx.fillRect(s.x * pjW, ((s.y * pjH + t * 0.005 * s.s) % pjH), s.s, s.s);
+      const a = 0.25 + Math.abs(Math.sin(ms * 1.2 + s.tw)) * 0.5;
+      pjCtx.fillStyle = 'rgba(255,51,136,' + a.toFixed(2) + ')';
+      pjCtx.fillRect(s.x * pjW, s.y * pjH, s.s, s.s);
     }
-    // platforms
+    // platforms with glow
     for (const p of PJ_PLATS) {
-      pjCtx.fillStyle = 'rgba(255,51,136,0.5)';
-      pjCtx.fillRect(p.x * pjW, p.y * pjH, p.w, 6);
+      const px = p.x * pjW, py = p.y * pjH, pw = p.w * pjW;
+      pjCtx.shadowColor = '#ff3388';
+      pjCtx.shadowBlur = 10;
+      pjCtx.fillStyle = '#ff3388';
+      pjCtx.fillRect(px, py, pw, 5);
+      pjCtx.shadowBlur = 0;
+      pjCtx.fillStyle = 'rgba(255,255,255,0.35)';
+      pjCtx.fillRect(px, py, pw, 1);
     }
-    // player bounce
-    pjPlayer.vy += 300 * dt;
+    // hop physics: jump toward next platform
+    const target = PJ_PLATS[pjPlayer.target];
+    pjPlayer.vy += 520 * dt;
     pjPlayer.y += pjPlayer.vy * dt / pjH;
-    // land on platforms
-    for (const p of PJ_PLATS) {
-      if (pjPlayer.vy > 0 && Math.abs(pjPlayer.y - p.y) < 0.03 && pjPlayer.x > p.x - 0.02 && pjPlayer.x < p.x + p.w / pjW + 0.02) {
-        pjPlayer.vy = -200;
-        pjPlayer.y = p.y;
+    // horizontal ease toward target center
+    const tx = target.x + target.w / 2;
+    pjPlayer.x += (tx - pjPlayer.x) * Math.min(1, dt * 2.4);
+    // landing
+    if (pjPlayer.vy > 0 && Math.abs(pjPlayer.y - target.y) < 0.02 &&
+        pjPlayer.x > target.x - 0.03 && pjPlayer.x < target.x + target.w + 0.03) {
+      pjPlayer.y = target.y;
+      pjPlayer.vy = -280;
+      pjPlayer.target = (pjPlayer.target + 1) % PJ_PLATS.length;
+      // if we reached the top, restart from bottom
+      if (pjPlayer.target === 0) {
+        pjPlayer.x = PJ_PLATS[0].x + PJ_PLATS[0].w / 2;
+        pjPlayer.y = PJ_PLATS[0].y;
+        pjPlayer.target = 1;
       }
     }
-    if (pjPlayer.y > 1.1) { pjPlayer.y = 0.1; pjPlayer.vy = 0; pjPlayer.x = 0.3 + Math.random() * 0.4; }
-    // draw player
+    // trail
+    PJ_TRAIL.push({ x: pjPlayer.x, y: pjPlayer.y, a: 1 });
+    if (PJ_TRAIL.length > 10) PJ_TRAIL.shift();
+    for (let i = 0; i < PJ_TRAIL.length; i++) {
+      const tr = PJ_TRAIL[i];
+      tr.a -= dt * 2.2;
+      if (tr.a <= 0) continue;
+      pjCtx.globalAlpha = tr.a * 0.4;
+      pjCtx.fillStyle = '#ff3388';
+      pjCtx.fillRect(tr.x * pjW - 3, tr.y * pjH - 9, 6, 6);
+    }
+    pjCtx.globalAlpha = 1;
+    // draw player as a pixel character (7x9 with eyes)
+    const pxw = 12, pxh = 14;
+    const cx = pjPlayer.x * pjW - pxw / 2;
+    const cy = pjPlayer.y * pjH - pxh;
+    pjCtx.shadowColor = '#ff3388';
+    pjCtx.shadowBlur = 14;
     pjCtx.fillStyle = '#ff3388';
-    pjCtx.shadowColor = '#ff3388'; pjCtx.shadowBlur = 10;
-    pjCtx.fillRect(pjPlayer.x * pjW - 5, pjPlayer.y * pjH - 10, 10, 10);
+    pjCtx.fillRect(cx, cy, pxw, pxh);
     pjCtx.shadowBlur = 0;
+    // eyes
+    pjCtx.fillStyle = '#fff';
+    pjCtx.fillRect(cx + 3, cy + 4, 2, 2);
+    pjCtx.fillRect(cx + 7, cy + 4, 2, 2);
+    // feet / base shine
+    pjCtx.fillStyle = 'rgba(255,255,255,0.35)';
+    pjCtx.fillRect(cx + 1, cy + 1, pxw - 2, 1);
   }
 
   // ── Slash Fury preview ──────────────────────────────────────
@@ -2256,7 +2305,9 @@
 
   // ── Main animation loop ───────────────────────────────────────
   let lastT = 0;
+  let loopRunning = true;
   function loop(t) {
+    if (!loopRunning) return;
     const dt = Math.min((t - lastT) / 1000, 1/30);
     lastT = t;
 
@@ -2285,6 +2336,19 @@
   }
 
   requestAnimationFrame(loop);
+
+  // Stop previews immediately on navigation so the click isn't blocked
+  // by the 19 canvas redraws competing for the main thread.
+  function stopLoop() { loopRunning = false; }
+  document.querySelectorAll('a.game-card').forEach(card => {
+    // pointerdown fires before click and gives us a head start to free the CPU.
+    card.addEventListener('pointerdown', stopLoop, { passive: true });
+    card.addEventListener('click', stopLoop, { passive: true });
+  });
+  window.addEventListener('pagehide', stopLoop);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopLoop();
+  });
 })();
 </script>
 </body>

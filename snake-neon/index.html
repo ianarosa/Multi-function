@@ -96,6 +96,46 @@
   @media (min-width: 900px) {
     #dpad { display: none; }
   }
+
+  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  #top-bar, .top-bar, .topbar, #topBar {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    background: rgba(8,8,14,0.88) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-sizing: border-box;
+  }
+  #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
+  #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
+  #topBar > a[href="/"],
+  a.back[href="/"],
+  a.icon-btn[href="/"] {
+    font-family: 'Barlow', 'Courier New', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    padding: 7px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 28px !important;
+    height: auto !important;
+    width: auto !important;
+    white-space: nowrap !important;
+  }
+  a.back[href="/"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 14px !important;
+    z-index: 100 !important;
+  }
 </style>
 </head>
 <body>
@@ -224,16 +264,40 @@
   setupDpad('dpad-right', DIR.RIGHT);
 
   /* ════════════════════════════════════════════════════════
-     TOUCH / SWIPE
+     TOUCH / SWIPE — directional change fires on touchmove the moment
+     a small swipe threshold is crossed, so response feels instant.
      ════════════════════════════════════════════════════════ */
   let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+  let swipeHandled = false;     // true once this gesture already triggered a dir change
+  let lastSwipeX = 0, lastSwipeY = 0;
+  const SWIPE_THRESHOLD = 14;   // px — low threshold for immediate response
 
   cvs.addEventListener('touchstart', e => {
     e.preventDefault();
     const t = e.changedTouches[0];
-    touchStartX = t.clientX;
-    touchStartY = t.clientY;
+    touchStartX = lastSwipeX = t.clientX;
+    touchStartY = lastSwipeY = t.clientY;
     touchStartTime = Date.now();
+    swipeHandled = false;
+  }, {passive: false});
+
+  cvs.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (gameState !== 'playing') return;
+    const t = e.changedTouches[0];
+    // Use last-swipe point so follow-up flicks in a different axis register too
+    const dx = t.clientX - lastSwipeX;
+    const dy = t.clientY - lastSwipeY;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx < SWIPE_THRESHOLD && ady < SWIPE_THRESHOLD) return;
+    if (adx > ady) {
+      setDir(dx > 0 ? DIR.RIGHT : DIR.LEFT);
+    } else {
+      setDir(dy > 0 ? DIR.DOWN : DIR.UP);
+    }
+    swipeHandled = true;
+    lastSwipeX = t.clientX;
+    lastSwipeY = t.clientY;
   }, {passive: false});
 
   cvs.addEventListener('touchend', e => {
@@ -245,21 +309,13 @@
     const elapsed = Date.now() - touchStartTime;
 
     // Tap (no swipe) - start/restart game or tap-to-steer
-    if (dist < 20 && elapsed < 400) {
+    if (!swipeHandled && dist < 20 && elapsed < 400) {
       if (gameState === 'menu' || gameState === 'gameover') { startGame(); return; }
       if (gameState === 'playing') { tapSteer(t.clientX, t.clientY); return; }
       return;
     }
 
-    // Swipe
-    if (dist > 25 && gameState === 'playing') {
-      if (Math.abs(dx) > Math.abs(dy)) {
-        setDir(dx > 0 ? DIR.RIGHT : DIR.LEFT);
-      } else {
-        setDir(dy > 0 ? DIR.DOWN : DIR.UP);
-      }
-    }
-    // Also allow swipe to start
+    // Allow swipe/tap to start from menu/gameover
     if (gameState === 'menu' || gameState === 'gameover') startGame();
   }, {passive: false});
 
