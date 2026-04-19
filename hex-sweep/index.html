@@ -108,14 +108,46 @@
     letter-spacing: 0.08em; text-transform: uppercase;
   }
 
-  /* ── Unified Arcade HUD (injected) ──────────────────────────── */
+  /* ── Unified Arcade HUD (canonical, 48px height) ── */
   #top-bar, .top-bar, .topbar, #topBar {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 12px !important;
+    margin: 0 !important;
+    gap: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     font-family: 'Barlow', 'Courier New', sans-serif !important;
     background: rgba(8,8,14,0.88) !important;
     border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-sizing: border-box;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 100 !important;
+  }
+  #top-bar h1, .top-bar h1, .topbar h1, #topBar h1,
+  #top-bar .title, .top-bar .title, .topbar .title, #topBar .title,
+  #top-bar .top-title, .top-bar .top-title {
+    font-family: 'Bebas Neue','Barlow',sans-serif !important;
+    font-size: 22px !important;
+    letter-spacing: 3px !important;
+    font-weight: 700 !important;
+    flex: 1 1 auto !important;
+    text-align: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    transform: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1 !important;
+    pointer-events: none !important;
   }
   #top-bar #back-btn, .top-bar #back-btn, .topbar #back-btn, #topBar #back-btn,
   #top-bar a.top-btn[href="/"], .top-bar a.top-btn[href="/"],
@@ -127,7 +159,7 @@
     font-weight: 600 !important;
     letter-spacing: 2px !important;
     text-transform: uppercase !important;
-    padding: 7px 12px !important;
+    padding: 0 12px !important;
     border-radius: 4px !important;
     border: 1px solid currentColor !important;
     background: rgba(0,0,0,0.35) !important;
@@ -136,16 +168,47 @@
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    min-height: 28px !important;
-    height: auto !important;
+    height: 30px !important;
+    min-height: 30px !important;
     width: auto !important;
+    min-width: 0 !important;
     white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
-  a.back[href="/"] {
-    position: absolute !important;
-    top: 14px !important;
-    left: 14px !important;
-    z-index: 100 !important;
+  #top-bar #fs-btn, .top-bar #fs-btn, .topbar #fs-btn, #topBar #fs-btn,
+  #top-bar #fsBtn, #topBar #fsBtn,
+  #top-bar button.icon-btn:not([href="/"]), .topbar button.icon-btn:not([href="/"]) {
+    width: 32px !important;
+    height: 30px !important;
+    min-width: 32px !important;
+    min-height: 30px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    background: rgba(0,0,0,0.35) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #top-bar #top-spacer, .top-bar #top-spacer, .topbar #top-spacer, #topBar #top-spacer {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  /* Freestanding back link (used when game has no top-bar container) */
+  body > a.back[href="/"] {
+    position: fixed !important;
+    top: 9px !important;
+    left: 12px !important;
+    z-index: 200 !important;
   }
 </style>
 </head>

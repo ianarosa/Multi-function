@@ -611,9 +611,9 @@
         <canvas id="cv-jumper"></canvas>
       </div>
       <div class="card-info">
-        <div class="card-genre">Platformer &middot; Endless</div>
+        <div class="card-genre">Arcade &middot; Endless</div>
         <div class="card-name">PIXEL JUMPER</div>
-        <div class="card-desc">Bounce ever higher on platforms that move, break, and vanish. Dodge hazards and chase your altitude record.</div>
+        <div class="card-desc">Hop across roads, rivers, and rails. Dodge cars and trains, ride the logs, and chase your altitude record.</div>
         <span class="play-btn">PLAY</span>
       </div>
     </a>
@@ -1890,93 +1890,276 @@
   }
 
   // ── Pixel Jumper preview ────────────────────────────────────
+  // Mirrors the actual game: a grid-based hopper (Crossy-Road style) where the
+  // player bounces upward across grass / road / water / rail lanes. Vertical
+  // scroll conveys the "altitude record" chase; cars and the pink locomotive
+  // are the hazards.
   const pjCvs = document.getElementById('cv-jumper');
   const pjCtx = pjCvs ? pjCvs.getContext('2d') : null;
   let pjW, pjH;
   function resizeJumper() { if (!pjCvs) return; const r = pjCvs.parentElement.getBoundingClientRect(); pjW = pjCvs.width = r.width || 320; pjH = pjCvs.height = r.height || 190; }
   resizeJumper();
   window.addEventListener('resize', resizeJumper);
-  // Platforms laid out in a clear staircase so preview always shows landing path
-  const PJ_PLATS = [
-    { x: 0.12, y: 0.85, w: 0.22 },
-    { x: 0.50, y: 0.72, w: 0.20 },
-    { x: 0.22, y: 0.58, w: 0.22 },
-    { x: 0.60, y: 0.44, w: 0.22 },
-    { x: 0.20, y: 0.30, w: 0.22 },
-    { x: 0.55, y: 0.18, w: 0.22 }
+
+  const PJ_COLS = 8;
+  // Fixed lane script so the preview always shows one of each hazard type.
+  // type: 'grass' | 'road' | 'water' | 'track'
+  const PJ_LANES = [
+    { type: 'grass', decor: [1, 6] },
+    { type: 'road',  dir:  1, cars: [0.5, 4.2], speed: 1.8 },
+    { type: 'grass', decor: [3] },
+    { type: 'water', dir: -1, logs: [{ x: 1.2, len: 2 }, { x: 5.5, len: 2 }], speed: 1.2 },
+    { type: 'grass', decor: [0, 5] },
+    { type: 'track' },
+    { type: 'grass', decor: [2, 7] },
+    { type: 'road',  dir: -1, cars: [1.0, 5.5], speed: 2.2 },
+    { type: 'grass', decor: [4] }
   ];
-  let pjPlayer = { x: 0.23, y: 0.78, vy: -260, target: 1 };
-  const PJ_TRAIL = [];
-  const PJ_STARS = Array.from({length: 28}, () => ({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random() * 1.5, tw: Math.random() * 6 }));
+  // player hops upward through lane indices 1, 2, 3, ... cycling when offscreen
+  const pjPlayer = { laneFrom: 0, laneTo: 1, colFrom: 3, colTo: 3, hopT: 1, dir: 'up' };
+  let pjHopDelay = 0.25;    // pause between hops
+  let pjCamRow = -1.2;      // world row at bottom edge (float)
+  function pjPickHop() {
+    // Always climb to next lane; pick a column that survives (avoid a car directly on it)
+    const next = pjPlayer.laneTo + 1;
+    const lane = PJ_LANES[next % PJ_LANES.length];
+    let target = pjPlayer.colTo;
+    // Nudge sideways occasionally to feel alive
+    if (Math.random() < 0.45) target += (Math.random() < 0.5 ? -1 : 1);
+    target = Math.max(0, Math.min(PJ_COLS - 1, target));
+    // For water lanes, snap to a log column
+    if (lane.type === 'water') {
+      const log = lane.logs[Math.floor(Math.random() * lane.logs.length)];
+      target = Math.round(log.x + log.len / 2);
+      target = Math.max(0, Math.min(PJ_COLS - 1, target));
+    }
+    pjPlayer.colFrom = pjPlayer.colTo;
+    pjPlayer.laneFrom = pjPlayer.laneTo;
+    pjPlayer.colTo = target;
+    pjPlayer.laneTo = next;
+    pjPlayer.dir = target > pjPlayer.colFrom ? 'right' : target < pjPlayer.colFrom ? 'left' : 'up';
+    pjPlayer.hopT = 0;
+  }
+
+  function pjLaneY(row) {
+    // row grows upward; camera at bottom of canvas
+    const tile = pjH / 4.5;   // show ~4.5 lanes vertically
+    return pjH - (row - pjCamRow + 1) * tile;
+  }
+
   function drawJumperPreview(dt, t) {
     if (!pjCtx) return;
     const ms = t / 1000;
-    pjCtx.clearRect(0, 0, pjW, pjH);
-    // twinkling stars
-    for (const s of PJ_STARS) {
-      const a = 0.25 + Math.abs(Math.sin(ms * 1.2 + s.tw)) * 0.5;
-      pjCtx.fillStyle = 'rgba(255,51,136,' + a.toFixed(2) + ')';
-      pjCtx.fillRect(s.x * pjW, s.y * pjH, s.s, s.s);
+    const tile = pjH / 4.5;
+    const colW = pjW / PJ_COLS;
+
+    // sky
+    pjCtx.fillStyle = '#050510';
+    pjCtx.fillRect(0, 0, pjW, pjH);
+
+    // camera slowly scrolls up to convey altitude chase
+    pjCamRow += dt * 0.25;
+    // Reset / recycle when player has climbed far
+    if (pjPlayer.laneTo > PJ_LANES.length - 1) {
+      const shift = PJ_LANES.length;
+      pjPlayer.laneFrom -= shift;
+      pjPlayer.laneTo -= shift;
+      pjCamRow -= shift;
     }
-    // platforms with glow
-    for (const p of PJ_PLATS) {
-      const px = p.x * pjW, py = p.y * pjH, pw = p.w * pjW;
-      pjCtx.shadowColor = '#ff3388';
-      pjCtx.shadowBlur = 10;
-      pjCtx.fillStyle = '#ff3388';
-      pjCtx.fillRect(px, py, pw, 5);
-      pjCtx.shadowBlur = 0;
-      pjCtx.fillStyle = 'rgba(255,255,255,0.35)';
-      pjCtx.fillRect(px, py, pw, 1);
-    }
-    // hop physics: jump toward next platform
-    const target = PJ_PLATS[pjPlayer.target];
-    pjPlayer.vy += 520 * dt;
-    pjPlayer.y += pjPlayer.vy * dt / pjH;
-    // horizontal ease toward target center
-    const tx = target.x + target.w / 2;
-    pjPlayer.x += (tx - pjPlayer.x) * Math.min(1, dt * 2.4);
-    // landing
-    if (pjPlayer.vy > 0 && Math.abs(pjPlayer.y - target.y) < 0.02 &&
-        pjPlayer.x > target.x - 0.03 && pjPlayer.x < target.x + target.w + 0.03) {
-      pjPlayer.y = target.y;
-      pjPlayer.vy = -280;
-      pjPlayer.target = (pjPlayer.target + 1) % PJ_PLATS.length;
-      // if we reached the top, restart from bottom
-      if (pjPlayer.target === 0) {
-        pjPlayer.x = PJ_PLATS[0].x + PJ_PLATS[0].w / 2;
-        pjPlayer.y = PJ_PLATS[0].y;
-        pjPlayer.target = 1;
+
+    // draw visible lanes
+    const firstRow = Math.floor(pjCamRow) - 1;
+    const lastRow = firstRow + 6;
+    for (let r = firstRow; r <= lastRow; r++) {
+      const lane = PJ_LANES[((r % PJ_LANES.length) + PJ_LANES.length) % PJ_LANES.length];
+      const y = pjLaneY(r);
+      if (lane.type === 'grass') {
+        pjCtx.fillStyle = r % 2 === 0 ? '#2e9640' : '#267835';
+        pjCtx.fillRect(0, y, pjW, tile);
+        // tiny bushes/flowers
+        pjCtx.fillStyle = '#1f7a37';
+        for (const col of lane.decor) {
+          const cx = col * colW + colW / 2;
+          pjCtx.fillRect(cx - 5, y + tile / 2 - 3, 10, 6);
+          pjCtx.fillStyle = '#ffdd55';
+          pjCtx.fillRect(cx - 1, y + tile / 2 - 1, 2, 2);
+          pjCtx.fillStyle = '#1f7a37';
+        }
+      } else if (lane.type === 'road') {
+        pjCtx.fillStyle = '#2a2a32';
+        pjCtx.fillRect(0, y, pjW, tile);
+        pjCtx.fillStyle = '#ffcc44';
+        for (let x = 0; x < pjW; x += 14) pjCtx.fillRect(x, y + tile / 2 - 1, 7, 1.5);
+        // cars — animate by hashing row into time
+        for (let i = 0; i < lane.cars.length; i++) {
+          const cx0 = ((lane.cars[i] + ms * lane.speed * lane.dir) % PJ_COLS + PJ_COLS) % PJ_COLS;
+          const cx = cx0 * colW;
+          const len = colW * 1.3;
+          const h = tile - 8;
+          pjCtx.fillStyle = i % 2 ? '#ff5577' : '#55ddff';
+          pjCtx.fillRect(cx - len / 2, y + 4, len, h);
+          pjCtx.fillStyle = 'rgba(255,255,255,0.45)';
+          pjCtx.fillRect(cx - len / 2, y + 4, len, 2);
+          pjCtx.fillStyle = '#223a55';
+          const wsx = lane.dir > 0 ? cx + len / 2 - 7 : cx - len / 2 + 2;
+          pjCtx.fillRect(wsx, y + 7, 5, h - 6);
+          pjCtx.fillStyle = '#ffffaa';
+          const hl = lane.dir > 0 ? cx + len / 2 - 2 : cx - len / 2;
+          pjCtx.fillRect(hl, y + tile / 2 - 1, 2, 3);
+        }
+      } else if (lane.type === 'water') {
+        pjCtx.fillStyle = '#2060c8';
+        pjCtx.fillRect(0, y, pjW, tile);
+        pjCtx.fillStyle = 'rgba(255,255,255,0.18)';
+        const waveOff = (ms * 24) % 16;
+        for (let x = -16; x < pjW + 16; x += 16) {
+          pjCtx.fillRect(x + waveOff, y + 6, 6, 1.5);
+          pjCtx.fillRect(x + waveOff + 8, y + tile - 8, 6, 1.5);
+        }
+        // logs drift
+        for (const log of lane.logs) {
+          const lx0 = ((log.x + ms * lane.speed * lane.dir) % PJ_COLS + PJ_COLS) % PJ_COLS;
+          const lx = lx0 * colW;
+          const len = log.len * colW;
+          const h = tile - 8;
+          pjCtx.fillStyle = '#8a5a2e';
+          pjCtx.fillRect(lx - len / 2, y + 4, len, h);
+          pjCtx.fillStyle = '#6a4020';
+          pjCtx.fillRect(lx - len / 2, y + 4, len, 2);
+          pjCtx.fillRect(lx - len / 2, y + h + 2, len, 2);
+          pjCtx.fillStyle = '#3d1f0c';
+          pjCtx.fillRect(lx - len / 2 + 2, y + 6, 1.5, h - 4);
+          pjCtx.fillRect(lx + len / 2 - 3, y + 6, 1.5, h - 4);
+        }
+      } else if (lane.type === 'track') {
+        pjCtx.fillStyle = '#3a2a24';
+        pjCtx.fillRect(0, y, pjW, tile);
+        pjCtx.fillStyle = '#5a3b2a';
+        for (let x = 0; x < pjW; x += 9) pjCtx.fillRect(x, y + 4, 5, tile - 8);
+        pjCtx.fillStyle = '#b8b8c8';
+        pjCtx.fillRect(0, y + 7, pjW, 2);
+        pjCtx.fillRect(0, y + tile - 9, pjW, 2);
+        // Train runs on a cycle: 4s idle/warn, then a zoom across
+        const cyc = (ms % 6);
+        if (cyc > 2 && cyc < 2.5) {
+          // warn flash
+          const on = Math.floor(cyc * 10) % 2 === 0;
+          if (on) {
+            pjCtx.fillStyle = 'rgba(255,60,60,0.35)';
+            pjCtx.fillRect(0, y, pjW, tile);
+          }
+          pjCtx.fillStyle = on ? '#ff4444' : '#661111';
+          pjCtx.fillRect(3, y + tile / 2 - 2, 4, 4);
+          pjCtx.fillRect(pjW - 7, y + tile / 2 - 2, 4, 4);
+        } else if (cyc >= 2.5 && cyc < 3.8) {
+          // zooming pink locomotive
+          const p = (cyc - 2.5) / 1.3;
+          const trainLen = pjW * 0.85;
+          const tx = -trainLen / 2 + p * (pjW + trainLen);
+          pjCtx.fillStyle = '#ff3388';
+          pjCtx.fillRect(tx - trainLen / 2, y + 3, trainLen, tile - 6);
+          pjCtx.fillStyle = '#ffaacc';
+          pjCtx.fillRect(tx - trainLen / 2, y + 3, trainLen, 3);
+          pjCtx.fillStyle = '#ffffee';
+          for (let i = 0; i < 5; i++) {
+            const wx = tx - trainLen / 2 + 10 + i * (trainLen / 5);
+            pjCtx.fillRect(wx, y + 9, 8, 5);
+          }
+          pjCtx.fillStyle = '#ffffaa';
+          pjCtx.fillRect(tx + trainLen / 2 - 4, y + tile / 2 - 2, 3, 4);
+        }
       }
     }
-    // trail
-    PJ_TRAIL.push({ x: pjPlayer.x, y: pjPlayer.y, a: 1 });
-    if (PJ_TRAIL.length > 10) PJ_TRAIL.shift();
-    for (let i = 0; i < PJ_TRAIL.length; i++) {
-      const tr = PJ_TRAIL[i];
-      tr.a -= dt * 2.2;
-      if (tr.a <= 0) continue;
-      pjCtx.globalAlpha = tr.a * 0.4;
-      pjCtx.fillStyle = '#ff3388';
-      pjCtx.fillRect(tr.x * pjW - 3, tr.y * pjH - 9, 6, 6);
+
+    // advance hop
+    if (pjPlayer.hopT >= 1) {
+      pjHopDelay -= dt;
+      if (pjHopDelay <= 0) {
+        pjPickHop();
+        pjHopDelay = 0.22 + Math.random() * 0.15;
+      }
+    } else {
+      pjPlayer.hopT = Math.min(1, pjPlayer.hopT + dt * 7);
     }
-    pjCtx.globalAlpha = 1;
-    // draw player as a pixel character (7x9 with eyes)
-    const pxw = 12, pxh = 14;
-    const cx = pjPlayer.x * pjW - pxw / 2;
-    const cy = pjPlayer.y * pjH - pxh;
-    pjCtx.shadowColor = '#ff3388';
-    pjCtx.shadowBlur = 14;
+    const e = 1 - (1 - pjPlayer.hopT) * (1 - pjPlayer.hopT);
+    const col = pjPlayer.colFrom + (pjPlayer.colTo - pjPlayer.colFrom) * e;
+    const row = pjPlayer.laneFrom + (pjPlayer.laneTo - pjPlayer.laneFrom) * e;
+    const sx = col * colW + colW / 2;
+    const sy = pjLaneY(row) + tile / 2;
+    const hopLift = pjPlayer.hopT < 1 ? Math.sin(pjPlayer.hopT * Math.PI) * 8 : 0;
+
+    // altitude meter (rising bar on the left) — conveys "altitude record" chase
+    pjCtx.fillStyle = 'rgba(0,0,0,0.5)';
+    pjCtx.fillRect(4, 6, 5, pjH - 12);
+    pjCtx.strokeStyle = 'rgba(255,51,136,0.35)';
+    pjCtx.lineWidth = 1;
+    pjCtx.strokeRect(4.5, 6.5, 4, pjH - 13);
+    const climb = Math.min(1, pjPlayer.laneTo / PJ_LANES.length);
     pjCtx.fillStyle = '#ff3388';
-    pjCtx.fillRect(cx, cy, pxw, pxh);
-    pjCtx.shadowBlur = 0;
-    // eyes
-    pjCtx.fillStyle = '#fff';
-    pjCtx.fillRect(cx + 3, cy + 4, 2, 2);
-    pjCtx.fillRect(cx + 7, cy + 4, 2, 2);
-    // feet / base shine
-    pjCtx.fillStyle = 'rgba(255,255,255,0.35)';
-    pjCtx.fillRect(cx + 1, cy + 1, pxw - 2, 1);
+    pjCtx.fillRect(4, 6 + (pjH - 12) * (1 - climb), 5, (pjH - 12) * climb);
+    // up arrow at top
+    pjCtx.fillStyle = '#ff3388';
+    pjCtx.beginPath();
+    pjCtx.moveTo(6.5, 2);
+    pjCtx.lineTo(2, 6);
+    pjCtx.lineTo(11, 6);
+    pjCtx.closePath();
+    pjCtx.fill();
+
+    // shadow under player
+    pjCtx.fillStyle = 'rgba(0,0,0,0.35)';
+    pjCtx.beginPath();
+    pjCtx.ellipse(sx, sy + 10, 7, 2.2, 0, 0, Math.PI * 2);
+    pjCtx.fill();
+
+    // hot-pink pixel character (matches game: head + body + legs + directional eyes)
+    const sz = Math.min(22, tile * 0.55);
+    const x0 = Math.floor(sx - sz / 2);
+    const y0 = Math.floor(sy - sz / 2 - hopLift);
+    const bodyColor = '#ff3388';
+    const bodyLight = '#ff77aa';
+    const bodyDark  = '#c01e66';
+    // legs
+    pjCtx.fillStyle = bodyDark;
+    pjCtx.fillRect(x0 + 3, y0 + sz - 5, 4, 5);
+    pjCtx.fillRect(x0 + sz - 7, y0 + sz - 5, 4, 5);
+    // body
+    pjCtx.fillStyle = bodyColor;
+    pjCtx.fillRect(x0 + 2, y0 + 6, sz - 4, sz - 12);
+    pjCtx.fillStyle = bodyLight;
+    pjCtx.fillRect(x0 + 2, y0 + 6, sz - 4, 2);
+    pjCtx.fillStyle = bodyDark;
+    pjCtx.fillRect(x0 + 2, y0 + sz - 8, sz - 4, 2);
+    // head
+    pjCtx.fillStyle = bodyColor;
+    pjCtx.fillRect(x0 + 3, y0, sz - 6, 7);
+    pjCtx.fillStyle = bodyLight;
+    pjCtx.fillRect(x0 + 3, y0, sz - 6, 2);
+    // eyes — direction based
+    pjCtx.fillStyle = '#ffffff';
+    if (pjPlayer.dir === 'left') {
+      pjCtx.fillRect(x0 + 4, y0 + 3, 3, 3);
+      pjCtx.fillStyle = '#050510';
+      pjCtx.fillRect(x0 + 4, y0 + 3, 2, 3);
+    } else if (pjPlayer.dir === 'right') {
+      pjCtx.fillRect(x0 + sz - 7, y0 + 3, 3, 3);
+      pjCtx.fillStyle = '#050510';
+      pjCtx.fillRect(x0 + sz - 6, y0 + 3, 2, 3);
+    } else {
+      pjCtx.fillRect(x0 + 5, y0 + 3, 2, 2);
+      pjCtx.fillRect(x0 + sz - 7, y0 + 3, 2, 2);
+      pjCtx.fillStyle = '#050510';
+      pjCtx.fillRect(x0 + 5, y0 + 3, 2, 2);
+      pjCtx.fillRect(x0 + sz - 7, y0 + 3, 2, 2);
+    }
+    // soft glow
+    pjCtx.save();
+    pjCtx.globalCompositeOperation = 'lighter';
+    pjCtx.fillStyle = 'rgba(255,51,136,0.15)';
+    pjCtx.beginPath();
+    pjCtx.arc(sx, sy - hopLift, 14, 0, Math.PI * 2);
+    pjCtx.fill();
+    pjCtx.restore();
   }
 
   // ── Slash Fury preview ──────────────────────────────────────
