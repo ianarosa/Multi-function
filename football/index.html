@@ -417,6 +417,7 @@
                speed: 5.5, reactionTimer: 0, trackedY: HEIGHT / 2 };
 
   let score = 0;
+  window.__lbCurrentScore = function() { return score; };
   let goalFlash = 0;   // seconds remaining for goal flash effect
   let lastT = performance.now();
 
@@ -720,5 +721,6 @@
     });
   })();
 </script>
+<script src="/leaderboard.js" data-game="football" data-color="#c8f03c"></script>
 </body>
 </html>

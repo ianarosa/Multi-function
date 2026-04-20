@@ -847,6 +847,7 @@ function loop(time){
     if(resultTimer>=resultDuration){
       if(lives<=0){
         state=STATE.GAMEOVER;
+        window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
       }else{
         round++;
         startRound();
@@ -863,5 +864,6 @@ function loop(time){
 
 requestAnimationFrame(loop);
 </script>
+<script src="/leaderboard.js" data-game="memory-matrix" data-color="#00aaff"></script>
 </body>
 </html>

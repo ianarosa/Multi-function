@@ -821,7 +821,10 @@
       state.money += reward;
       floatFromDice(`+${formatNum(reward)}`, '#7fffa0');
 
-      if (state.streak > state.best) state.best = state.streak;
+      if (state.streak > state.best) {
+        state.best = state.streak;
+        window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.best } }));
+      }
 
       if (state.streak >= target) {
         // JACKPOT
@@ -900,5 +903,6 @@
   restartAuto();
 })();
 </script>
+<script src="/leaderboard.js" data-game="dice-roll" data-color="#ffd24a"></script>
 </body>
 </html>

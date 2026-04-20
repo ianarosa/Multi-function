@@ -657,6 +657,7 @@
       try { localStorage.setItem('vd_best', best.toString()); } catch(e) {}
       bestEl.textContent = best.toFixed(1);
     }
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: Math.round(time * 10) } }));
     overlay.classList.remove('hide');
     overlay.querySelector('h1').textContent = 'YOU DIED';
     const ps = overlay.querySelectorAll('p');
@@ -705,5 +706,6 @@
   });
 })();
 </script>
+<script src="/leaderboard.js" data-game="void-dancer" data-color="#d870ff"></script>
 </body>
 </html>

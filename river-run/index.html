@@ -614,6 +614,7 @@
       hiScore = state.score;
       localStorage.setItem(HI_KEY, String(hiScore));
     }
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.score } }));
     finalScore.textContent = state.score;
     hiEnd.textContent = hiScore;
     hiStart.textContent = hiScore;
@@ -1208,5 +1209,6 @@
   requestAnimationFrame(loop);
 })();
 </script>
+<script src="/leaderboard.js" data-game="river-run" data-color="#44ff66"></script>
 </body>
 </html>

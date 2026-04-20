@@ -739,6 +739,7 @@
       highScore = state.score;
       localStorage.setItem(HI_KEY, String(highScore));
     }
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.score } }));
     overTitle.textContent = cause || 'GAME OVER';
     finalScoreEl.textContent = state.score;
     finalBestEl.textContent = highScore;
@@ -1136,5 +1137,6 @@
   requestAnimationFrame(loop);
 })();
 </script>
+<script src="/leaderboard.js" data-game="pixel-jumper" data-color="#ff3388"></script>
 </body>
 </html>

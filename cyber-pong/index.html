@@ -746,6 +746,7 @@
           rally = 0; mult = 1;
           if (lives <= 0) {
             state = 'gameover';
+            window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
           } else {
             ball = makeBall(1);
             pl.h = PH_BASE; delete effects.wide;
@@ -1009,5 +1010,6 @@
   });
 })();
 </script>
+<script src="/leaderboard.js" data-game="cyber-pong" data-color="#00ddff"></script>
 </body>
 </html>

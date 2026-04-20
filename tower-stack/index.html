@@ -395,6 +395,7 @@
 
   function gameOver() {
     state = 'gameover';
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
   }
 
   function spawnParticles(px, py, count, color) {
@@ -833,5 +834,6 @@
 
 })();
 </script>
+<script src="/leaderboard.js" data-game="tower-stack" data-color="#ff2288"></script>
 </body>
 </html>

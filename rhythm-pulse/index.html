@@ -548,6 +548,7 @@ function endGame(){
     highScore = score;
     localStorage.setItem('rhythmPulseHigh', highScore);
   }
+  window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
   finalScoreEl.textContent = score;
   hiScoreText.textContent = 'HIGH SCORE: ' + highScore;
   gameoverScreen.classList.remove('hidden');
@@ -782,5 +783,6 @@ if(highScore > 0){
 
 })();
 </script>
+<script src="/leaderboard.js" data-game="rhythm-pulse" data-color="#aa44ff"></script>
 </body>
 </html>

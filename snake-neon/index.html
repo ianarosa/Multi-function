@@ -523,6 +523,7 @@
           highScore = score;
           try { localStorage.setItem('sn_hs', highScore); } catch(e) {}
         }
+        window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
         // Death burst
         for (const seg of snake) {
           burst(seg.x * CELL + CELL/2, seg.y * CELL + CELL/2, '#f00', 3, 60);
@@ -977,5 +978,6 @@
   });
 })();
 </script>
+<script src="/leaderboard.js" data-game="snake-neon" data-color="#00ff66"></script>
 </body>
 </html>

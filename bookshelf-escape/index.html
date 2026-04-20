@@ -702,6 +702,7 @@ const levels=[
 // ---- Game state ----
 let currentLevel=0;
 let timerSec=0;
+let runTotal=0;
 let timerInterval=null;
 let currentBooks=[];
 let dragIdx=-1;
@@ -1009,8 +1010,10 @@ function closeHint(){
 
 // ---- Level complete ----
 function showLevelComplete(){
+  runTotal+=timerSec;
   spawnCelebration();
   if(currentLevel>=levels.length-1){
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: Math.max(0, 9999 - runTotal) } }));
     winScreen.style.display='flex';
     return;
   }
@@ -1080,5 +1083,6 @@ loadLevel(currentLevel);
 
 })();
 </script>
+<script src="/leaderboard.js" data-game="bookshelf-escape" data-color="#ff9944"></script>
 </body>
 </html>

@@ -799,6 +799,7 @@ canvas.addEventListener('click',function(e){
     const timeBonus=Math.floor(timer*10);
     const moveBonus=Math.max(0,50-moves);
     score=100+timeBonus+moveBonus;
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
 
     if(!save.scores[currentLevel]||score>save.scores[currentLevel]){
       save.scores[currentLevel]=score;
@@ -825,5 +826,6 @@ window.addEventListener('resize',()=>{
 draw();
 requestAnimationFrame(tick);
 </script>
+<script src="/leaderboard.js" data-game="pipe-flow" data-color="#2288ff"></script>
 </body>
 </html>

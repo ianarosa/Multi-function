@@ -369,6 +369,7 @@
   let deathTimer = null;
   function die() {
     if (score > highScore) { highScore = score; try { localStorage.setItem('sd_hs', highScore); } catch(e) {} }
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
     ship.trail = [];  // clear trail so stale ghost positions don't linger during death animation
     burst(SHIP_X, ship.y, '#b400ff', 28);
     burst(SHIP_X, ship.y, '#ff4433', 20);
@@ -755,5 +756,6 @@
   });
 })();
 </script>
+<script src="/leaderboard.js" data-game="stellar-dash" data-color="#cc44ff"></script>
 </body>
 </html>

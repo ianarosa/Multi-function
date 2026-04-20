@@ -436,6 +436,7 @@ function gameOver() {
     highScore = score;
     localStorage.setItem('slashFury_hi', highScore);
   }
+  window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
 }
 
 // --- Embers (background) ---
@@ -951,5 +952,6 @@ function loop(timestamp) {
 
 requestAnimationFrame(loop);
 </script>
+<script src="/leaderboard.js" data-game="slash-fury" data-color="#ff6622"></script>
 </body>
 </html>

@@ -725,7 +725,10 @@ function cashOut() {
   if (streak === 0) return;
   const payout = streakPayout(streak);
   state.coins += payout;
-  if (streak > state.bestStreak) state.bestStreak = streak;
+  if (streak > state.bestStreak) {
+    state.bestStreak = streak;
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.bestStreak } }));
+  }
 
   // Particles at cashout button
   const rect = btnCashout.getBoundingClientRect();
@@ -869,5 +872,6 @@ requestAnimationFrame(mainLoop);
 // Save periodically
 setInterval(save, 5000);
 </script>
+<script src="/leaderboard.js" data-game="coin-flip" data-color="#ffd700"></script>
 </body>
 </html>
