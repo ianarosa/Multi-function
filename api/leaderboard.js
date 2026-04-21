@@ -10,49 +10,79 @@ const KNOWN_GAMES = new Set([
 
 const MAX_NAME_LEN = 20;
 
+let schemaReady = false;
+async function ensureSchema(sql) {
+  if (schemaReady) return;
+  await sql`
+    CREATE TABLE IF NOT EXISTS scores (
+      id         SERIAL PRIMARY KEY,
+      game_id    TEXT    NOT NULL,
+      player     TEXT    NOT NULL,
+      score      INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS scores_game_rank ON scores (game_id, score DESC)`;
+  schemaReady = true;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
-  const sql = neon(process.env.DATABASE_URL);
-
-  if (req.method === 'GET') {
-    const game = req.query.game;
-    if (!game || !KNOWN_GAMES.has(game)) {
-      res.status(400).json({ error: 'Unknown game' });
-      return;
-    }
-    const rows = await sql`
-      SELECT player, score, created_at
-      FROM scores
-      WHERE game_id = ${game}
-      ORDER BY score DESC, created_at ASC
-      LIMIT 10
-    `;
-    res.status(200).json(rows);
+  if (!process.env.DATABASE_URL) {
+    res.status(500).json({ error: 'DATABASE_URL is not configured on the server' });
     return;
   }
 
-  if (req.method === 'POST') {
-    const { game, player, score } = req.body || {};
-    if (!game || !KNOWN_GAMES.has(game)) {
-      res.status(400).json({ error: 'Unknown game' });
-      return;
-    }
-    if (typeof score !== 'number' || !Number.isInteger(score) || score < 0 || score > 9_999_999) {
-      res.status(400).json({ error: 'Invalid score' });
-      return;
-    }
-    const name = String(player || 'Anonymous').trim().slice(0, MAX_NAME_LEN) || 'Anonymous';
-    await sql`
-      INSERT INTO scores (game_id, player, score)
-      VALUES (${game}, ${name}, ${score})
-    `;
-    res.status(201).json({ ok: true });
-    return;
-  }
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    await ensureSchema(sql);
 
-  res.status(405).json({ error: 'Method not allowed' });
+    if (req.method === 'GET') {
+      const game = req.query.game;
+      if (!game || !KNOWN_GAMES.has(game)) {
+        res.status(400).json({ error: 'Unknown game' });
+        return;
+      }
+      const rows = await sql`
+        SELECT player, score, created_at
+        FROM scores
+        WHERE game_id = ${game}
+        ORDER BY score DESC, created_at ASC
+        LIMIT 10
+      `;
+      res.status(200).json(rows);
+      return;
+    }
+
+    if (req.method === 'POST') {
+      const { game, player, score } = req.body || {};
+      if (!game || !KNOWN_GAMES.has(game)) {
+        res.status(400).json({ error: 'Unknown game' });
+        return;
+      }
+      if (typeof score !== 'number' || !Number.isInteger(score) || score < 0 || score > 9_999_999) {
+        res.status(400).json({ error: 'Invalid score' });
+        return;
+      }
+      const name = String(player || 'Anonymous').trim().slice(0, MAX_NAME_LEN) || 'Anonymous';
+      await sql`
+        INSERT INTO scores (game_id, player, score)
+        VALUES (${game}, ${name}, ${score})
+      `;
+      res.status(201).json({ ok: true });
+      return;
+    }
+
+    res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('leaderboard handler error:', err);
+    res.status(500).json({
+      error: 'Leaderboard database error',
+      detail: err && err.message ? err.message : String(err)
+    });
+  }
 }
