@@ -436,11 +436,97 @@
     color: rgba(255,255,255,0.15);
     text-transform: uppercase;
   }
+
+  /* ── Settings button ── */
+  #settings-btn {
+    position: fixed; top: 16px; right: 16px; z-index: 200;
+    background: rgba(10,10,20,0.85); border: 1px solid rgba(190,80,255,0.35);
+    color: rgba(190,80,255,0.8); font-family: 'Barlow', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+    padding: 7px 14px; border-radius: 6px; cursor: pointer;
+    transition: background .15s, color .15s;
+    backdrop-filter: blur(4px);
+  }
+  #settings-btn:hover { background: rgba(190,80,255,0.15); color: #c864ff; }
+
+  /* ── Settings modal ── */
+  #settings-modal {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,.82); align-items: center; justify-content: center;
+    font-family: 'Barlow', sans-serif;
+  }
+  #settings-modal.open { display: flex; }
+  #settings-panel {
+    background: #0a0812; border: 1px solid rgba(190,80,255,.45);
+    border-radius: 12px; padding: 32px 36px; width: min(360px, 90vw);
+    box-shadow: 0 0 50px rgba(190,80,255,.15);
+  }
+  #settings-panel h2 {
+    font-family: 'Bebas Neue', cursive; font-size: 1.9rem; letter-spacing: .12em;
+    color: #c864ff; text-align: center; margin-bottom: 22px;
+    text-shadow: 0 0 16px rgba(200,100,255,.6);
+  }
+  .settings-label {
+    font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(255,255,255,.4); margin-bottom: 6px; display: block;
+  }
+  #settings-name-input {
+    width: 100%; background: #111; border: 1px solid rgba(190,80,255,.4);
+    border-radius: 6px; color: #fff; font-size: 1rem; padding: 9px 12px;
+    outline: none; margin-bottom: 8px; box-sizing: border-box;
+  }
+  #settings-name-input:focus { border-color: #c864ff; }
+  .settings-hint {
+    font-size: .73rem; color: rgba(255,255,255,.3); margin-bottom: 22px; line-height: 1.5;
+  }
+  .settings-hint a {
+    color: rgba(190,80,255,.7); cursor: pointer; text-decoration: underline;
+  }
+  .settings-btns { display: flex; gap: 10px; }
+  #settings-save {
+    flex: 1; background: #c864ff; color: #000; border: none; border-radius: 6px;
+    font-family: 'Bebas Neue', cursive; font-size: 1.1rem; letter-spacing: .1em;
+    padding: 10px; cursor: pointer;
+  }
+  #settings-save:hover { opacity: .85; }
+  #settings-cancel {
+    flex: 1; background: transparent; border: 1px solid rgba(190,80,255,.4);
+    color: rgba(190,80,255,.8); border-radius: 6px;
+    font-family: 'Bebas Neue', cursive; font-size: 1.1rem; letter-spacing: .1em;
+    padding: 10px; cursor: pointer;
+  }
+  #settings-cancel:hover { background: rgba(190,80,255,.1); }
+  #settings-status {
+    text-align: center; font-size: .75rem; color: #0f6; margin-top: 10px;
+    min-height: 1em;
+  }
 </style>
 </head>
 <body>
 
 <canvas id="bg-canvas"></canvas>
+
+<!-- Settings button -->
+<button id="settings-btn" onclick="lbSettingsOpen()">⚙ SETTINGS</button>
+
+<!-- Settings modal -->
+<div id="settings-modal">
+  <div id="settings-panel">
+    <h2>SETTINGS</h2>
+    <label class="settings-label" for="settings-name-input">Default Leaderboard Name</label>
+    <input id="settings-name-input" type="text" maxlength="20"
+           placeholder="Enter your name" autocomplete="off" spellcheck="false"/>
+    <p class="settings-hint">
+      When set, scores are auto-submitted under this name — no typing needed after each game.
+      <a onclick="lbSettingsClear()">Clear saved name.</a>
+    </p>
+    <div class="settings-btns">
+      <button id="settings-save" onclick="lbSettingsSave()">SAVE</button>
+      <button id="settings-cancel" onclick="lbSettingsClose()">CANCEL</button>
+    </div>
+    <p id="settings-status"></p>
+  </div>
+</div>
 
 <div class="content">
   <header>
@@ -2532,6 +2618,56 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopLoop();
   });
+})();
+</script>
+
+<script>
+/* ── Leaderboard settings ── */
+(function () {
+  var modal  = document.getElementById('settings-modal');
+  var input  = document.getElementById('settings-name-input');
+  var status = document.getElementById('settings-status');
+  var KEY    = 'lb_player_name';
+
+  function lbSettingsOpen() {
+    input.value = localStorage.getItem(KEY) || '';
+    status.textContent = '';
+    modal.classList.add('open');
+    setTimeout(function () { input.focus(); }, 60);
+  }
+  function lbSettingsClose() { modal.classList.remove('open'); }
+  function lbSettingsSave() {
+    var name = input.value.trim().slice(0, 20);
+    if (name) {
+      localStorage.setItem(KEY, name);
+      status.textContent = 'Saved! Scores will auto-submit as "' + name + '".';
+    } else {
+      localStorage.removeItem(KEY);
+      status.textContent = 'Name cleared.';
+    }
+    setTimeout(lbSettingsClose, 1200);
+  }
+  function lbSettingsClear() {
+    input.value = '';
+    localStorage.removeItem(KEY);
+    status.textContent = 'Name cleared.';
+  }
+
+  /* Close on backdrop click */
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) lbSettingsClose();
+  });
+  /* Enter key saves */
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') lbSettingsSave();
+    if (e.key === 'Escape') lbSettingsClose();
+  });
+
+  /* Expose to onclick= attributes */
+  window.lbSettingsOpen  = lbSettingsOpen;
+  window.lbSettingsClose = lbSettingsClose;
+  window.lbSettingsSave  = lbSettingsSave;
+  window.lbSettingsClear = lbSettingsClear;
 })();
 </script>
 </body>

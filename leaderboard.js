@@ -7,10 +7,11 @@
 (function () {
   'use strict';
 
-  var script = document.currentScript;
-  var gameId = (script && script.getAttribute('data-game')) ||
+  var script  = document.currentScript;
+  var gameId  = (script && script.getAttribute('data-game')) ||
     window.location.pathname.replace(/^\/|\/$/g, '').split('/')[0] || 'unknown';
-  var accent = (script && script.getAttribute('data-color')) || '#00ccff';
+  var accent  = (script && script.getAttribute('data-color')) || '#00ccff';
+  var savedName = localStorage.getItem('lb_player_name') || '';
 
   /* ── Inject styles ───────────────────────────────────────── */
   var style = document.createElement('style');
@@ -35,8 +36,9 @@
     '#lb-submit:hover{opacity:.85;}',
     '#lb-skip{display:block;width:100%;background:transparent;border:1px solid ' + accent + '44;',
     'color:' + accent + ';border-radius:5px;font-size:.8rem;letter-spacing:.05em;',
-    'padding:6px;cursor:pointer;margin-bottom:18px;}',
+    'padding:6px;cursor:pointer;margin-bottom:14px;}',
     '#lb-skip:hover{background:' + accent + '22;}',
+    '#lb-save-hint{text-align:center;font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:4px;}',
     '#lb-table-wrap h2{margin-bottom:14px;}',
     '#lb-table{width:100%;border-collapse:collapse;}',
     '#lb-table th{font-size:.7rem;letter-spacing:.1em;color:' + accent + '99;',
@@ -45,7 +47,10 @@
     '#lb-table tr.lb-me td{color:#fff;font-weight:600;}',
     '#lb-table td.lb-rank{color:' + accent + ';font-weight:700;width:28px;}',
     '#lb-table td.lb-sc{text-align:right;font-variant-numeric:tabular-nums;}',
-    '#lb-close{display:block;width:100%;margin-top:18px;background:transparent;',
+    '#lb-as{text-align:center;font-size:.75rem;color:rgba(255,255,255,.35);margin-top:14px;}',
+    '#lb-as button{background:none;border:none;color:' + accent + ';font-size:.75rem;',
+    'cursor:pointer;text-decoration:underline;padding:0;}',
+    '#lb-close{display:block;width:100%;margin-top:12px;background:transparent;',
     'border:1px solid ' + accent + '55;color:' + accent + ';border-radius:5px;',
     'font-family:"Bebas Neue",cursive;font-size:1.1rem;letter-spacing:.1em;',
     'padding:9px;cursor:pointer;}',
@@ -74,34 +79,40 @@
     '      <button id="lb-submit">SUBMIT</button>',
     '    </div>',
     '    <button id="lb-skip">Skip — just view leaderboard</button>',
+    '    <p id="lb-save-hint">Name will be saved for next time</p>',
     '  </div>',
     '  <div id="lb-table-wrap" style="display:none">',
     '    <h2>LEADERBOARD</h2>',
     '    <div id="lb-table-content"><p id="lb-loading">Loading…</p></div>',
+    '    <p id="lb-as"></p>',
     '    <button id="lb-close">CLOSE</button>',
     '  </div>',
     '</div>',
   ].join('');
   document.body.appendChild(overlay);
 
-  /* ── Floating trophy button (always visible) ─────────────── */
+  /* ── Floating trophy button ──────────────────────────────── */
   var trophy = document.createElement('button');
   trophy.id = 'lb-trophy';
   trophy.textContent = '🏆 Leaderboard';
   document.body.appendChild(trophy);
 
   /* ── DOM refs ────────────────────────────────────────────── */
-  var submitWrap = document.getElementById('lb-submit-wrap');
-  var tableWrap  = document.getElementById('lb-table-wrap');
-  var scoreVal   = document.getElementById('lb-score-val');
-  var nameInput  = document.getElementById('lb-name');
-  var submitBtn  = document.getElementById('lb-submit');
-  var skipBtn    = document.getElementById('lb-skip');
+  var submitWrap   = document.getElementById('lb-submit-wrap');
+  var tableWrap    = document.getElementById('lb-table-wrap');
+  var scoreVal     = document.getElementById('lb-score-val');
+  var nameInput    = document.getElementById('lb-name');
+  var submitBtn    = document.getElementById('lb-submit');
+  var skipBtn      = document.getElementById('lb-skip');
   var tableContent = document.getElementById('lb-table-content');
-  var closeBtn   = document.getElementById('lb-close');
+  var asLine       = document.getElementById('lb-as');
+  var closeBtn     = document.getElementById('lb-close');
 
-  var pendingScore = null;
+  var pendingScore  = null;
   var submittedName = '';
+
+  /* Pre-fill name if one is saved */
+  if (savedName) nameInput.value = savedName;
 
   /* ── Open / close overlay ────────────────────────────────── */
   function openOverlay() { overlay.classList.add('lb-show'); }
@@ -127,13 +138,27 @@
     setTimeout(function () { nameInput.focus(); }, 80);
   }
 
-  /* ── Fetch & render leaderboard table ────────────────────── */
-  function showLeaderboard(highlightName) {
+  /* ── Auto-submit with saved name ─────────────────────────── */
+  function autoSubmit(score) {
+    pendingScore   = score;
+    submittedName  = savedName;
     submitWrap.style.display = 'none';
     tableWrap.style.display  = '';
-    tableContent.innerHTML   = '<p id="lb-loading">Loading…</p>';
+    tableContent.innerHTML   = '<p id="lb-loading">Submitting as ' + escHtml(savedName) + '…</p>';
+    setAsLine(savedName, true);
     openOverlay();
 
+    fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game: gameId, player: savedName, score: score })
+    })
+      .then(function () { fetchAndRender(savedName); })
+      .catch(function () { fetchAndRender(savedName); });
+  }
+
+  /* ── Fetch & render leaderboard table ────────────────────── */
+  function fetchAndRender(highlightName) {
     fetch('/api/leaderboard?game=' + encodeURIComponent(gameId))
       .then(function (r) { return r.json(); })
       .then(function (rows) {
@@ -159,10 +184,38 @@
       });
   }
 
+  function showLeaderboard(highlightName) {
+    submitWrap.style.display = 'none';
+    tableWrap.style.display  = '';
+    tableContent.innerHTML   = '<p id="lb-loading">Loading…</p>';
+    setAsLine(highlightName || submittedName, false);
+    openOverlay();
+    fetchAndRender(highlightName || submittedName);
+  }
+
+  function setAsLine(name, showChange) {
+    if (!name) { asLine.innerHTML = ''; return; }
+    asLine.innerHTML = 'Submitted as <strong>' + escHtml(name) + '</strong>';
+    if (showChange) {
+      var btn = document.createElement('button');
+      btn.textContent = 'change name';
+      btn.addEventListener('click', function () {
+        pendingScore = pendingScore !== null ? pendingScore : 0;
+        showSubmitForm(pendingScore);
+      });
+      asLine.appendChild(document.createTextNode(' · '));
+      asLine.appendChild(btn);
+    }
+  }
+
   /* ── Submit score ────────────────────────────────────────── */
   function doSubmit() {
     var name = nameInput.value.trim() || 'Anonymous';
     submittedName = name;
+    /* Persist for next time */
+    localStorage.setItem('lb_player_name', name);
+    savedName = name;
+
     submitBtn.disabled = true;
     submitBtn.textContent = '…';
 
@@ -176,7 +229,6 @@
       .finally(function () {
         submitBtn.disabled = false;
         submitBtn.textContent = 'SUBMIT';
-        nameInput.value = '';
       });
   }
 
@@ -184,10 +236,11 @@
   nameInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') doSubmit();
   });
-  skipBtn.addEventListener('click', function () { showLeaderboard(submittedName); });
+  skipBtn.addEventListener('click', function () { showLeaderboard(''); });
   trophy.addEventListener('click', function () {
     if (typeof window.__lbCurrentScore === 'function') {
-      showSubmitForm(Math.round(Number(window.__lbCurrentScore())));
+      var s = Math.round(Number(window.__lbCurrentScore()));
+      if (savedName) { autoSubmit(s); } else { showSubmitForm(s); }
     } else {
       showLeaderboard(submittedName);
     }
@@ -197,11 +250,15 @@
   window.addEventListener('lbGameOver', function (e) {
     var score = (e.detail && e.detail.score != null) ? Math.round(Number(e.detail.score)) : 0;
     if (score < 0) score = 0;
-    showSubmitForm(score);
+    if (savedName) {
+      autoSubmit(score);
+    } else {
+      showSubmitForm(score);
+    }
   });
 
   /* ── Helper ──────────────────────────────────────────────── */
   function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 })();
