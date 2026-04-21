@@ -25,10 +25,11 @@ export default async function handler(req, res) {
       return;
     }
     const rows = await sql`
-      SELECT player, score, created_at
+      SELECT player, MAX(score) AS score, MIN(created_at) AS created_at
       FROM scores
       WHERE game_id = ${game}
-      ORDER BY score DESC, created_at ASC
+      GROUP BY player
+      ORDER BY MAX(score) DESC, MIN(created_at) ASC
       LIMIT 10
     `;
     res.status(200).json(rows);
@@ -49,6 +50,10 @@ export default async function handler(req, res) {
     await sql`
       INSERT INTO scores (game_id, player, score)
       VALUES (${game}, ${name}, ${score})
+      ON CONFLICT (game_id, player)
+      DO UPDATE SET
+        score      = GREATEST(scores.score, EXCLUDED.score),
+        created_at = CASE WHEN EXCLUDED.score > scores.score THEN now() ELSE scores.created_at END
     `;
     res.status(201).json({ ok: true });
     return;

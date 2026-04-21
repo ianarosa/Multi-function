@@ -19,7 +19,12 @@ function getTop10(game) {
 
 function insertScore(game, player, score) {
   if (!store[game]) store[game] = [];
-  store[game].push({ player, score, created_at: new Date().toISOString() });
+  const existing = store[game].find(r => r.player === player);
+  if (existing) {
+    if (score > existing.score) { existing.score = score; existing.created_at = new Date().toISOString(); }
+  } else {
+    store[game].push({ player, score, created_at: new Date().toISOString() });
+  }
 }
 
 // Seed a few demo scores so the leaderboard isn't empty on first load
