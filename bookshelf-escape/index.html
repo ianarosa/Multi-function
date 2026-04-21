@@ -704,6 +704,7 @@ let currentLevel=0;
 let timerSec=0;
 let runTotal=0;
 let timerInterval=null;
+window.__lbCurrentScore = function() { return Math.max(0, (currentLevel + 1) * 1000 - timerSec); };
 let currentBooks=[];
 let dragIdx=-1;
 let dragBook=null;

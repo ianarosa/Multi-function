@@ -602,6 +602,7 @@
     streak: 0,
     levels: Object.fromEntries(UPGRADES.map(u => [u.id, 0])),
   };
+  window.__lbCurrentScore = function() { return state.best; };
 
   function save() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}

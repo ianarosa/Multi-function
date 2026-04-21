@@ -380,6 +380,7 @@ let state = {
   totalFlips: 0,
   upgrades: { charm: 0, double: 0, auto: 0, shield: 0, magnet: 0, speed: 0 }
 };
+window.__lbCurrentScore = function() { return state.bestStreak; };
 
 function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 function load() {
