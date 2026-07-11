@@ -113,6 +113,11 @@
   }
   #focus-btn.active { background: rgba(100,255,255,0.25); border-color: #4ff; color: #4ff; text-shadow: 0 0 10px #4ff; }
 
+  /* Touch overlay is mobile-only; desktop plays with keyboard (arrows/WASD + SHIFT). */
+  @media (hover: hover) and (pointer: fine) {
+    #stick-zone, #focus-btn { display: none !important; }
+  }
+
   @media (orientation: landscape) {
     #top-bar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 50;

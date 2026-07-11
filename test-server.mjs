@@ -26,7 +26,7 @@ function insertScore(game, player, score) {
 const GAMES = ['asteroid-blitz','snake-neon','neon-breaker','pixel-jumper','cyber-pong',
                'void-dancer','river-run','slash-fury','tower-stack','stellar-dash',
                'bookshelf-escape','coin-flip','dice-roll','football','hex-sweep',
-               'memory-matrix','pipe-flow','rhythm-pulse'];
+               'memory-matrix','pipe-flow','rhythm-pulse','platformer'];
 const NAMES = ['Alice','Bob','Carol','Dave','Eve'];
 for (const g of GAMES) {
   for (let i = 0; i < 5; i++) {

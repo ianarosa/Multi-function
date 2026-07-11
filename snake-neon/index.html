@@ -96,6 +96,10 @@
   @media (min-width: 900px) {
     #dpad { display: none; }
   }
+  /* Hide touch d-pad on precise-pointer desktops (keyboard/mouse play remains) */
+  @media (hover: hover) and (pointer: fine) {
+    #dpad { display: none !important; }
+  }
 
   /* ── Unified Arcade HUD (canonical, 48px height) ── */
   #top-bar, .top-bar, .topbar, #topBar {

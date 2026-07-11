@@ -177,6 +177,11 @@
     left: 12px !important;
     z-index: 200 !important;
   }
+  /* Touch overlay is mobile-only: on precise-pointer desktops the LAUNCH button
+     merely duplicates the Space/Enter key, so hide it there. */
+  @media (hover: hover) and (pointer: fine) {
+    #launch-btn { display: none !important; }
+  }
 </style>
 </head>
 <body>

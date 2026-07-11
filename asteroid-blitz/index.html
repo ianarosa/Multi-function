@@ -84,8 +84,10 @@
     box-shadow: 0 0 40px rgba(255,68,68,0.7), inset 0 0 14px rgba(255,255,255,0.3);
   }
 
-  @media (min-width: 800px) {
-    #stick-zone, #fire-btn { display: none; }
+  /* Touch overlay (joystick + fire button) is mobile-only.
+     Hide on precise-pointer desktops; keyboard/mouse still play the game. */
+  @media (hover: hover) and (pointer: fine) {
+    #stick-zone, #fire-btn { display: none !important; }
   }
 
   /* ── Unified Arcade HUD (canonical, 48px fixed height) ── */

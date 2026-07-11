@@ -219,6 +219,13 @@
     -webkit-tap-highlight-color: transparent;
   }
   .touch-fire.show { display: flex; }
+  /* Touch FIRE button is mobile-only; desktop uses SPACE to shoot. */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-fire { display: flex; }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .touch-fire, .touch-fire.show { display: none !important; }
+  }
   .hint {
     margin-top: 16px;
     font-size: 14px;

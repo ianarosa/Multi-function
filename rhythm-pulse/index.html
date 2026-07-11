@@ -53,6 +53,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#08020d;font-family:
   #combo-display{font-size:18px;}
 }
 
+/* Touch lane buttons are for phones only; hide on precise-pointer desktops (keyboard A/S/D & mouse-click play there) */
+@media (hover: hover) and (pointer: fine){
+  #mobile-lanes, #mobile-lanes.active{display:none !important;}
+}
+
   /* ── Unified Arcade HUD (canonical, 48px height) ── */
   #top-bar, .top-bar, .topbar, #topBar {
     box-sizing: border-box !important;
