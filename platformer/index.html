@@ -164,6 +164,96 @@
     gap: 6px !important;
     width: auto !important;
   }
+
+  /* ── Brotato-style SELECT screen + post-game (DOM overlays) ── */
+  #select, #pg {
+    position: fixed; inset: 0; z-index: 150; display: none;  /* above the top-bar so it fully covers the screen */
+    flex-direction: column; align-items: center;
+    background: rgba(6,3,12,0.94);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    font-family: 'Barlow', sans-serif;
+  }
+  /* full-viewport layout: sections distributed down the whole height, scaling with the screen */
+  #select {
+    justify-content: space-evenly; overflow: hidden;
+    padding: clamp(54px, 7vh, 110px) 2vw clamp(20px, 4vh, 64px);
+  }
+  #pg { justify-content: center; gap: 13px; padding: 54px 12px 20px; overflow-y: auto; }
+  .sel-head { display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 1vh, 14px); }
+  .sel-danger-group { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.6vh, 22px); width: 100%; }
+  #select .sel-title {
+    font-family: 'Bebas Neue', cursive; font-size: clamp(2.2rem, 7vw, 6rem);
+    letter-spacing: 0.14em; color: #ff5a5f; text-shadow: 0 0 32px rgba(255,90,95,0.6); line-height: 0.95;
+  }
+  #select .sel-sub {
+    font-size: clamp(0.66rem, 1.3vw, 1.05rem); letter-spacing: 0.28em; color: rgba(255,255,255,0.45);
+    text-transform: uppercase; font-weight: 600;
+  }
+  .carousel-wrap {
+    position: relative; width: 100%;
+    min-height: clamp(210px, 30vh, 380px); overflow: hidden;
+  }
+  .car-strip {
+    position: absolute; top: 50%; left: 0; display: flex;
+    gap: clamp(14px, 1.6vw, 34px); align-items: center;
+    transition: transform 0.22s cubic-bezier(.2,.7,.3,1); will-change: transform;
+  }
+  .card {
+    width: clamp(140px, 15vw, 280px); flex: 0 0 auto; box-sizing: border-box; border-radius: clamp(12px, 1vw, 18px);
+    background: rgba(20,10,26,0.92); border: 1px solid rgba(255,90,95,0.28);
+    padding: clamp(14px, 1.5vw, 28px) clamp(12px, 1.2vw, 22px); text-align: center; cursor: pointer;
+    transform: scale(0.86); opacity: 0.26;
+    transition: transform 0.22s, opacity 0.22s, box-shadow 0.22s, border-color 0.22s;
+  }
+  .card.focus {
+    transform: scale(1.14); border-color: #ff5a5f; opacity: 1 !important;
+    box-shadow: 0 0 42px rgba(255,90,95,0.4), inset 0 0 26px rgba(255,90,95,0.08);
+  }
+  .card .card-tag { font-size: clamp(0.52rem, 0.8vw, 0.82rem); letter-spacing: 0.2em; color: #ff5a5f; text-transform: uppercase; opacity: 0.85; }
+  .card .card-name { font-family: 'Bebas Neue', cursive; font-size: clamp(1.4rem, 2.2vw, 2.9rem); letter-spacing: 0.05em; color: #fff; margin: clamp(6px, 0.9vh, 16px) 0 3px; line-height: 1; }
+  .card .card-desc { font-size: clamp(0.66rem, 1vw, 1.02rem); color: rgba(255,255,255,0.55); min-height: 2.3em; }
+  .card .card-best { margin-top: clamp(8px, 1.1vh, 18px); font-size: clamp(0.6rem, 0.9vw, 0.94rem); letter-spacing: 0.05em; color: #ffd24a; }
+  .car-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+    width: clamp(40px, 3.4vw, 62px); height: clamp(40px, 3.4vw, 62px); border-radius: 50%; background: rgba(255,90,95,0.12);
+    border: 1.5px solid rgba(255,90,95,0.5); color: #ff5a5f; font-size: clamp(1.6rem, 2.4vw, 2.8rem); line-height: 1;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .car-arrow:active { background: rgba(255,90,95,0.3); }
+  #car-left { left: clamp(4px, 1.5vw, 34px); } #car-right { right: clamp(4px, 1.5vw, 34px); }
+  .danger { display: flex; gap: clamp(7px, 0.8vw, 16px); flex-wrap: wrap; justify-content: center; }
+  .pip {
+    width: clamp(34px, 3.4vw, 64px); height: clamp(30px, 4.2vh, 54px); border-radius: 6px; border: 1.5px solid rgba(255,90,95,0.4);
+    background: rgba(255,90,95,0.06); color: rgba(255,255,255,0.55);
+    font-family: 'Bebas Neue', cursive; font-size: clamp(1.1rem, 1.8vw, 2rem);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .pip.on { background: #ff5a5f; color: #0a0510; border-color: #ff5a5f; box-shadow: 0 0 16px rgba(255,90,95,0.55); }
+  #danger-info { font-size: clamp(0.68rem, 1.05vw, 1.05rem); color: rgba(255,255,255,0.64); text-align: center; max-width: min(760px, 92vw); line-height: 1.55; min-height: 2.6em; padding: 0 8px; }
+  #danger-info b { color: #ffd24a; }
+  #start-btn {
+    font-family: 'Bebas Neue', cursive; font-size: clamp(1.5rem, 2.6vw, 3rem); letter-spacing: 0.14em;
+    color: #0a0510; background: #ff5a5f; border: none; border-radius: clamp(8px, 0.8vw, 14px);
+    padding: clamp(10px, 1.5vh, 20px) clamp(46px, 7vw, 120px);
+    cursor: pointer; box-shadow: 0 0 30px rgba(255,90,95,0.5);
+  }
+  #start-btn:hover { filter: brightness(1.08); }
+  #start-btn:active { transform: scale(0.97); }
+  /* post-game */
+  #pg .pg-title { font-family: 'Bebas Neue', cursive; font-size: clamp(2.2rem, 10vw, 3.8rem); letter-spacing: 0.1em; color: #ff5a5f; text-shadow: 0 0 26px rgba(255,90,95,0.6); }
+  #pg .pg-title.win { color: #12ffe8; text-shadow: 0 0 26px rgba(18,255,232,0.6); }
+  #pg-stats { text-align: center; color: #fff; font-size: 0.95rem; line-height: 1.85; letter-spacing: 0.04em; }
+  #pg-stats b { color: #ffd24a; }
+  .pg-btns { display: flex; gap: 14px; margin-top: 10px; }
+  .pg-btns button { font-family: 'Bebas Neue', cursive; font-size: 1.2rem; letter-spacing: 0.1em; cursor: pointer; border-radius: 7px; padding: 9px 28px; }
+  #pg-retry { color: #0a0510; background: #ff5a5f; border: none; box-shadow: 0 0 18px rgba(255,90,95,0.4); }
+  #pg-select { color: #ff5a5f; background: transparent; border: 1.5px solid rgba(255,90,95,0.5); }
+  /* short/landscape screens: keep it from overflowing */
+  @media (max-height: 560px) {
+    #select { justify-content: space-between; padding-top: clamp(50px, 8vh, 60px); }
+    .carousel-wrap { min-height: 150px; }
+    #select .sel-title { font-size: clamp(1.8rem, 6vw, 3rem); }
+  }
 </style>
 </head>
 <body>
@@ -188,6 +278,33 @@
   </div>
   <div class="side">
     <div class="ctl" id="ctl-jump">JUMP</div>
+  </div>
+</div>
+
+<div id="select">
+  <div class="sel-head">
+    <div class="sel-title">NEON RUNNER</div>
+    <div class="sel-sub">Select Mode &mdash; &#8249; &#8250; browse</div>
+  </div>
+  <div class="carousel-wrap" id="carousel">
+    <button class="car-arrow" id="car-left" aria-label="Previous">&#8249;</button>
+    <div class="car-strip" id="car-strip"></div>
+    <button class="car-arrow" id="car-right" aria-label="Next">&#8250;</button>
+  </div>
+  <div class="sel-danger-group">
+    <div class="sel-sub">Danger &mdash; &#8593; &#8595; adjust</div>
+    <div class="danger" id="danger"></div>
+    <div id="danger-info"></div>
+  </div>
+  <button id="start-btn">START</button>
+</div>
+
+<div id="pg">
+  <div class="pg-title" id="pg-title">WASTED</div>
+  <div id="pg-stats"></div>
+  <div class="pg-btns">
+    <button id="pg-retry">RETRY</button>
+    <button id="pg-select">SELECT</button>
   </div>
 </div>
 
@@ -234,42 +351,123 @@
   const CAM_LEFT  = 250, CAM_RIGHT = 420;  // camera keeps hero within this on-screen band
   const COIN_VAL  = 25;
   const LEVELS_Y  = [372, 312, 256];  // platform surface heights
-  const MAX_HP    = 3;           // hero health pool
-  const HEAL_STEP = 2500;        // score interval that regenerates one heart
+  const MAX_HP    = 3;           // default hero health pool (overridden per danger tier)
+  const HEAL_STEP = 2500;        // base-score interval that regenerates one heart
   const INV_TIME  = 1.15;        // invulnerability window after a hit (seconds)
 
-  // ── Parallax neon skyline (two layers, tiled) ──────────────────
+  // ── DANGER tiers (Brotato-style) — scale difficulty AND score reward ──
+  // density=spawn prob mult · spd=enemy speed · aggro=detection range · proj=projectile speed
+  // gapF=desired-gap widener (still clamped to a crossable jump) · hearts=starting HP · mult=score×
+  const DANGERS = [
+    { name: 'CALM',   density: 0.55, spd: 0.85, aggro: 0.80, proj: 0.85, gapF: 0.82, hearts: 4, mult: 1.0 },
+    { name: 'NORMAL', density: 0.78, spd: 1.00, aggro: 1.00, proj: 1.00, gapF: 0.95, hearts: 3, mult: 1.4 },
+    { name: 'HARD',   density: 0.98, spd: 1.12, aggro: 1.15, proj: 1.12, gapF: 1.05, hearts: 3, mult: 1.9 },
+    { name: 'BRUTAL', density: 1.18, spd: 1.26, aggro: 1.32, proj: 1.26, gapF: 1.12, hearts: 2, mult: 2.6 },
+    { name: 'SAVAGE', density: 1.38, spd: 1.42, aggro: 1.52, proj: 1.42, gapF: 1.20, hearts: 2, mult: 3.4 },
+    { name: 'INSANE', density: 1.62, spd: 1.60, aggro: 1.75, proj: 1.60, gapF: 1.28, hearts: 1, mult: 4.4 },
+  ];
+
+  const DEFAULT_THEME = { top: '#0b0518', mid: '#12071f', bot: '#1a0a22', accent: '#ff5a5f' };
+
+  // ── Finite, hand-tuned, DETERMINISTIC levels (fixed seed = fixed layout) ──
+  const LEVELS = [
+    { id: 'l1', name: 'NEON DISTRICT', desc: 'Rooftops · short',    seed: 1337, len: 3400, density: 0.32, coin: 0.80, gapProb: 0.58, types: ['drone'],
+      theme: { top: '#0b0518', mid: '#12071f', bot: '#1a0a22', accent: '#ff5a5f' } },
+    { id: 'l2', name: 'DATA HARBOR',   desc: 'Docks · +hoppers',    seed: 2749, len: 4400, density: 0.48, coin: 0.80, gapProb: 0.64, types: ['drone', 'hopper'],
+      theme: { top: '#04121a', mid: '#062233', bot: '#083041', accent: '#12d0ff' } },
+    { id: 'l3', name: 'VOLT FACTORY',  desc: 'Machines · +chasers', seed: 5501, len: 5200, density: 0.60, coin: 0.76, gapProb: 0.70, types: ['drone', 'hopper', 'chaser'],
+      theme: { top: '#160a02', mid: '#2a1405', bot: '#3a1d06', accent: '#ffb03a' } },
+    { id: 'l4', name: 'SKY SPIRES',    desc: 'Towers · +flyers',    seed: 8123, len: 6000, density: 0.64, coin: 0.72, gapProb: 0.74, types: ['drone', 'hopper', 'chaser', 'flyer'],
+      theme: { top: '#0a0620', mid: '#160b3a', bot: '#221055', accent: '#b06bff' } },
+    { id: 'l5', name: 'CORE MELTDOWN', desc: 'Reactor · all foes',  seed: 9091, len: 7000, density: 0.70, coin: 0.70, gapProb: 0.78, types: ['drone', 'hopper', 'chaser', 'flyer', 'turret'],
+      theme: { top: '#1a0308', mid: '#2e050c', bot: '#440810', accent: '#ff3b4d' } },
+  ];
+
+  // Carousel entries: ENDLESS first, then each designed level.
+  const MODES = [{ id: 'endless', name: 'ENDLESS', desc: 'Procedural · no finish' }]
+    .concat(LEVELS.map(l => ({ id: l.id, name: l.name, desc: l.desc })));
+
+  // small deterministic PRNG for fixed level layouts
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // ── Parallax neon skyline (multiple depth layers, tiled) ───────
   function makeSkyline(n, minH, maxH, wRange) {
     const arr = []; let x = 0;
     for (let i = 0; i < n; i++) {
       const w = wRange[0] + Math.random() * (wRange[1] - wRange[0]);
       const h = minH + Math.random() * (maxH - minH);
-      arr.push({ x, w, h, seed: Math.random() });
+      arr.push({ x, w, h, seed: Math.random(),
+        sign: Math.random() < 0.32,           // some buildings carry a neon sign
+        signC: Math.random() < 0.5 ? '#12ffe8' : null,
+        flick: 2 + Math.random() * 5 });       // per-building light flicker speed
       x += w + 6 + Math.random() * 26;
     }
     return { list: arr, span: x };
   }
-  const SKY_FAR  = makeSkyline(22, 70, 190, [40, 90]);
-  const SKY_NEAR = makeSkyline(16, 110, 250, [60, 130]);
-  const STARS = Array.from({ length: 90 }, () => ({
-    x: Math.random() * W, y: Math.random() * H * 0.6,
+  const SKY_FAR  = makeSkyline(24, 60, 170, [36, 84]);   // distant haze towers
+  const SKY_MID  = makeSkyline(18, 90, 210, [48, 108]);  // mid buildings (NEW)
+  const SKY_NEAR = makeSkyline(15, 120, 250, [62, 132]); // near skyline
+  const SKY_FORE = makeSkyline(9, 150, 300, [96, 190]);  // foreground silhouettes (NEW)
+  const STARS = Array.from({ length: 110 }, () => ({
+    x: Math.random() * W, y: Math.random() * H * 0.62,
     r: Math.random() * 1.2 + 0.3, a: 0.2 + Math.random() * 0.7,
-    p: 0.02 + Math.random() * 0.06,
+    p: 0.02 + Math.random() * 0.06, tw: Math.random() * 6.28,   // twinkle phase
+    tws: 1.2 + Math.random() * 2.4,                              // twinkle speed
   }));
+  // drifting fog/cloud bands (soft, low-alpha)
+  const FOG = Array.from({ length: 6 }, (_, i) => ({
+    y: 70 + Math.random() * 210, r: 90 + Math.random() * 150,
+    spd: 3 + Math.random() * 7, off: Math.random() * 1400, a: 0.03 + Math.random() * 0.045,
+  }));
+  // precomputed static vignette + scanline overlay (drawn once per frame as a single image)
+  const overlay = (() => {
+    const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
+    const o = oc.getContext('2d');
+    const vg = o.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+    o.fillStyle = vg; o.fillRect(0, 0, W, H);
+    o.fillStyle = 'rgba(0,0,0,0.06)';
+    for (let y = 0; y < H; y += 3) o.fillRect(0, y, W, 1);   // faint scanlines
+    return oc;
+  })();
 
   // ── State ───────────────────────────────────────────────────────
   let hero, platforms, coins, enemies, particles, floats, shots;
   let scrollX, worldCursor, groundY, score, coinCount;
   let shake, flash, flashCol, maxProgress, bonusScore, nextHeal;
-  let state = 'menu';
+  let state = 'select';
   let lastT = null;
   let best; try { best = +(localStorage.getItem('nr_best') || 0); } catch (e) { best = 0; }
+
+  // mode / difficulty / level runtime
+  let gameMode = 'endless';           // 'endless' or a level id
+  let levelSpec = null;               // the LEVELS entry when in a level, else null
+  let diff = DANGERS[1];              // active danger tier
+  let dangerIdx = 1;
+  let maxHp = MAX_HP;                  // starting hearts (from danger tier)
+  let finite = false;                 // true for finite levels
+  let finishX = Infinity;             // win trigger x (levels only)
+  let finishFlag = null;              // { x, y } drawn goal
+  let elapsed = 0;                    // level timer (seconds)
+  let theme = DEFAULT_THEME;
+  // generation context (set per mode/level)
+  let rng = Math.random;              // Math.random for endless, seeded for levels
+  let genPool = null;                 // enemy type pool (null => distance-based endless pool)
+  let genDensityBase = 0.5;           // base spawn probability before danger scaling
+  let genCoinProb = 0.7, genGapProb = 0.72;
 
   const held = { left: false, right: false };
 
   // ── Input ───────────────────────────────────────────────────────
   function doJump() {
-    if (state !== 'playing') { tryStart(); return; }
+    if (state !== 'playing') return;
     if (hero.jumps > 0) {
       hero.vy = hero.jumps === hero.maxJumps ? JUMP_V : DBL_V;
       hero.jumps--;
@@ -277,22 +475,37 @@
       jumpPuff();
     }
   }
-  function tryStart() { if (state === 'menu' || state === 'gameover') startGame(); }
 
   window.addEventListener('keydown', e => {
     if (e.repeat) return;
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') held.left = true;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') held.right = true;
-    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { e.preventDefault(); doJump(); }
+    const k = e.key;
+    if (state === 'select') {
+      // carousel + danger navigation
+      if (k === 'ArrowLeft'  || k === 'a' || k === 'A') { e.preventDefault(); cardStep(-1); }
+      else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); cardStep(1); }
+      else if (k === 'ArrowUp'   || k === 'w' || k === 'W') { e.preventDefault(); dangerStep(1); }
+      else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); dangerStep(-1); }
+      else if (k === 'Enter' || k === ' ') { e.preventDefault(); doStart(); }
+      return;
+    }
+    if (state === 'gameover' || state === 'levelcomplete') {
+      if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') { e.preventDefault(); retry(); }
+      else if (k === 'Escape' || k === 'Backspace') { e.preventDefault(); backToSelect(); }
+      return;
+    }
+    // playing
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') held.left = true;
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') held.right = true;
+    if (k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); doJump(); }
   });
   window.addEventListener('keyup', e => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') held.left = false;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') held.right = false;
   });
 
-  // Canvas tap = jump / start
-  cvs.addEventListener('mousedown', e => { e.preventDefault(); doJump(); });
-  cvs.addEventListener('touchstart', e => { e.preventDefault(); doJump(); }, { passive: false });
+  // Canvas tap = jump (only during play; menus are DOM overlays)
+  cvs.addEventListener('mousedown', e => { if (state === 'playing') { e.preventDefault(); doJump(); } });
+  cvs.addEventListener('touchstart', e => { if (state === 'playing') { e.preventDefault(); doJump(); } }, { passive: false });
 
   // On-screen buttons
   function bindHold(id, on, off) {
@@ -360,22 +573,23 @@
 
   function genPlatform() {
     // width of solid ground segment
-    const w = 160 + Math.random() * 190;
+    const w = 160 + rng() * 190;
     platforms.push({ x: worldCursor, w, y: groundY });
 
     // coins along the platform surface
-    if (Math.random() < 0.7) {
-      const n = 2 + Math.floor(Math.random() * 3);
+    if (rng() < genCoinProb) {
+      const n = 2 + Math.floor(rng() * 3);
       placeCoinRow(worldCursor + w * 0.3, groundY - COIN_ON, n, false);
     }
-    // enemies — variety + count scale with how far right we've generated (difficulty)
+    // enemies — density scales with mode base × the chosen DANGER tier
     if (platforms.length > 3 && w > 190) {
-      const D = worldCursor;                                   // distance proxy
-      const spawnP = Math.min(0.34 + D / 12000, 0.74);
-      if (Math.random() < spawnP) {
+      const D = worldCursor;                                   // distance proxy (endless pool)
+      let spawnP = (genPool ? genDensityBase : Math.min(0.34 + D / 12000, 0.6)) * diff.density;
+      spawnP = Math.min(spawnP, 0.9);
+      if (rng() < spawnP) {
         addEnemy(pickEnemyType(D), worldCursor, w, groundY);
-        // occasional second enemy far out, if the platform is wide enough
-        if (D > 6000 && w > 320 && Math.random() < 0.3) {
+        // higher danger / wider platforms can hold a second foe
+        if (w > 300 && rng() < 0.18 * diff.density) {
           addEnemy(pickEnemyType(D), worldCursor + w * 0.5, w * 0.5, groundY);
         }
       }
@@ -383,24 +597,25 @@
     worldCursor += w;
 
     // decide a pit gap + possibly change elevation
-    if (Math.random() < 0.72) {
+    if (rng() < genGapProb) {
       // Choose the far-side elevation FIRST so we can guarantee the gap is jumpable.
-      const r = Math.random();
+      const r = rng();
       const farY = r < 0.55 ? LEVELS_Y[0] : r < 0.85 ? LEVELS_Y[1] : LEVELS_Y[2];
       const rise = groundY - farY;                 // +ve => far platform is higher (harder jump)
-      // Narrow the pit so it is ALWAYS crossable in a single jump for this rise.
-      let gap = 70 + Math.random() * 80;           // desired 70..150
+      // Danger widens the desired gap, but it is ALWAYS clamped to a crossable single jump.
+      let gap = (70 + rng() * 80) * diff.gapF;
       gap = Math.max(48, Math.min(gap, maxJumpGap(rise)));
       const nearEdge = worldCursor;                // takeoff = near platform's right edge
       // A coin trail may go over the pit ONLY because the pit is now crossable AND the
       // next genPlatform() always builds a landing platform at farY on the far side.
-      if (Math.random() < 0.62) placeJumpArc(nearEdge, groundY, gap, farY);
+      if (rng() < 0.62) placeJumpArc(nearEdge, groundY, gap, farY);
       worldCursor += gap;
       groundY = farY;                              // far platform (built next) sits at farY
     }
   }
 
   function ensureWorld() {
+    if (finite) return;                            // finite levels are fully built up-front
     while (worldCursor < scrollX + W + 480) genPlatform();
     // No left-culling: the player can walk back, so the traversed terrain must persist.
   }
@@ -416,14 +631,14 @@
     return pool;
   }
   function pickEnemyType(D) {
-    const pool = poolFor(D);
-    return pool[(Math.random() * pool.length) | 0];
+    const pool = genPool || poolFor(D);   // fixed roster for levels, distance-based for endless
+    return pool[(rng() * pool.length) | 0];
   }
 
   function addEnemy(type, px, pw, gy) {
     const min = px + 14, max = px + pw - 14;   // patrol/edge bounds — enemies stay on THIS platform
     const cxs = px + pw * 0.5;
-    const dir = Math.random() < 0.5 ? -1 : 1;
+    const dir = rng() < 0.5 ? -1 : 1;
     const e = {
       type, dead: false, gy, min, max, home: cxs,
       bob: Math.random() * Math.PI * 2, state: 'patrol', timer: 0, cool: 0,
@@ -432,17 +647,17 @@
       stompable: true, reward: 60, tx: 0, ty: 0,
     };
     if (type === 'drone') {
-      e.w = 34; e.h = 30; e.vx = dir * (0.7 + Math.random() * 0.8); e.reward = 60;
+      e.w = 34; e.h = 30; e.vx = dir * (0.7 + rng() * 0.8); e.reward = 60;
     } else if (type === 'hopper') {
-      e.w = 30; e.h = 26; e.vx = dir * (0.5 + Math.random() * 0.5);
-      e.timer = 0.6 + Math.random() * 0.8; e.reward = 80;
+      e.w = 30; e.h = 26; e.vx = dir * (0.5 + rng() * 0.5);
+      e.timer = 0.6 + rng() * 0.8; e.reward = 80;
     } else if (type === 'chaser') {
       e.w = 32; e.h = 34; e.vx = dir * 0.75; e.reward = 120;
     } else if (type === 'flyer') {
       e.w = 38; e.h = 24; e.hoverY = gy - 118; e.cy = e.hoverY;
       e.vx = dir * 1.0; e.stompable = false; e.reward = 0; e.state = 'hover';
     } else if (type === 'turret') {
-      e.w = 34; e.h = 28; e.vx = 0; e.cool = 1.0 + Math.random(); e.reward = 100;
+      e.w = 34; e.h = 28; e.vx = 0; e.cool = 1.0 + rng(); e.reward = 100;
     }
     e.x = cxs - e.w / 2;
     if (type !== 'flyer') e.cy = gy - e.h / 2;
@@ -459,14 +674,14 @@
     const sameLevel = Math.abs(heroFeet - e.gy) < 66;     // hero roughly on this enemy's level
 
     if (e.type === 'drone') {
-      e.x += e.vx * f;
+      e.x += e.vx * f * diff.spd;
       if (e.x < e.min) { e.x = e.min; e.vx = Math.abs(e.vx); }
       if (e.x + e.w > e.max) { e.x = e.max - e.w; e.vx = -Math.abs(e.vx); }
       e.face = e.vx >= 0 ? 1 : -1;
       e.cy = e.gy - e.h / 2 + Math.sin(e.bob) * 3;
 
     } else if (e.type === 'hopper') {
-      e.x += e.vx * f;
+      e.x += e.vx * f * diff.spd;
       if (e.x < e.min) { e.x = e.min; e.vx = Math.abs(e.vx); }
       if (e.x + e.w > e.max) { e.x = e.max - e.w; e.vx = -Math.abs(e.vx); }
       if (e.onGround) {
@@ -482,16 +697,16 @@
     } else if (e.type === 'chaser') {
       // state machine: patrol → alert(telegraph) → chase → return
       if (e.state === 'patrol') {
-        e.x += e.vx * f;
+        e.x += e.vx * f * diff.spd;
         if (e.x < e.min) { e.x = e.min; e.vx = Math.abs(e.vx); }
         if (e.x + e.w > e.max) { e.x = e.max - e.w; e.vx = -Math.abs(e.vx); }
-        if (sameLevel && Math.abs(dx) < 250) { e.state = 'alert'; e.timer = 0.45; }
+        if (sameLevel && Math.abs(dx) < 250 * diff.aggro) { e.state = 'alert'; e.timer = 0.45; }
       } else if (e.state === 'alert') {
         e.timer -= dt;                                    // wind-up: stand + flash
         if (e.timer <= 0) e.state = 'chase';
         if (!sameLevel || Math.abs(dx) > 360) e.state = 'return';
       } else if (e.state === 'chase') {
-        e.x += Math.sign(dx) * 2.6 * f;                   // pursue the hero
+        e.x += Math.sign(dx) * 2.6 * diff.spd * f;        // pursue the hero (faster at higher danger)
         if (e.x < e.min) e.x = e.min;                     // STOP at ledge — never leave the platform
         if (e.x + e.w > e.max) e.x = e.max - e.w;
         e.vx = Math.sign(dx) || e.vx; e.face = e.vx >= 0 ? 1 : -1;
@@ -500,19 +715,19 @@
         const dh = e.home - eCx;
         e.x += Math.sign(dh) * 1.1 * f; e.face = dh >= 0 ? 1 : -1;
         if (Math.abs(dh) < 6) { e.state = 'patrol'; e.vx = (e.face) * 0.75; }
-        else if (sameLevel && Math.abs(dx) < 210) e.state = 'chase';
+        else if (sameLevel && Math.abs(dx) < 210 * diff.aggro) e.state = 'chase';
       }
       e.cy = e.gy - e.h / 2;
 
     } else if (e.type === 'flyer') {
       if (e.cool > 0) e.cool -= dt;
       if (e.state === 'hover') {
-        e.x += e.vx * f;
+        e.x += e.vx * f * diff.spd;
         if (e.x < e.min - 40) { e.x = e.min - 40; e.vx = Math.abs(e.vx); }
         if (e.x + e.w > e.max + 40) { e.x = e.max + 40 - e.w; e.vx = -Math.abs(e.vx); }
         e.face = e.vx >= 0 ? 1 : -1;
         e.cy = e.hoverY + Math.sin(e.bob) * 5;
-        if (e.cool <= 0 && Math.abs(dx) < 72 && heroFeet > e.cy) {       // hero underneath → attack
+        if (e.cool <= 0 && Math.abs(dx) < 72 * diff.aggro && heroFeet > e.cy) {   // hero underneath → attack
           e.state = 'windup'; e.timer = 0.5;
           e.tx = heroCx; e.ty = Math.min(hero.y + HH / 2, e.gy - e.h / 2);
         }
@@ -527,7 +742,7 @@
         if (e.cy >= e.ty) { e.cy = e.ty; e.state = 'recover'; }
       } else if (e.state === 'recover') {
         e.cy -= 3.4 * f;
-        if (e.cy <= e.hoverY) { e.cy = e.hoverY; e.state = 'hover'; e.cool = 1.6; }
+        if (e.cy <= e.hoverY) { e.cy = e.hoverY; e.state = 'hover'; e.cool = 1.6 / diff.aggro; }
       }
 
     } else if (e.type === 'turret') {
@@ -535,13 +750,13 @@
       e.face = dx >= 0 ? 1 : -1;
       if (e.cool > 0) e.cool -= dt;
       if (e.state === 'patrol') {
-        if (sameLevel && Math.abs(dx) < 340 && e.cool <= 0) { e.state = 'charge'; e.timer = 0.55; }
+        if (sameLevel && Math.abs(dx) < 340 * diff.aggro && e.cool <= 0) { e.state = 'charge'; e.timer = 0.55; }
       } else if (e.state === 'charge') {
         e.timer -= dt;                                    // telegraph: muzzle charges
         if (e.timer <= 0) {
           shots.push({ x: e.x + e.w / 2 + e.face * e.w * 0.5, y: e.gy - 15,
-                       vx: 3.4 * e.face, life: 3.2, dead: false });
-          e.cool = 1.9 + Math.random() * 0.9; e.state = 'patrol';
+                       vx: 3.4 * diff.proj * e.face, life: 3.2, dead: false });
+          e.cool = (1.9 + Math.random() * 0.9) / diff.aggro; e.state = 'patrol';
         }
       }
     }
@@ -568,10 +783,18 @@
     }
   }
   function jumpPuff() {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       particles.push({ x: heroScreenX() + HW / 2, y: hero.y + HH,
-        vx: (Math.random() - 0.5) * 60, vy: 30 + Math.random() * 40,
-        life: 0.3, maxLife: 0.3, col: '#ffd0d2', sz: 1.4 + Math.random() * 1.8, grav: 40 });
+        vx: (Math.random() - 0.5) * 70, vy: 30 + Math.random() * 55,
+        life: 0.32, maxLife: 0.32, col: i < 3 ? '#12ffe8' : '#ffd0d2', sz: 1.4 + Math.random() * 2, grav: 45 });
+    }
+  }
+  function landPuff() {
+    for (let i = 0; i < 9; i++) {
+      const side = i < 4 ? -1 : 1;
+      particles.push({ x: heroScreenX() + HW / 2 + side * (2 + Math.random() * 10), y: hero.y + HH,
+        vx: side * (40 + Math.random() * 80), vy: -(6 + Math.random() * 22),
+        life: 0.3, maxLife: 0.3, col: '#ffd0d2', sz: 1.4 + Math.random() * 2.2, grav: 150 });
     }
   }
   function floatText(x, y, text, col) { floats.push({ x, y, text, col, life: 1.1 }); }
@@ -593,32 +816,64 @@
   function heroScreenX() { return hero.wx - scrollX; }
 
   // ── Start / init ────────────────────────────────────────────────
-  function seedWorld() {
+  function resetWorld() {
     platforms = []; coins = []; enemies = []; particles = []; floats = []; shots = [];
     scrollX = 0; worldCursor = 0; groundY = LEVELS_Y[0];
-    // guaranteed safe runway at the start
-    platforms.push({ x: 0, w: 520, y: groundY });
+    platforms.push({ x: 0, w: 520, y: groundY });   // guaranteed safe start runway
     worldCursor = 520;
+  }
+
+  // ENDLESS: procedural, generated incrementally as the camera advances.
+  function seedWorld() {
+    finite = false; finishX = Infinity; finishFlag = null;
+    rng = Math.random; genPool = null; genDensityBase = 0.5; genCoinProb = 0.7; genGapProb = 0.72;
+    resetWorld();
     ensureWorld();
   }
 
-  function startGame() {
-    seedWorld();
-    score = 0; coinCount = 0; maxProgress = 0; bonusScore = 0;
+  // LEVEL: fully built up-front from a fixed seed → identical layout every time, with a finish flag.
+  function buildLevel(spec) {
+    finite = true;
+    rng = mulberry32(spec.seed);
+    genPool = spec.types; genDensityBase = spec.density; genCoinProb = spec.coin; genGapProb = spec.gapProb;
+    resetWorld();
+    while (worldCursor < spec.len) genPlatform();
+    // Solid, flat finishing platform + goal flag on the far side of the last stretch.
+    const fx = worldCursor;
+    platforms.push({ x: fx, w: 420, y: groundY, finish: true });
+    finishFlag = { x: fx + 120, y: groundY };
+    finishX = fx + 120;                              // reaching this x = LEVEL COMPLETE
+  }
+
+  function startGame(mode, dIdx) {
+    gameMode = mode;
+    dangerIdx = Math.max(0, Math.min(DANGERS.length - 1, dIdx));
+    diff = DANGERS[dangerIdx];
+    maxHp = diff.hearts;
+    levelSpec = mode === 'endless' ? null : LEVELS.find(l => l.id === mode) || null;
+    theme = levelSpec ? levelSpec.theme : DEFAULT_THEME;
+
+    if (levelSpec) buildLevel(levelSpec); else seedWorld();
+
+    score = 0; coinCount = 0; maxProgress = 0; bonusScore = 0; elapsed = 0;
     scrollX = 0;
     shake = 0; flash = 0; flashCol = '#ff5a5f'; nextHeal = HEAL_STEP;
     hero = {
-      wx: HERO_HOME, y: groundY - HH, vy: 0,
+      wx: HERO_HOME, y: LEVELS_Y[0] - HH, vy: 0,
       onGround: true, jumps: 2, maxJumps: 2, trail: [], run: 0, blink: 0,
-      hp: MAX_HP, inv: 0, face: 1, moving: false, breathe: 0,
+      hp: maxHp, inv: 0, face: 1, moving: false, breathe: 0, squash: 0,
     };
     held.left = held.right = false;
     state = 'playing';
     lastT = performance.now();
+    try { localStorage.setItem('nr_sel_mode', mode); localStorage.setItem('nr_sel_danger', String(dangerIdx)); } catch (e) {}
+    syncUI();
   }
 
   // ── Update ──────────────────────────────────────────────────────
-  function currentScore() { return Math.floor(maxProgress / 12) + coinCount * COIN_VAL + bonusScore; }
+  // base score drives heal cadence; final score applies the danger multiplier
+  function baseScore() { return Math.floor(maxProgress / 12) + coinCount * COIN_VAL + bonusScore; }
+  function currentScore() { return Math.round(baseScore() * (diff ? diff.mult : 1)); }
 
   function hurt(e) {
     hero.hp--;
@@ -642,6 +897,27 @@
     hero.dead = true;
     state = 'gameover';
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: fin } }));
+    showPostGame();
+  }
+
+  function levelComplete() {
+    if (state !== 'playing') return;
+    const fin = currentScore();
+    if (fin > best) { best = fin; try { localStorage.setItem('nr_best', best); } catch (e) {} }
+    // persist per-level best score + best (lowest) time
+    if (levelSpec) {
+      try {
+        const bs = +(localStorage.getItem('nr_lb_' + levelSpec.id) || 0);
+        if (fin > bs) localStorage.setItem('nr_lb_' + levelSpec.id, String(fin));
+        const bt = +(localStorage.getItem('nr_lt_' + levelSpec.id) || 0);
+        if (!bt || elapsed < bt) localStorage.setItem('nr_lt_' + levelSpec.id, elapsed.toFixed(2));
+      } catch (e) {}
+    }
+    for (let i = 0; i < 3; i++) burst(heroScreenX() + HW / 2, hero.y + HH / 2, i ? '#ffd24a' : '#12ffe8', 22, 150);
+    flash = 0.8; flashCol = '#12ffe8'; shake = 10;
+    state = 'levelcomplete';
+    window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: fin } }));
+    showPostGame();
   }
 
   function update(dt) {
@@ -659,9 +935,14 @@
     // so the walk cycle freezes when idle or shoved against the wall
     hero.moving = (held.left || held.right) && Math.abs(hero.wx - prevWx) > 0.05;
 
+    elapsed += dt;   // level timer
+
     // furthest rightward progress drives score (standing still earns nothing)
     maxProgress = Math.max(maxProgress, hero.wx - HERO_HOME);
     score = currentScore();
+
+    // reached the goal flag → LEVEL COMPLETE
+    if (finite && hero.wx + HW / 2 >= finishX) { levelComplete(); return; }
 
     // camera follows the hero, keeping them inside a comfortable window; never past world start
     const heroSx = hero.wx - scrollX;
@@ -673,8 +954,8 @@
 
     // invulnerability window ticks down; regen a heart at score milestones
     if (hero.inv > 0) hero.inv = Math.max(0, hero.inv - dt);
-    if (score >= nextHeal) {
-      if (hero.hp < MAX_HP) {
+    if (baseScore() >= nextHeal) {
+      if (hero.hp < maxHp) {
         hero.hp++;
         floatText(heroScreenX() + HW / 2, hero.y - 12, '+1 HEART', '#ff8f92');
       }
@@ -691,19 +972,17 @@
 
     // platform collision — land when falling onto a platform under hero centre
     const cx = hero.wx + HW / 2;
+    const wasGround = hero.onGround;
     hero.onGround = false;
-    let landed = false;
     for (const p of platforms) {
       if (cx < p.x || cx > p.x + p.w) continue;
       if (hero.vy >= 0 && prevBottom <= p.y + 2 && hero.y + HH >= p.y) {
+        if (!wasGround && hero.vy > 4) { hero.squash = Math.min(1, hero.vy / 15); landPuff(); }  // impact squash + dust
         hero.y = p.y - HH; hero.vy = 0; hero.onGround = true;
-        hero.jumps = hero.maxJumps; landed = true; break;
+        hero.jumps = hero.maxJumps; break;
       }
     }
-    if (!landed) {
-      // if standing but no platform under centre, start falling
-      // (handled naturally next frame; nothing to do)
-    }
+    hero.squash = Math.max(0, (hero.squash || 0) - dt * 4.5);   // squash relaxes over time
 
     // fell into a pit
     if (hero.y > H + 40) { die('pit'); return; }
@@ -763,53 +1042,185 @@
   // ── Draw helpers ────────────────────────────────────────────────
   function glow(col, blur) { ctx.shadowColor = col; ctx.shadowBlur = blur; }
   function noGlow() { ctx.shadowBlur = 0; }
+  function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  function drawFinish() {
+    if (!finishFlag) return;
+    const x = finishFlag.x - scrollX, gy = finishFlag.y;
+    if (x < -80 || x > W + 80) return;
+    const t = performance.now() / 1000;
+    const H0 = 156;                                    // flag height
+
+    // soft glowing portal beam behind the pole
+    const beam = ctx.createLinearGradient(x, gy - H0, x, gy);
+    beam.addColorStop(0, hexA('#12ffe8', 0.02));
+    beam.addColorStop(1, hexA('#12ffe8', 0.16 + 0.05 * Math.sin(t * 3)));
+    ctx.fillStyle = beam; ctx.fillRect(x - 16, gy - H0, 32, H0);
+
+    // ground burst ring at the base
+    glow('#12ffe8', 18); ctx.strokeStyle = hexA('#12ffe8', 0.5); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x, gy - 1, 20, 5, 0, 0, Math.PI * 2); ctx.stroke(); noGlow();
+
+    // glowing pole with a light bulb finial
+    glow('#12ffe8', 10);
+    ctx.fillStyle = '#eafffb'; ctx.fillRect(x - 2, gy - H0, 4, H0);
+    ctx.beginPath(); ctx.arc(x, gy - H0, 5, 0, Math.PI * 2); ctx.fill();
+    noGlow();
+
+    // clean waving pennant (smooth triangle) with a checkered leading band
+    ctx.save();
+    glow('#12ffe8', 14);
+    const wv = Math.sin(t * 3) * 5, wv2 = Math.sin(t * 3 + 1) * 5;
+    const flagGrad = ctx.createLinearGradient(x, 0, x + 62, 0);
+    flagGrad.addColorStop(0, '#12ffe8'); flagGrad.addColorStop(1, hexA('#12ffe8', 0.45));
+    ctx.fillStyle = flagGrad;
+    ctx.beginPath();
+    ctx.moveTo(x + 2, gy - H0 + 4);
+    ctx.quadraticCurveTo(x + 34, gy - H0 - 2 + wv, x + 62, gy - H0 + 16 + wv2);
+    ctx.quadraticCurveTo(x + 34, gy - H0 + 26 + wv, x + 2, gy - H0 + 40);
+    ctx.closePath(); ctx.fill();
+    noGlow();
+    // checkered leading band near the pole (clean 2 rows)
+    ctx.fillStyle = 'rgba(6,26,26,0.85)';
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      if ((r + c) % 2) continue;
+      ctx.fillRect(x + 3 + c * 8, gy - H0 + 6 + r * 10 + wv * 0.3, 8, 10);
+    }
+    ctx.restore();
+
+    // "FINISH" glow label
+    glow('#12ffe8', 14); ctx.fillStyle = '#eafffb';
+    ctx.font = 'bold 18px "Bebas Neue", cursive';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText('FINISH', x, gy - H0 - 12);
+    noGlow();
+  }
 
   function drawBg() {
-    // gradient night sky
+    const now = performance.now() / 1000;
+
+    // themed vertical sky (deep top → magenta mid → near-black bottom)
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#0b0518');
-    g.addColorStop(0.55, '#12071f');
-    g.addColorStop(1, '#1a0a22');
+    g.addColorStop(0, theme.top);
+    g.addColorStop(0.5, theme.mid);
+    g.addColorStop(1, theme.bot);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-    // stars
+    // big soft accent halo high in the sky (atmosphere)
+    const halo = ctx.createRadialGradient(W - 120, 96, 8, W - 120, 96, 280);
+    halo.addColorStop(0, hexA(theme.accent, 0.32));
+    halo.addColorStop(0.5, hexA(theme.accent, 0.1));
+    halo.addColorStop(1, hexA(theme.accent, 0));
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H * 0.85);
+
+    // twinkling stars
+    ctx.fillStyle = '#fff';
     for (const s of STARS) {
       const sx = ((s.x - scrollX * s.p) % W + W) % W;
-      ctx.globalAlpha = s.a; ctx.fillStyle = '#fff';
+      ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(now * s.tws + s.tw));
       ctx.fillRect(sx, s.y, s.r, s.r);
     }
     ctx.globalAlpha = 1;
 
-    // moon glow
-    glow('#ff5a5f', 40);
-    ctx.fillStyle = 'rgba(255,120,120,0.14)';
-    ctx.beginPath(); ctx.arc(W - 120, 90, 46, 0, Math.PI * 2); ctx.fill();
-    noGlow();
+    // neon moon/sun: glowing disc with bright core + ring
+    const mx = W - 120, my = 96;
+    glow(theme.accent, 46); ctx.fillStyle = hexA(theme.accent, 0.16);
+    ctx.beginPath(); ctx.arc(mx, my, 50, 0, Math.PI * 2); ctx.fill(); noGlow();
+    const md = ctx.createRadialGradient(mx - 10, my - 10, 4, mx, my, 46);
+    md.addColorStop(0, '#fff'); md.addColorStop(0.5, hexA(theme.accent, 0.85)); md.addColorStop(1, hexA(theme.accent, 0.25));
+    ctx.fillStyle = md; ctx.beginPath(); ctx.arc(mx, my, 44, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = hexA('#ffffff', 0.25); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(mx, my, 52, 0, Math.PI * 2); ctx.stroke();
 
-    drawSkyline(SKY_FAR, 0.18, '#1e0f33', '#3a1f5c', 0.5);
-    drawSkyline(SKY_NEAR, 0.42, '#170a26', '#2a1145', 0.85);
+    // drifting fog bands
+    for (const f of FOG) {
+      const fx = ((f.off - scrollX * 0.12 - now * f.spd) % (W + f.r * 2) + W + f.r * 2) % (W + f.r * 2) - f.r;
+      const fg = ctx.createRadialGradient(fx, f.y, 0, fx, f.y, f.r);
+      fg.addColorStop(0, hexA(theme.accent, f.a)); fg.addColorStop(1, hexA(theme.accent, 0));
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(fx, f.y, f.r, f.r * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // parallax skyline: far → mid → near (windows + signs), then dark foreground silhouettes
+    drawSkyline(SKY_FAR, 0.14, '#160b26', 0.42, now);
+    drawSkyline(SKY_MID, 0.28, '#1b0d2e', 0.62, now);
+    drawSkyline(SKY_NEAR, 0.46, '#22103a', 0.85, now);
+
+    // stronger horizon neon glow just above the play area
+    const hg = ctx.createLinearGradient(0, H - 170, 0, H - 20);
+    hg.addColorStop(0, hexA(theme.accent, 0)); hg.addColorStop(1, hexA(theme.accent, 0.2));
+    ctx.fillStyle = hg; ctx.fillRect(0, H - 170, W, 150);
+
+    drawForeground(SKY_FORE, 0.72);
+
+    // ambient neon bounce along the very bottom (ground light)
+    const amb = ctx.createLinearGradient(0, H - 46, 0, H);
+    amb.addColorStop(0, hexA(theme.accent, 0)); amb.addColorStop(1, hexA(theme.accent, 0.16));
+    ctx.fillStyle = amb; ctx.fillRect(0, H - 46, W, 46);
   }
 
-  function drawSkyline(sky, par, body, edge, alpha) {
+  function drawSkyline(sky, par, body, alpha, now) {
     const off = (scrollX * par) % sky.span;
+    const light = hexA(theme.accent, 0.55);
+    const edge = hexA(theme.accent, 0.5);
     ctx.globalAlpha = alpha;
     for (let base = -sky.span; base < W + sky.span; base += sky.span) {
       for (const b of sky.list) {
         const x = base + b.x - off;
         if (x + b.w < -4 || x > W + 4) continue;
-        const y = H - 78 - b.h;
+        const y = H - 88 - b.h;
         ctx.fillStyle = body;
-        ctx.fillRect(x, y, b.w, b.h + 78);
+        ctx.fillRect(x, y, b.w, b.h + 88);
         // neon roof edge
         ctx.fillStyle = edge;
-        ctx.fillRect(x, y, b.w, 3);
-        // coral window lights
-        ctx.fillStyle = 'rgba(255,90,95,0.5)';
+        ctx.fillRect(x, y, b.w, 2);
+        // window lights (some flicker off)
+        ctx.fillStyle = light;
         const cols = Math.max(1, Math.floor(b.w / 14));
         const rows = Math.max(1, Math.floor(b.h / 20));
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
           if (((r * 7 + c * 3 + Math.floor(b.seed * 20)) % 5) !== 0) continue;
+          if (Math.sin(now * b.flick + r * 2 + c) < -0.75) continue;   // occasional flicker-off
           ctx.fillRect(x + 5 + c * 14, y + 8 + r * 20, 4, 6);
+        }
+        // rooftop neon sign
+        if (b.sign) {
+          const sc = b.signC || theme.accent;
+          const pulse = 0.5 + 0.5 * Math.sin(now * 3 + b.seed * 10);
+          ctx.globalAlpha = alpha * (0.4 + 0.6 * pulse);
+          glow(sc, 8); ctx.fillStyle = sc;
+          ctx.fillRect(x + b.w * 0.5 - 5, y - 10, 3, 10);
+          ctx.fillRect(x + b.w * 0.5 - 6, y - 12, 12, 3);
+          noGlow(); ctx.globalAlpha = alpha;
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawForeground(sky, par) {
+    const off = (scrollX * par) % sky.span;
+    ctx.globalAlpha = 0.95;
+    for (let base = -sky.span; base < W + sky.span; base += sky.span) {
+      for (const b of sky.list) {
+        const x = base + b.x - off;
+        if (x + b.w < -4 || x > W + 4) continue;
+        const y = H - 60 - b.h;
+        // dark, but tinted with a vertical gradient (not a pure-black void)
+        const bg = ctx.createLinearGradient(0, y, 0, H);
+        bg.addColorStop(0, '#140a22'); bg.addColorStop(1, '#080411');
+        ctx.fillStyle = bg; ctx.fillRect(x, y, b.w, b.h + 60);
+        // glowing rim light along the top + near edge
+        ctx.fillStyle = hexA(theme.accent, 0.5); ctx.fillRect(x, y, b.w, 1.6);
+        ctx.fillStyle = hexA(theme.accent, 0.22); ctx.fillRect(x, y, 2, b.h + 60);
+        // sparse dim windows
+        ctx.fillStyle = hexA(theme.accent, 0.22);
+        const cols = Math.max(1, Math.floor(b.w / 22));
+        for (let r = 0; r < 5; r++) for (let c = 0; c < cols; c++) {
+          if (((r * 3 + c * 5 + Math.floor(b.seed * 30)) % 6) !== 0) continue;
+          ctx.fillRect(x + 6 + c * 22, y + 12 + r * 26, 4, 7);
         }
       }
     }
@@ -817,29 +1228,53 @@
   }
 
   function drawPlatforms() {
+    const now = performance.now() / 1000;
     for (const p of platforms) {
       const x = p.x - scrollX;
       if (x > W || x + p.w < 0) continue;
-      const h = H - p.y;
-      // body
-      ctx.fillStyle = '#140a1e';
-      ctx.fillRect(x, p.y, p.w, h);
-      // inner grid
-      ctx.strokeStyle = 'rgba(255,90,95,0.07)';
-      ctx.lineWidth = 1;
-      for (let gx = x + 24; gx < x + p.w; gx += 24) {
-        ctx.beginPath(); ctx.moveTo(gx, p.y + 4); ctx.lineTo(gx, H); ctx.stroke();
+      const top = p.y, h = H - top;
+
+      // body — lit vertical gradient face (never pure black)
+      const bg = ctx.createLinearGradient(0, top, 0, H);
+      bg.addColorStop(0, '#2a1a3e');
+      bg.addColorStop(0.45, '#180d29');
+      bg.addColorStop(1, '#0c0716');
+      ctx.fillStyle = bg; ctx.fillRect(x, top, p.w, h);
+
+      // structural panel lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+      for (let gx = x + 26; gx < x + p.w - 2; gx += 26) { ctx.beginPath(); ctx.moveTo(gx, top + 4); ctx.lineTo(gx, H); ctx.stroke(); }
+      ctx.strokeStyle = hexA(theme.accent, 0.09);
+      for (let gy = top + 22; gy < H; gy += 22) { ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + p.w, gy); ctx.stroke(); }
+
+      // lit / flickering windows down the face
+      const cols = Math.max(1, Math.floor(p.w / 22)), cellW = p.w / cols;
+      for (let r = 0; top + 14 + r * 20 < H - 6; r++) {
+        for (let c = 0; c < cols; c++) {
+          if ((r * 5 + c * 3 + Math.floor(p.x * 0.5)) % 7 > 3) continue;
+          if (Math.sin(now * (2 + (c % 3)) + r * 1.7 + c + p.x) < -0.72) continue;
+          ctx.fillStyle = hexA(((r + c) % 5 === 0) ? '#12ffe8' : theme.accent, 0.62);
+          ctx.fillRect(x + c * cellW + cellW * 0.28, top + 14 + r * 20, Math.max(3, cellW * 0.42), 8);
+        }
       }
-      for (let gy = p.y + 22; gy < H; gy += 22) {
-        ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + p.w, gy); ctx.stroke();
-      }
-      // glowing coral top edge
-      glow('#ff5a5f', 16);
-      ctx.fillStyle = '#ff5a5f';
-      ctx.fillRect(x, p.y - 1, p.w, 4);
+
+      // side neon edge outlines (coral near, cyan far)
+      ctx.fillStyle = hexA(theme.accent, 0.3); ctx.fillRect(x, top, 1.6, h);
+      ctx.fillStyle = hexA('#12ffe8', 0.16); ctx.fillRect(x + p.w - 1.6, top, 1.6, h);
+
+      // light spill under the lit cap
+      const rg = ctx.createLinearGradient(0, top, 0, top + 44);
+      rg.addColorStop(0, hexA(theme.accent, 0.3)); rg.addColorStop(1, hexA(theme.accent, 0));
+      ctx.fillStyle = rg; ctx.fillRect(x, top, p.w, 44);
+
+      // bright standable neon CAP (clearly reads as a platform)
+      glow(theme.accent, 20);
+      ctx.fillStyle = theme.accent; ctx.fillRect(x, top - 3, p.w, 6);
       noGlow();
-      ctx.fillStyle = 'rgba(255,160,163,0.9)';
-      ctx.fillRect(x, p.y - 1, p.w, 1.4);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(x, top - 3, p.w, 1.8);
+      // lit end-caps
+      ctx.fillStyle = hexA('#12ffe8', 0.9);
+      ctx.fillRect(x, top - 5, 4, 8); ctx.fillRect(x + p.w - 4, top - 5, 4, 8);
     }
     // left boundary wall at world x=0 (glowing barrier the hero can't pass)
     const wx = -scrollX;
@@ -1039,6 +1474,14 @@
     }
   }
 
+  // draw a 2-segment limb (upper + lower) with rounded joints
+  function limb(x0, y0, x1, y1, x2, y2, wUp, wLo, col, gl) {
+    glow(col, gl); ctx.strokeStyle = col; ctx.lineCap = 'round';
+    ctx.lineWidth = wUp; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.lineWidth = wLo; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    noGlow();
+  }
+
   function drawHero() {
     const x = heroScreenX(), y = hero.y;
     const cx = x + HW / 2;
@@ -1046,53 +1489,99 @@
     // blink while invulnerable after a hit
     if (hero.inv > 0 && Math.floor(hero.inv * 18) % 2 === 0) return;
 
-    // ghost trail
+    // ── energy ghost trail ──
     for (let i = 0; i < hero.trail.length; i++) {
       const fr = i / hero.trail.length;
-      ctx.globalAlpha = fr * 0.26;
-      glow('#ff5a5f', 10);
-      ctx.fillStyle = '#ff5a5f';
-      ctx.beginPath(); ctx.arc(hero.trail[i].x, hero.trail[i].y, 10 * fr, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = fr * 0.22;
+      glow('#ff5a5f', 10); ctx.fillStyle = '#ff5a5f';
+      ctx.beginPath(); ctx.arc(hero.trail[i].x, hero.trail[i].y, 9 * fr, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1; noGlow();
 
+    // contact shadow on the ground (fades with height)
+    if (hero.y + HH < H) {
+      ctx.globalAlpha = hero.onGround ? 0.3 : 0.14;
+      ctx.fillStyle = '#050208';
+      ctx.beginPath(); ctx.ellipse(cx, y + HH + 1, HW * 0.72, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    const now = performance.now() / 1000;
+    const air = !hero.onGround;
+    const running = hero.onGround && hero.moving;
+    const rising = hero.vy < -1;
+    const p = hero.run;
+    const s = Math.sin(p), foot = HH / 2 - 1;       // ~17
+    const legCol = '#ff8f92', armCol = '#ff7a80', bodyCol = '#ff5a5f';
+
     ctx.save();
-    // subtle breathing bob only while standing idle
-    const idle = hero.onGround && !hero.moving;
-    const idleBob = idle ? Math.sin(hero.breathe * 2.2) * 0.8 : 0;
-    ctx.translate(cx, y + HH / 2 + idleBob);
+    const idleBob = (hero.onGround && !hero.moving) ? Math.sin(hero.breathe * 2.2) * 0.8 : 0;
+    const PRES = 1.16;                                 // visual presence scale — collision box (HW/HH) unchanged
+    ctx.translate(cx, y + HH - (HH / 2) * PRES + idleBob);   // anchor at the feet so they stay on the platform
     const f = hero.face < 0 ? -1 : 1;
-    ctx.scale(f, 1);                     // face the direction of travel
-    const tilt = Math.max(-0.28, Math.min(0.28, hero.vy * 0.02)) * f;
+    ctx.scale(f * PRES, PRES);                         // +x is now "forward"
+    // squash/stretch: squash on landing, stretch while falling fast
+    const stretch = air ? Math.max(-0.05, Math.min(0.12, hero.vy * 0.011)) : 0;
+    ctx.scale(1 + hero.squash * 0.22 - stretch * 0.5, 1 - hero.squash * 0.22 + stretch);
+    // lean forward when running, plus air tilt
+    const tilt = (running ? 0.14 : 0) + Math.max(-0.24, Math.min(0.24, hero.vy * 0.016));
     ctx.rotate(tilt);
 
-    // legs: stride only while actually walking; airborne = jump pose; idle = still (neutral)
-    const swing = !hero.onGround ? 5 : (hero.moving ? Math.sin(hero.run) * 7 : 0);
-    glow('#ff5a5f', 8);
-    ctx.strokeStyle = '#ff8f92'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-3, HH / 2 - 12); ctx.lineTo(-3 - swing, HH / 2 - 1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(4, HH / 2 - 12); ctx.lineTo(4 + swing, HH / 2 - 1); ctx.stroke();
-    noGlow();
+    // ── trailing energy scarf (behind, waves with motion) ──
+    ctx.strokeStyle = hexA('#12ffe8', 0.85); ctx.lineCap = 'round'; ctx.lineWidth = 3;
+    glow('#12ffe8', 8); ctx.beginPath(); ctx.moveTo(-3, -HH / 2 + 9);
+    for (let i = 1; i <= 4; i++) {
+      const xx = -3 - i * 5;
+      const yy = -HH / 2 + 9 + Math.sin(now * 6 + i * 0.9 + p) * 3 + (air ? -i * 1.6 : i * 0.4);
+      ctx.lineTo(xx, yy);
+    }
+    ctx.stroke(); noGlow();
 
-    // body — glowing coral capsule
-    glow('#ff5a5f', 20);
-    ctx.fillStyle = '#ff5a5f';
-    roundRect(-HW / 2 + 3, -HH / 2 + 4, HW - 6, HH - 16, 8); ctx.fill();
-    noGlow();
-    // lighter core stripe
-    ctx.fillStyle = '#ff9fa2';
-    roundRect(-HW / 2 + 6, -HH / 2 + 8, HW - 16, HH - 24, 5); ctx.fill();
+    // ── legs (behind body drawn first) ──
+    if (air) {
+      const tuck = rising ? 1 : 0;
+      limb(-3, 5, -5, 11 - 3 * tuck, -7, 16 - 7 * tuck, 5, 4, legCol, 6);        // back leg
+      limb(3, 5, 7, 10 - tuck, 10, 15 - 5 * tuck, 5, 4, legCol, 6);              // front leg (raised)
+    } else if (running) {
+      limb(-2, 5, -2 - s * 7, 11, -2 - s * 12, foot, 5, 4, legCol, 6);
+      limb(2, 5, 2 + s * 7, 11, 2 + s * 12, foot, 5, 4, legCol, 6);
+    } else {
+      limb(-2, 5, -3, 11, -3, foot, 5, 4, legCol, 5);
+      limb(2, 5, 3, 11, 3, foot, 5, 4, legCol, 5);
+    }
 
-    // head
-    glow('#ff5a5f', 14);
-    ctx.fillStyle = '#ffd0d2';
-    ctx.beginPath(); ctx.arc(2, -HH / 2 + 2, 8, 0, Math.PI * 2); ctx.fill();
-    noGlow();
-    // visor (cyan accent for contrast)
-    ctx.fillStyle = '#12ffe8';
-    glow('#12ffe8', 10);
-    roundRect(2, -HH / 2 - 2, 8, 5, 2); ctx.fill();
-    noGlow();
+    // ── back arm ──
+    if (air) limb(-2, -HH / 2 + 12, -7, rising ? -HH / 2 + 5 : 0, -11, rising ? -HH / 2 - 2 : 6, 4, 3, armCol, 5);
+    else if (running) limb(-2, -HH / 2 + 12, -6 + s * 6, -2, -9 + s * 9, 2, 4, 3, armCol, 5);
+    else limb(-2, -HH / 2 + 12, -6, -1, -7, 6 + idleBob * 0.5, 4, 3, armCol, 4);
+
+    // ── torso (glowing coral, tapered) ──
+    glow(bodyCol, 18); ctx.fillStyle = bodyCol;
+    ctx.beginPath();
+    ctx.moveTo(-7, -HH / 2 + 8); ctx.lineTo(7, -HH / 2 + 8);
+    ctx.quadraticCurveTo(9, -HH / 2 + 14, 6, 6);
+    ctx.lineTo(-6, 6); ctx.quadraticCurveTo(-9, -HH / 2 + 14, -7, -HH / 2 + 8);
+    ctx.closePath(); ctx.fill(); noGlow();
+    // chest core light
+    ctx.fillStyle = '#ffb9bb'; roundRect(-4, -HH / 2 + 12, 8, 10, 3); ctx.fill();
+    glow('#12ffe8', 8); ctx.fillStyle = '#8ffff4';
+    ctx.beginPath(); ctx.arc(0, -HH / 2 + 15, 2, 0, Math.PI * 2); ctx.fill(); noGlow();
+
+    // ── head + cyan visor ──
+    glow(bodyCol, 12); ctx.fillStyle = '#ffd0d2';
+    ctx.beginPath(); ctx.arc(1.5, -HH / 2 + 1, 7.5, 0, Math.PI * 2); ctx.fill(); noGlow();
+    // helmet crest
+    ctx.fillStyle = bodyCol;
+    ctx.beginPath(); ctx.arc(1.5, -HH / 2 + 1, 7.5, Math.PI * 1.15, Math.PI * 2.05); ctx.fill();
+    // visor
+    glow('#12ffe8', 10); ctx.fillStyle = '#12ffe8';
+    roundRect(3, -HH / 2 - 2, 8, 4.5, 2); ctx.fill(); noGlow();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(8, -HH / 2 - 1.5, 2, 1.5);
+
+    // ── front arm (over torso) ──
+    if (air) limb(2, -HH / 2 + 12, 8, rising ? -HH / 2 + 4 : 4, 12, rising ? -HH / 2 - 3 : 10, 4, 3, armCol, 5);
+    else if (running) limb(2, -HH / 2 + 12, 6 - s * 6, -2, 9 - s * 9, 2, 4, 3, armCol, 5);
+    else limb(2, -HH / 2 + 12, 6, -1, 7, 6 - idleBob * 0.5, 4, 3, armCol, 4);
 
     ctx.restore();
   }
@@ -1148,65 +1637,52 @@
     ctx.globalAlpha = 1;
   }
 
+  function fmtTime(s) {
+    if (s < 60) return s.toFixed(1) + 's';
+    const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(1).padStart(4, '0');
+  }
+
   function drawHUD() {
     // ── Health hearts — top-left ──
-    for (let i = 0; i < MAX_HP; i++) {
-      drawHeart(24 + i * 22, 18, 15, i < hero.hp);
-    }
+    for (let i = 0; i < maxHp; i++) drawHeart(24 + i * 22, 18, 15, i < hero.hp);
 
     // Score (below hearts)
-    glow('#ff5a5f', 12); ctx.fillStyle = '#ff5a5f';
+    glow(theme.accent, 12); ctx.fillStyle = theme.accent;
     ctx.font = 'bold 32px "Bebas Neue", cursive';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(score.toLocaleString(), 16, 32);
     noGlow();
 
     // coins tally (below score)
-    ctx.fillStyle = '#ffd24a';
-    glow('#ffd24a', 8);
-    ctx.beginPath(); ctx.arc(23, 82, 6, 0, Math.PI * 2); ctx.fill();
-    noGlow();
+    ctx.fillStyle = '#ffd24a'; glow('#ffd24a', 8);
+    ctx.beginPath(); ctx.arc(23, 82, 6, 0, Math.PI * 2); ctx.fill(); noGlow();
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 16px "Bebas Neue", cursive';
     ctx.fillText('x ' + coinCount, 34, 73);
 
-    // best + distance travelled (top-right)
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.font = '11px Barlow'; ctx.textAlign = 'right';
-    ctx.fillText('BEST  ' + best.toLocaleString(), W - 16, 14);
-    glow('#ff8f92', 8); ctx.fillStyle = '#ff8f92';
-    ctx.font = 'bold 18px "Bebas Neue", cursive';
-    ctx.fillText(Math.floor(maxProgress / 40) + ' M', W - 16, 28);
-    noGlow();
-  }
+    // mode + danger tier (top centre)
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '11px Barlow';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText((levelSpec ? levelSpec.name : 'ENDLESS') + '   ·   DANGER ' + dangerIdx +
+                 ' ' + diff.name + '   ·   x' + diff.mult.toFixed(1), W / 2, 10);
 
-  function drawOverlay() {
-    ctx.fillStyle = 'rgba(7,4,14,0.82)';
-    ctx.fillRect(0, 0, W, H);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-    glow('#ff5a5f', 34); ctx.fillStyle = '#ff5a5f';
-    ctx.font = 'bold 82px "Bebas Neue", cursive';
-    ctx.fillText(state === 'menu' ? 'NEON RUNNER' : 'WASTED', W / 2, H / 2 - 66);
-    noGlow();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.font = '15px Barlow';
-    if (state === 'menu') {
-      ctx.fillText('Move with A / D or ← →   ·   Space / ↑ to jump (double-jump)', W / 2, H / 2 - 6);
-      ctx.fillText('Explore right — leap pits, grab coins, stomp the drones.', W / 2, H / 2 + 16);
+    // top-right: level timer + finish progress, or endless best + distance
+    ctx.textAlign = 'right';
+    if (finite) {
+      glow('#12ffe8', 6); ctx.fillStyle = '#bff8f2';
+      ctx.font = 'bold 18px "Bebas Neue", cursive';
+      ctx.fillText(fmtTime(elapsed), W - 16, 24); noGlow();
+      const prog = Math.max(0, Math.min(1, (hero.wx - HERO_HOME) / (finishX - HERO_HOME)));
+      const bw = 130, bx = W - 16 - bw, by = 46;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bx, by, bw, 4);
+      glow('#12ffe8', 5); ctx.fillStyle = '#12ffe8'; ctx.fillRect(bx, by, bw * prog, 4); noGlow();
     } else {
-      ctx.fillStyle = '#ffd24a';
-      ctx.font = 'bold 26px "Bebas Neue", cursive';
-      ctx.fillText('SCORE  ' + score.toLocaleString() + '   ·   COINS  ' + coinCount, W / 2, H / 2 - 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '13px Barlow';
-      ctx.fillText('BEST  ' + best.toLocaleString(), W / 2, H / 2 + 24);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '11px Barlow';
+      ctx.fillText('BEST  ' + best.toLocaleString(), W - 16, 24);
+      glow('#ff8f92', 8); ctx.fillStyle = '#ff8f92';
+      ctx.font = 'bold 18px "Bebas Neue", cursive';
+      ctx.fillText(Math.floor(maxProgress / 40) + ' M', W - 16, 38); noGlow();
     }
-
-    glow('#ff5a5f', 10); ctx.fillStyle = '#ff5a5f';
-    ctx.font = 'bold 24px "Bebas Neue", cursive';
-    ctx.fillText(state === 'menu' ? 'TAP / SPACE TO START' : 'TAP / SPACE TO RETRY', W / 2, H / 2 + 70);
-    noGlow();
   }
 
   // ── Render frame ────────────────────────────────────────────────
@@ -1215,12 +1691,15 @@
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
     drawBg();
-    drawPlatforms();
-    drawCoins();
-    drawEnemies();
-    drawShots();
-    if (state === 'playing' || state === 'gameover') drawParticles();
-    if (state === 'playing') drawHero();
+    if (state !== 'select') {
+      drawPlatforms();
+      drawCoins();
+      drawFinish();
+      drawEnemies();
+      drawShots();
+      drawParticles();
+      if (state === 'playing') drawHero();
+    }
 
     if (flash > 0) {
       ctx.globalAlpha = flash * 0.4; ctx.fillStyle = flashCol;
@@ -1228,16 +1707,20 @@
     }
     ctx.restore();
 
-    if (state === 'playing' || state === 'gameover') drawHUD();
-    if (state === 'menu' || state === 'gameover') drawOverlay();
+    // static vignette + scanline overlay (one cheap drawImage)
+    ctx.drawImage(overlay, 0, 0);
+
+    if (state === 'playing' || state === 'gameover' || state === 'levelcomplete') drawHUD();
   }
 
-  // ── Safe pre-init so the menu isn't blank ───────────────────────
-  seedWorld();
+  // ── Safe pre-init so nothing is undefined before first game ──────
+  theme = DEFAULT_THEME; diff = DANGERS[1]; dangerIdx = 1; maxHp = MAX_HP;
+  finite = false; finishX = Infinity; finishFlag = null;
+  resetWorld();
   hero = { wx: HERO_HOME, y: LEVELS_Y[0] - HH, vy: 0, onGround: true,
            jumps: 2, maxJumps: 2, trail: [], run: 0, hp: MAX_HP, inv: 0, face: 1,
-           moving: false, breathe: 0 };
-  score = 0; coinCount = 0; maxProgress = 0; bonusScore = 0;
+           moving: false, breathe: 0, squash: 0 };
+  score = 0; coinCount = 0; maxProgress = 0; bonusScore = 0; elapsed = 0;
   shake = 0; flash = 0; flashCol = '#ff5a5f'; nextHeal = HEAL_STEP;
 
   // ── Loop ────────────────────────────────────────────────────────
@@ -1250,6 +1733,116 @@
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+
+  // ── Select screen + post-game (DOM overlays) ─────────────────────
+  let selCard = 0, selDanger = 1;
+  try { const m = localStorage.getItem('nr_sel_mode'); const idx = MODES.findIndex(x => x.id === m); if (idx >= 0) selCard = idx; } catch (e) {}
+  try { const d = +(localStorage.getItem('nr_sel_danger')); if (d >= 0 && d < DANGERS.length) selDanger = d; } catch (e) {}
+  let stripEl = null, cardEls = [];
+
+  function bestLabel(m) {
+    try {
+      if (m.id === 'endless') { const b = +(localStorage.getItem('nr_best') || 0); return b ? ('BEST ' + b.toLocaleString()) : 'NO SCORE YET'; }
+      const s = +(localStorage.getItem('nr_lb_' + m.id) || 0), t = +(localStorage.getItem('nr_lt_' + m.id) || 0);
+      return s ? ('BEST ' + s.toLocaleString() + (t ? ('  ·  ' + fmtTime(t)) : '')) : 'NOT CLEARED';
+    } catch (e) { return ''; }
+  }
+
+  function buildSelectUI() {
+    stripEl = document.getElementById('car-strip');
+    stripEl.innerHTML = MODES.map((m, i) =>
+      '<div class="card" data-i="' + i + '">' +
+        '<div class="card-tag">' + (m.id === 'endless' ? 'ENDLESS' : ('LEVEL ' + i)) + '</div>' +
+        '<div class="card-name">' + m.name + '</div>' +
+        '<div class="card-desc">' + m.desc + '</div>' +
+        '<div class="card-best" data-best="' + i + '"></div>' +
+      '</div>').join('');
+    cardEls = Array.from(stripEl.querySelectorAll('.card'));
+    cardEls.forEach(el => el.addEventListener('click', () => {
+      const i = +el.dataset.i; if (i === selCard) doStart(); else setCard(i);
+    }));
+    document.getElementById('car-left').addEventListener('click', () => cardStep(-1));
+    document.getElementById('car-right').addEventListener('click', () => cardStep(1));
+    // touch swipe on the carousel
+    let sx = null;
+    const cw = document.getElementById('carousel');
+    cw.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+    cw.addEventListener('touchend', e => {
+      if (sx == null) return;
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) > 36) cardStep(dx < 0 ? 1 : -1);
+      sx = null;
+    }, { passive: true });
+    // danger pips
+    const dg = document.getElementById('danger');
+    dg.innerHTML = DANGERS.map((d, i) => '<div class="pip" data-d="' + i + '">' + i + '</div>').join('');
+    Array.from(dg.querySelectorAll('.pip')).forEach(el => el.addEventListener('click', () => setDanger(+el.dataset.d)));
+    document.getElementById('start-btn').addEventListener('click', doStart);
+    document.getElementById('pg-retry').addEventListener('click', retry);
+    document.getElementById('pg-select').addEventListener('click', backToSelect);
+  }
+
+  function renderCarousel() {
+    if (!stripEl || !cardEls.length) return;
+    const cw = document.getElementById('carousel').clientWidth || 320;
+    const fc = cardEls[selCard];
+    // centre the focused card using its real layout position (gap-agnostic + responsive)
+    const tx = cw / 2 - (fc.offsetLeft + fc.offsetWidth / 2);
+    stripEl.style.transform = 'translateY(-50%) translateX(' + tx + 'px)';
+    cardEls.forEach((el, i) => {
+      el.classList.toggle('focus', i === selCard);
+      if (i !== selCard) el.style.opacity = Math.max(0.22, 0.62 - Math.abs(i - selCard) * 0.16);
+      const b = el.querySelector('.card-best'); if (b) b.textContent = bestLabel(MODES[i]);
+    });
+  }
+
+  function renderDanger() {
+    const dg = document.getElementById('danger'); if (!dg) return;
+    Array.from(dg.querySelectorAll('.pip')).forEach((el, i) => el.classList.toggle('on', i === selDanger));
+    const d = DANGERS[selDanger];
+    document.getElementById('danger-info').innerHTML =
+      '<b>DANGER ' + selDanger + ' · ' + d.name + '</b> — start with <b>' + d.hearts + '</b> hearts · ' +
+      'enemies ×' + d.spd.toFixed(2) + ' speed, ×' + d.density.toFixed(2) + ' density · ' +
+      'gaps ×' + d.gapF.toFixed(2) + ' · score <b>×' + d.mult.toFixed(1) + '</b>';
+  }
+
+  function clampCard(i) { return Math.max(0, Math.min(MODES.length - 1, i)); }
+  function setCard(i) { selCard = clampCard(i); renderCarousel(); }
+  function cardStep(dir) { setCard(selCard + dir); }
+  function setDanger(i) { selDanger = Math.max(0, Math.min(DANGERS.length - 1, i)); renderDanger(); }
+  function dangerStep(dir) { setDanger(selDanger + dir); }
+  function doStart() { startGame(MODES[selCard].id, selDanger); }
+  function retry() { startGame(gameMode, dangerIdx); }
+  function backToSelect() { theme = DEFAULT_THEME; finishFlag = null; finite = false; state = 'select'; syncUI(); }
+
+  function showPostGame() {
+    const win = state === 'levelcomplete';
+    const t = document.getElementById('pg-title');
+    t.textContent = win ? 'LEVEL COMPLETE' : 'WASTED';
+    t.className = win ? 'pg-title win' : 'pg-title';
+    const rows = ['SCORE <b>' + currentScore().toLocaleString() + '</b>',
+                  'COINS ' + coinCount + '   ·   DANGER ' + dangerIdx + ' ×' + diff.mult.toFixed(1)];
+    if (win) rows.push('TIME <b>' + fmtTime(elapsed) + '</b>');
+    rows.push('BEST ' + best.toLocaleString());
+    document.getElementById('pg-stats').innerHTML = rows.map(r => '<div>' + r + '</div>').join('');
+    syncUI();
+  }
+
+  function syncUI() {
+    document.getElementById('select').style.display = state === 'select' ? 'flex' : 'none';
+    document.getElementById('pg').style.display = (state === 'gameover' || state === 'levelcomplete') ? 'flex' : 'none';
+    const pad = document.getElementById('pad'); if (pad) pad.style.display = state === 'playing' ? '' : 'none';
+    const hint = document.getElementById('hint'); if (hint) hint.style.visibility = state === 'playing' ? 'visible' : 'hidden';
+    if (state === 'select') { renderCarousel(); renderDanger(); }
+  }
+
+  buildSelectUI();
+  window.addEventListener('resize', () => { if (state === 'select') renderCarousel(); });
+  // start on the select screen
+  state = 'select';
+  syncUI();
+  // render carousel once fonts/layout settle (offsetWidth needs layout)
+  requestAnimationFrame(() => { renderCarousel(); renderDanger(); });
 
   // expose current score for the floating trophy button
   window.__lbCurrentScore = () => currentScore();

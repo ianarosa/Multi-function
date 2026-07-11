@@ -2951,17 +2951,19 @@
   }
 
   // ── Neon Runner card preview ──────────────────────────────────
-  // Faithful mini-diorama of the real game (/platformer/): the glowing coral
-  // hero — coral capsule body, pink head, cyan visor, ghost trail — RUNS along
-  // scrolling neon platforms, arcs over the pits with a real gravity jump, grabs
-  // gold coins (pop + "+25") and stomps the odd hover-drone. Deterministic
-  // layout so it reads as gameplay, not a floating loop.
+  // Faithful mini-diorama of the redesigned game (/platformer/): the coral
+  // runner hero — helmet + cyan visor, tapered torso with a chest core, two-
+  // segment arms/legs in a run cycle, a trailing cyan energy scarf, coral glow +
+  // ghost trail — RUNS along neon platforms, arcs over pits with a real gravity
+  // jump, and grabs coins, all over a rich night-city backdrop (neon moon, drift
+  // fog, twinkling stars, multi-layer parallax skyline, platform reflection glow).
   const plCvs = document.getElementById('cv-platformer');
   const plCtx = plCvs ? plCvs.getContext('2d') : null;
   let plW, plH;
 
-  const PL_HW = 14, PL_HH = 20;     // hero size (scaled-down HW26 / HH36)
+  const PL_HW = 14, PL_HH = 20;     // hero collision box (scaled-down HW26 / HH36)
   const PL_G = 900, PL_JV = 430;    // gravity / jump velocity (px, s)
+  const PL_HSCALE = 0.59;           // draws the game-size (HH36) hero at box size
   // Cyclic, deterministic level script: platform width + elevation, how many
   // surface coins, whether a drone patrols, then a pit gap with an optional
   // reward-arc of coins over it.
@@ -2972,8 +2974,31 @@
     { w: 150, lvl: 0, coins: 3, drone: 0, gap: 58, arc: 0 },
     { w: 118, lvl: 0, coins: 2, drone: 1, gap: 64, arc: 1 }
   ];
-  const PL_SKY = Array.from({ length: 16 }, (_, i) => ({
-    x: i / 16, w: 0.05 + (i % 3) * 0.02, h: 0.20 + ((i * 5) % 4) * 0.07
+
+  // ── parallax skyline layers + atmosphere (built once; heights are px, tied to
+  // the fixed 190px preview height; x/width scale horizontally with the card) ──
+  function plMakeSky(n, hMin, hMax, wMin, wMax) {
+    const arr = []; let x = 0;
+    for (let i = 0; i < n; i++) {
+      const w = wMin + Math.random() * (wMax - wMin);
+      const hh = hMin + Math.random() * (hMax - hMin);
+      arr.push({ x, w, h: hh, seed: Math.random(),
+        sign: Math.random() < 0.3, signC: Math.random() < 0.5 ? '#12ffe8' : '#ff5a5f',
+        flick: 2 + Math.random() * 4 });
+      x += w + 4 + Math.random() * 16;
+    }
+    return { list: arr, span: x };
+  }
+  const PL_FAR  = plMakeSky(12, 26, 62, 26, 54);   // distant haze towers
+  const PL_NEAR = plMakeSky(9, 42, 96, 40, 78);    // lit near skyline
+  const PL_FORE = plMakeSky(6, 60, 120, 72, 130);  // dark foreground silhouettes
+  const PL_STARS = Array.from({ length: 28 }, () => ({
+    x: Math.random(), y: Math.random() * 0.58, r: Math.random() * 1.1 + 0.3,
+    a: 0.2 + Math.random() * 0.6, tw: Math.random() * 6.28, tws: 1.2 + Math.random() * 2.2
+  }));
+  const PL_FOG = Array.from({ length: 3 }, () => ({
+    y: 0.24 + Math.random() * 0.4, r: 70 + Math.random() * 90,
+    spd: 3 + Math.random() * 5, off: Math.random() * 900, a: 0.03 + Math.random() * 0.04
   }));
 
   let plPlats = [], plCoins = [], plDrones = [], plParts = [], plFloats = [];
@@ -3031,7 +3056,7 @@
     plAddArcCoins(plCursor + 6 * sx, introGap - 12 * sx, 2, introY);
     plCursor += introGap;
     while (plCursor < plW + 300 * sx) plGenNext();
-    plHero = { y: introY - PL_HH, vy: 0, onGround: true, jumps: 2, run: 0, trail: [], grabbed: 0 };
+    plHero = { y: introY - PL_HH, vy: 0, onGround: true, jumps: 2, run: 0, squash: 0, trail: [], grabbed: 0 };
     plInit = true;
   }
 
@@ -3049,7 +3074,7 @@
     if (!plCtx) return;
     if (!plInit) plResetWorld();
     const ctx = plCtx, W = plW, H = plH, sx = plSX();
-    const heroX = plHeroX(), h = plHero;
+    const heroX = plHeroX(), h = plHero, now = t / 1000;
     const speed = 94 * sx;
     const glow   = (c, b) => { ctx.shadowColor = c; ctx.shadowBlur = b; };
     const noGlow = () => { ctx.shadowBlur = 0; };
@@ -3092,7 +3117,7 @@
       h.y += h.vy * dt;
       if (h.vy > 0 && ground) {                   // land when falling onto a surface
         const surf = ground.y - PL_HH;
-        if (h.y >= surf) { h.y = surf; h.vy = 0; h.onGround = true; h.jumps = 2; }
+        if (h.y >= surf) { h.squash = Math.min(1, h.vy / 700); h.y = surf; h.vy = 0; h.onGround = true; h.jumps = 2; }
       }
       if (h.y > H + 40) {                          // safety: never truly pit-die here
         let np = null;
@@ -3100,6 +3125,7 @@
         if (np) { plScrollX = np.x + np.w * 0.35 - heroX - PL_HW / 2; h.y = np.y - PL_HH; h.vy = 0; h.onGround = true; h.jumps = 2; }
       }
     }
+    h.squash = Math.max(0, h.squash - dt * 4.5);   // landing squash relaxes
 
     // ghost-trail sample
     h.trail.push({ x: heroX + PL_HW / 2, y: h.y + PL_HH / 2 });
@@ -3145,29 +3171,91 @@
       if (f.life <= 0) plFloats.splice(i, 1);
     }
 
-    if (window.__NR_DEBUG) window.__nrHero = { y: h.y, vy: h.vy, g: h.onGround, grabbed: h.grabbed, sc: plScrollX, sx };
-
     // ── draw ────────────────────────────────────────────────────
+    const horizon = plLevelY(0);
+
+    // themed night sky
     const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#1a0712'); sky.addColorStop(0.6, '#12040c'); sky.addColorStop(1, '#070206');
+    sky.addColorStop(0, '#0b0518'); sky.addColorStop(0.5, '#160726'); sky.addColorStop(1, '#1a0a12');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
 
-    // parallax skyline behind the platforms
-    const horizon = plLevelY(0), skyOff = plScrollX * 0.16;
-    for (const b of PL_SKY) {
-      const bx = ((b.x * W - skyOff) % W + W) % W;
-      const bw = b.w * W, bh = b.h * H, by = horizon - bh;
-      for (const X of [bx, bx - W]) {
-        ctx.fillStyle = 'rgba(255,90,95,0.06)';
-        ctx.fillRect(X, by, bw, bh);
-        ctx.fillStyle = 'rgba(255,150,130,0.28)';
-        for (let wy = by + 5; wy < by + bh - 3; wy += 8)
-          for (let wx = X + 3; wx < X + bw - 3; wx += 6)
-            if ((((wx * 7 + wy * 3) | 0) % 3) === 0) ctx.fillRect(wx, wy, 1.6, 2.4);
-      }
+    // neon moon + soft accent halo
+    const mX = W * 0.82, mY = H * 0.26, mR = 20;
+    const halo = ctx.createRadialGradient(mX, mY, 4, mX, mY, 90);
+    halo.addColorStop(0, 'rgba(255,90,95,0.18)'); halo.addColorStop(1, 'rgba(255,90,95,0)');
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H * 0.85);
+
+    // twinkling stars
+    ctx.fillStyle = '#fff';
+    for (const s of PL_STARS) {
+      const px = ((s.x * W - plScrollX * 0.05) % W + W) % W;
+      ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(now * s.tws + s.tw));
+      ctx.fillRect(px, s.y * H, s.r, s.r);
+    }
+    ctx.globalAlpha = 1;
+
+    glow('#ff5a5f', 28); ctx.fillStyle = 'rgba(255,90,95,0.16)';
+    ctx.beginPath(); ctx.arc(mX, mY, mR + 6, 0, Math.PI * 2); ctx.fill(); noGlow();
+    const md = ctx.createRadialGradient(mX - 5, mY - 5, 2, mX, mY, mR);
+    md.addColorStop(0, '#fff'); md.addColorStop(0.5, 'rgba(255,90,95,0.85)'); md.addColorStop(1, 'rgba(255,90,95,0.25)');
+    ctx.fillStyle = md; ctx.beginPath(); ctx.arc(mX, mY, mR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(mX, mY, mR + 3, 0, Math.PI * 2); ctx.stroke();
+
+    // drifting fog bands
+    for (const f of PL_FOG) {
+      const span = W + f.r * 2;
+      const fx = ((f.off - plScrollX * 0.1 - now * f.spd) % span + span) % span - f.r;
+      const fy = f.y * H;
+      const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, f.r);
+      fg.addColorStop(0, 'rgba(255,90,95,' + f.a + ')'); fg.addColorStop(1, 'rgba(255,90,95,0)');
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(fx, fy, f.r, f.r * 0.42, 0, 0, Math.PI * 2); ctx.fill();
     }
 
-    // platforms — dark body + inner grid + glowing coral top edge
+    // parallax skyline: far → near (windows + neon signs) → dark foreground
+    const drawSky = (layer, par, body, alpha, windows) => {
+      const span = layer.span * sx;
+      const off = ((plScrollX * par) % span + span) % span;
+      ctx.globalAlpha = alpha;
+      for (let base = -span; base < W + span; base += span) {
+        for (const b of layer.list) {
+          const x = base + b.x * sx - off, bw = b.w * sx;
+          if (x + bw < -4 || x > W + 4) continue;
+          const y = horizon - b.h;
+          ctx.fillStyle = body; ctx.fillRect(x, y, bw, H - y);
+          ctx.fillStyle = 'rgba(255,90,95,0.5)'; ctx.fillRect(x, y, bw, 1.5);   // neon roof edge
+          if (windows) {
+            ctx.fillStyle = 'rgba(255,90,95,0.5)';
+            const cols = Math.max(1, Math.floor(bw / 12)), rows = Math.max(1, Math.floor(b.h / 16));
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+              if (((r * 7 + c * 3 + Math.floor(b.seed * 20)) % 5) !== 0) continue;
+              if (Math.sin(now * b.flick + r * 2 + c) < -0.7) continue;   // flicker off
+              ctx.fillRect(x + 4 + c * 12, y + 6 + r * 16, 3, 4);
+            }
+            if (b.sign) {
+              const pulse = 0.5 + 0.5 * Math.sin(now * 3 + b.seed * 10);
+              ctx.globalAlpha = alpha * (0.4 + 0.6 * pulse);
+              glow(b.signC, 6); ctx.fillStyle = b.signC;
+              ctx.fillRect(x + bw * 0.5 - 4, y - 8, 2.5, 8);
+              ctx.fillRect(x + bw * 0.5 - 5, y - 10, 10, 2.5);
+              noGlow(); ctx.globalAlpha = alpha;
+            }
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+    };
+    drawSky(PL_FAR, 0.14, '#180a24', 0.5, false);
+    drawSky(PL_NEAR, 0.42, '#241340', 0.85, true);
+
+    // horizon neon glow just above the play area
+    const hg = ctx.createLinearGradient(0, horizon - 60, 0, horizon);
+    hg.addColorStop(0, 'rgba(255,90,95,0)'); hg.addColorStop(1, 'rgba(255,90,95,0.10)');
+    ctx.fillStyle = hg; ctx.fillRect(0, horizon - 60, W, 60);
+
+    drawSky(PL_FORE, 0.7, '#070310', 0.95, false);
+
+    // platforms — dark body + inner grid + reflection glow + glowing coral edge
     for (const p of plPlats) {
       const x = p.x - plScrollX;
       if (x > W || x + p.w < 0) continue;
@@ -3175,8 +3263,11 @@
       ctx.fillRect(x, p.y, p.w, H - p.y);
       ctx.strokeStyle = 'rgba(255,90,95,0.08)'; ctx.lineWidth = 1;
       for (let gx = x + 20; gx < x + p.w; gx += 20) { ctx.beginPath(); ctx.moveTo(gx, p.y + 3); ctx.lineTo(gx, H); ctx.stroke(); }
-      glow('#ff5a5f', 12); ctx.fillStyle = '#ff5a5f'; ctx.fillRect(x, p.y - 1, p.w, 3); noGlow();
-      ctx.fillStyle = 'rgba(255,160,163,0.9)'; ctx.fillRect(x, p.y - 1, p.w, 1);
+      const rg = ctx.createLinearGradient(0, p.y, 0, p.y + 26);   // reflection spill
+      rg.addColorStop(0, 'rgba(255,90,95,0.20)'); rg.addColorStop(1, 'rgba(255,90,95,0)');
+      ctx.fillStyle = rg; ctx.fillRect(x, p.y, p.w, 26);
+      glow('#ff5a5f', 14); ctx.fillStyle = '#ff5a5f'; ctx.fillRect(x, p.y - 1, p.w, 3); noGlow();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(x, p.y - 1, p.w, 1.2);
     }
 
     // coins — gold wobbling ellipse with a white glint
@@ -3214,30 +3305,83 @@
     for (const p of plParts) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.col; ctx.fillRect(p.x, p.y, p.sz, p.sz); }
     ctx.globalAlpha = 1;
 
-    // hero — ghost trail, then coral capsule body, pink head, cyan visor, coral legs
+    // ── hero: ghost trail, then the redesigned runner silhouette ──
     for (let i = 0; i < h.trail.length; i++) {
       const fr = i / h.trail.length;
-      ctx.globalAlpha = fr * 0.26; glow('#ff5a5f', 8); ctx.fillStyle = '#ff5a5f';
-      ctx.beginPath(); ctx.arc(h.trail[i].x, h.trail[i].y, 7 * fr, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = fr * 0.22; glow('#ff5a5f', 8); ctx.fillStyle = '#ff5a5f';
+      ctx.beginPath(); ctx.arc(h.trail[i].x, h.trail[i].y, 8 * fr, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1; noGlow();
 
+    // two-segment limb helper (matches the game's `limb`)
+    const limb = (x0, y0, x1, y1, x2, y2, wUp, wLo, col, gl) => {
+      glow(col, gl); ctx.strokeStyle = col; ctx.lineCap = 'round';
+      ctx.lineWidth = wUp; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.lineWidth = wLo; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      noGlow();
+    };
+
+    const gHH = 36;                              // game-space hero height
+    const vyG = h.vy / 60;                       // game-frame-equivalent vy
+    const air = !h.onGround, rising = h.vy < -60, running = h.onGround;
+    const p = h.run, s = Math.sin(p), foot = gHH / 2 - 1;
+    const legCol = '#ff8f92', armCol = '#ff7a80', bodyCol = '#ff5a5f';
+
     ctx.save();
     ctx.translate(heroX + PL_HW / 2, h.y + PL_HH / 2);
-    ctx.rotate(Math.max(-0.28, Math.min(0.28, h.vy * 0.0018)));
-    const swing = h.onGround ? Math.sin(h.run) * 5 : 3;
-    glow('#ff5a5f', 6); ctx.strokeStyle = '#ff8f92'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-2, PL_HH / 2 - 7); ctx.lineTo(-2 - swing, PL_HH / 2 - 0.5); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(3, PL_HH / 2 - 7); ctx.lineTo(3 + swing, PL_HH / 2 - 0.5); ctx.stroke();
-    noGlow();
-    glow('#ff5a5f', 16); ctx.fillStyle = '#ff5a5f';
-    roundRect(ctx, -PL_HW / 2 + 2, -PL_HH / 2 + 3, PL_HW - 4, PL_HH - 10, 5); ctx.fill(); noGlow();
-    ctx.fillStyle = '#ff9fa2';
-    roundRect(ctx, -PL_HW / 2 + 4, -PL_HH / 2 + 6, PL_HW - 9, PL_HH - 15, 3); ctx.fill();
-    glow('#ff5a5f', 10); ctx.fillStyle = '#ffd0d2';
-    ctx.beginPath(); ctx.arc(1, -PL_HH / 2 + 1, 5, 0, Math.PI * 2); ctx.fill(); noGlow();
-    glow('#12ffe8', 8); ctx.fillStyle = '#12ffe8';
-    roundRect(ctx, 1, -PL_HH / 2 - 1, 5, 3, 1.4); ctx.fill(); noGlow();
+    ctx.scale(PL_HSCALE, PL_HSCALE);             // draw the game-size hero, scaled down
+    const stretch = air ? Math.max(-0.05, Math.min(0.12, vyG * 0.011)) : 0;
+    ctx.scale(1 + h.squash * 0.22 - stretch * 0.5, 1 - h.squash * 0.22 + stretch);
+    ctx.rotate((running ? 0.14 : 0) + Math.max(-0.24, Math.min(0.24, vyG * 0.016)));
+
+    // trailing cyan energy scarf (behind, waves with motion)
+    ctx.strokeStyle = 'rgba(18,255,232,0.85)'; ctx.lineCap = 'round'; ctx.lineWidth = 3;
+    glow('#12ffe8', 8); ctx.beginPath(); ctx.moveTo(-3, -gHH / 2 + 9);
+    for (let i = 1; i <= 4; i++) {
+      const xx = -3 - i * 5;
+      const yy = -gHH / 2 + 9 + Math.sin(now * 6 + i * 0.9 + p) * 3 + (air ? -i * 1.6 : i * 0.4);
+      ctx.lineTo(xx, yy);
+    }
+    ctx.stroke(); noGlow();
+
+    // legs
+    if (air) {
+      const tuck = rising ? 1 : 0;
+      limb(-3, 5, -5, 11 - 3 * tuck, -7, 16 - 7 * tuck, 5, 4, legCol, 6);
+      limb(3, 5, 7, 10 - tuck, 10, 15 - 5 * tuck, 5, 4, legCol, 6);
+    } else {
+      limb(-2, 5, -2 - s * 7, 11, -2 - s * 12, foot, 5, 4, legCol, 6);
+      limb(2, 5, 2 + s * 7, 11, 2 + s * 12, foot, 5, 4, legCol, 6);
+    }
+
+    // back arm
+    if (air) limb(-2, -gHH / 2 + 12, -7, rising ? -gHH / 2 + 5 : 0, -11, rising ? -gHH / 2 - 2 : 6, 4, 3, armCol, 5);
+    else     limb(-2, -gHH / 2 + 12, -6 + s * 6, -2, -9 + s * 9, 2, 4, 3, armCol, 5);
+
+    // torso (glowing coral, tapered) + chest core light
+    glow(bodyCol, 18); ctx.fillStyle = bodyCol;
+    ctx.beginPath();
+    ctx.moveTo(-7, -gHH / 2 + 8); ctx.lineTo(7, -gHH / 2 + 8);
+    ctx.quadraticCurveTo(9, -gHH / 2 + 14, 6, 6);
+    ctx.lineTo(-6, 6); ctx.quadraticCurveTo(-9, -gHH / 2 + 14, -7, -gHH / 2 + 8);
+    ctx.closePath(); ctx.fill(); noGlow();
+    ctx.fillStyle = '#ffb9bb'; roundRect(ctx, -4, -gHH / 2 + 12, 8, 10, 3); ctx.fill();
+    glow('#12ffe8', 8); ctx.fillStyle = '#8ffff4';
+    ctx.beginPath(); ctx.arc(0, -gHH / 2 + 15, 2, 0, Math.PI * 2); ctx.fill(); noGlow();
+
+    // head + helmet crest + cyan visor
+    glow(bodyCol, 12); ctx.fillStyle = '#ffd0d2';
+    ctx.beginPath(); ctx.arc(1.5, -gHH / 2 + 1, 7.5, 0, Math.PI * 2); ctx.fill(); noGlow();
+    ctx.fillStyle = bodyCol;
+    ctx.beginPath(); ctx.arc(1.5, -gHH / 2 + 1, 7.5, Math.PI * 1.15, Math.PI * 2.05); ctx.fill();
+    glow('#12ffe8', 10); ctx.fillStyle = '#12ffe8';
+    roundRect(ctx, 3, -gHH / 2 - 2, 8, 4.5, 2); ctx.fill(); noGlow();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(8, -gHH / 2 - 1.5, 2, 1.5);
+
+    // front arm (over torso)
+    if (air) limb(2, -gHH / 2 + 12, 8, rising ? -gHH / 2 + 4 : 4, 12, rising ? -gHH / 2 - 3 : 10, 4, 3, armCol, 5);
+    else     limb(2, -gHH / 2 + 12, 6 - s * 6, -2, 9 - s * 9, 2, 4, 3, armCol, 5);
+
     ctx.restore();
 
     // floating score pops (+25 / +60)
