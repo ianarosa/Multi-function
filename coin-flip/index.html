@@ -576,6 +576,7 @@ function drawStar(ctx, cx, cy, points, outerR, innerR) {
 
 // ── Coin Animation Loop ──
 let lastTime = 0;
+let spinTickAcc = 0; // throttle for spin-whir ticks
 function animateCoin(ts) {
   const dt = Math.min((ts - lastTime) / 1000, 0.1);
   lastTime = ts;
@@ -583,6 +584,12 @@ function animateCoin(ts) {
   if (coinSpinning) {
     coinAngle += coinSpinSpeed * dt;
     coinSpinSpeed *= 0.97; // friction
+    // Soft repeating tick while the coin whirls (throttled, gently slows with speed)
+    spinTickAcc += dt;
+    if (spinTickAcc >= 0.11) {
+      spinTickAcc = 0;
+      if (window.SFX) SFX.play('tick', { vol: 0.14, rate: 1.1 + Math.min(coinSpinSpeed, 30) / 40 });
+    }
     if (coinSpinSpeed < 0.5 && !flipping) {
       // Snap to target
       coinSpinning = false;
@@ -670,6 +677,8 @@ function doFlip() {
   coinSpinning = true;
   coinSpinSpeed = 25 + Math.random() * 15;
   showSide = finalHeads ? 'heads' : 'tails';
+  spinTickAcc = 0;
+  if (window.SFX) SFX.play('whoosh', { vol: 0.5 });
 
   // Resolve after animation
   const spinTime = 600 + Math.random() * 300;
@@ -677,6 +686,9 @@ function doFlip() {
     coinSpinning = false;
     coinAngle = finalHeads ? 0 : Math.PI;
     flipping = false;
+
+    // Coin lands / settles down
+    if (window.SFX) SFX.play('bounce', { vol: 0.4 });
 
     // Get coin position for particles
     const rect = coinCvs.getBoundingClientRect();
@@ -693,6 +705,8 @@ function doFlip() {
         resultText.className = 'result-text heads';
       }
       spawnParticles(px, py, '#ffd700', 20 + streak * 5);
+      // Correct guess: pitch climbs with the streak
+      if (window.SFX) SFX.play('coin', { combo: streak, vol: 0.55 });
       updateStreakDisplay();
       btnCashout.classList.add('show');
     } else {
@@ -700,6 +714,8 @@ function doFlip() {
       resultText.innerHTML = 'TAILS...';
       resultText.className = 'result-text tails';
       spawnParticles(px, py, '#666', 8);
+      // Wrong flip: losing a built-up streak hurts more than a cold miss
+      if (window.SFX) SFX.play(streak > 0 ? 'hurt' : 'error', { vol: 0.5 });
       streak = 0;
       updateStreakDisplay();
       btnCashout.classList.remove('show');
@@ -725,7 +741,8 @@ function cashOut() {
   if (streak === 0) return;
   const payout = streakPayout(streak);
   state.coins += payout;
-  if (streak > state.bestStreak) {
+  const newBest = streak > state.bestStreak;
+  if (newBest) {
     state.bestStreak = streak;
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.bestStreak } }));
   }
@@ -734,6 +751,8 @@ function cashOut() {
   const rect = btnCashout.getBoundingClientRect();
   spawnParticles(rect.left + rect.width/2, rect.top, '#2ecc71', 25);
 
+  // New best streak = milestone fanfare; otherwise a plain cash-out win
+  if (window.SFX) SFX.play(newBest ? 'levelup' : 'win', { vol: 0.55 });
   resultText.innerHTML = `+${formatNum(payout)} COINS!`;
   resultText.className = 'result-text heads';
   streak = 0;
@@ -836,6 +855,7 @@ function buyUpgrade(id) {
   if (state.coins < cost) return;
   state.coins -= cost;
   state.upgrades[id]++;
+  if (window.SFX) SFX.play('powerup');
 
   // If auto flip upgraded, reset timer
   if (id === 'auto') setupAutoFlip();
@@ -846,6 +866,7 @@ function buyUpgrade(id) {
 
 // ── Fullscreen ──
 function toggleFS() {
+  if (window.SFX) SFX.play('click');
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   } else {
@@ -872,6 +893,7 @@ requestAnimationFrame(mainLoop);
 // Save periodically
 setInterval(save, 5000);
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="coin-flip" data-color="#ffd700"></script>
 </body>
 </html>

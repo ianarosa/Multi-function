@@ -388,7 +388,7 @@
     if (focusTouch) { focusTouch = false; focusBtn.classList.remove('active'); }
   });
 
-  let player, bullets, particles, time, lives, iframes, running, lastT, phase, spawnTimers, stars, level, levelTime, banner;
+  let player, bullets, particles, time, lives, iframes, running, lastT, phase, spawnTimers, stars, level, levelTime, banner, prevFocus, grazeCombo, grazeTimer, grazeCd;
 
   const LEVEL_DURATION = 60;
   const STAGE_INTERVALS = [10, 7, 5, 4, 3, 2.5, 2];
@@ -404,6 +404,10 @@
     levelTime = 0;
     phase = 0;
     banner = { text: 'LEVEL 1', timer: 2.5 };
+    prevFocus = false;
+    grazeCombo = 0;
+    grazeTimer = 0;
+    grazeCd = 0;
     spawnTimers = { ring: 0, aim: 0, spiral: 0, wall: 0, laser: 0, spiralAngle: 0 };
     stars = [];
     for (let i = 0; i < 60; i++) stars.push({x: Math.random()*W, y: Math.random()*H, s: Math.random()*1.5+0.3, v: Math.random()*30+10});
@@ -421,6 +425,7 @@
     phase = 0;
     lives = Math.min(lives + 1, 9);
     iframes = Math.max(iframes, 2.5);
+    if (window.SFX) SFX.play('levelup');
     for (const b of bullets) explode(b.x, b.y, b.color);
     bullets.length = 0;
     banner = { text: 'LEVEL ' + level, timer: 2.5 };
@@ -520,6 +525,8 @@
     levelTime += dt;
     if (iframes > 0) iframes -= dt;
     if (banner.timer > 0) banner.timer -= dt;
+    if (grazeCd > 0) grazeCd -= dt;
+    if (grazeTimer > 0) { grazeTimer -= dt; if (grazeTimer <= 0) grazeCombo = 0; }
 
     if (levelTime >= LEVEL_DURATION) {
       levelUp();
@@ -542,6 +549,9 @@
     }
 
     player.focus = !!keys['shift'] || focusTouch;
+    // Discrete whoosh on focus enter (slow, lower pitch) / exit (boost, higher pitch).
+    if (player.focus !== prevFocus && window.SFX) SFX.play('whoosh', { vol: 0.25, rate: player.focus ? 0.85 : 1.25 });
+    prevFocus = player.focus;
     stickKnob.classList.toggle('focus', player.focus);
 
     const baseSpeed = player.focus ? 130 : 260;
@@ -573,8 +583,19 @@
         lives--;
         iframes = 2.5;
         explode(player.x, player.y, '#fff');
-        if (lives <= 0) gameOver();
+        if (lives <= 0) { gameOver(); }
+        else if (window.SFX) SFX.play('hit', { vol: 0.85, rate: 0.9 });
         break;
+      }
+      // GRAZE: bullet skims close but doesn't hit — signature dodge-game feedback.
+      if (iframes <= 0 && !b.grazed && d < b.r + hitR + 15) {
+        b.grazed = true;
+        grazeCombo = Math.min(grazeCombo + 1, 12);
+        grazeTimer = 1.2;
+        if (grazeCd <= 0 && window.SFX) {
+          SFX.play('tick', { vol: 0.3, rate: 1.4, combo: grazeCombo });
+          grazeCd = 0.06;
+        }
       }
     }
 
@@ -657,6 +678,10 @@
 
   function gameOver() {
     running = false;
+    if (window.SFX) {
+      SFX.play('explode', { vol: 0.95, rate: 0.8 });
+      setTimeout(() => { if (window.SFX) SFX.play('gameover', { rate: 0.95 }); }, 180);
+    }
     if (time > best) {
       best = time;
       try { localStorage.setItem('vd_best', best.toString()); } catch(e) {}
@@ -681,6 +706,7 @@
   }
 
   startBtn.addEventListener('click', () => {
+    if (window.SFX) SFX.play('start');
     overlay.classList.add('hide');
     init();
   });
@@ -699,6 +725,7 @@
     exitIcon.style.display  = inFs ? '' : 'none';
   });
   btn.addEventListener('click', function() {
+    if (window.SFX) SFX.play('click');
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen({ navigationUI: 'hide' })
         .then(function() {
@@ -710,7 +737,16 @@
     }
   });
 })();
+
+// ── Menu / navigation click cues ──────────────────────────────
+(function() {
+  ['back-btn', 'hub-link'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', function() { if (window.SFX) SFX.play('click', { vol: 0.7 }); });
+  });
+})();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="void-dancer" data-color="#d870ff"></script>
 </body>
 </html>

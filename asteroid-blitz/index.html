@@ -495,6 +495,8 @@ function update() {
       const ey = ship.y - Math.sin(ship.angle) * SHIP_SIZE * 0.8;
       spawnParticles(ex, ey, 1, '#ff6600', 2, 20);
     }
+    // Subtle engine rumble — throttled so it's a low continuous whoosh, not a per-frame blast
+    if (frameCount % 12 === 0 && window.SFX) SFX.play('whoosh', { vol: 0.12, rate: 0.9 });
   }
   ship.vx *= FRICTION;
   ship.vy *= FRICTION;
@@ -518,6 +520,7 @@ function update() {
       vy: Math.sin(ship.angle) * BULLET_SPEED + ship.vy * 0.3,
       life: BULLET_LIFE
     });
+    if (window.SFX) SFX.play('shoot', { vol: 0.35, rate: 1.05 });
   }
 
   // Update bullets
@@ -550,6 +553,11 @@ function update() {
         // Explosion
         const color = a.size === 'large' ? '#ff4444' : a.size === 'medium' ? '#ff6600' : '#ffaa33';
         spawnParticles(a.x, a.y, a.size === 'large' ? 18 : a.size === 'medium' ? 12 : 8, color, 3, 30);
+        // Bigger rocks boom deeper; small chunks pop higher.
+        if (window.SFX) SFX.play('explode', {
+          rate: a.size === 'large' ? 0.8 : a.size === 'medium' ? 1.05 : 1.25,
+          vol: a.size === 'large' ? 1.0 : a.size === 'medium' ? 0.7 : 0.5
+        });
         // Split
         if (a.size === 'large') {
           asteroids.push(spawnAsteroid(a.x, a.y, 'medium'));
@@ -575,12 +583,15 @@ function update() {
         spawnParticles(ship.x, ship.y, 30, '#ff4444', 4, 45);
         spawnParticles(ship.x, ship.y, 15, '#ff6600', 3, 35);
         triggerShake(18);
+        // Ship is destroyed on any collision — big, deep boom
+        if (window.SFX) SFX.play('explode', { vol: 1.3, rate: 0.65 });
         if (lives <= 0) {
           gameState = 'gameover';
           if (score > highScore) {
             highScore = score;
             localStorage.setItem('asteroidBlitzHigh', highScore);
           }
+          if (window.SFX) SFX.play('gameover');
           window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
         } else {
           // Respawn
@@ -610,6 +621,7 @@ function update() {
   // Check wave clear
   if (asteroids.length === 0 && gameState === 'playing') {
     wave++;
+    if (window.SFX) SFX.play('levelup');
     spawnWaveAsteroids();
   }
 
@@ -897,6 +909,7 @@ function draw() {
 // ── RESTART / START HANDLING ────────────────────────────
 function tryStart() {
   if (gameState === 'waiting' || gameState === 'gameover') {
+    if (window.SFX) SFX.play('start');
     initGame();
   }
 }
@@ -934,6 +947,7 @@ shakeX = 0; shakeY = 0; shakeDuration = 0;
 
 loop();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="asteroid-blitz" data-color="#ff6600"></script>
 </body>
 </html>

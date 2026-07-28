@@ -252,6 +252,7 @@ function showMenu(){
   document.getElementById('menuScreen').classList.add('visible');
   document.getElementById('hud').style.display='none';
   playing=false;
+  if(window.SFX)SFX.play('click',{vol:0.5});
 }
 
 function hideAllScreens(){
@@ -265,6 +266,7 @@ function showLevelSelect(){
   document.getElementById('hud').style.display='none';
   playing=false;
   buildLevelGrid();
+  if(window.SFX)SFX.play('click',{vol:0.5});
 }
 
 function buildLevelGrid(){
@@ -295,6 +297,7 @@ function startLevel(lvl){
   flowCells.clear();flowProgress=0;flowAnimating=false;flowComplete=false;
   particles=[];winParticles=[];
   updateHUD();
+  if(window.SFX)SFX.play('start');
 }
 
 function nextLevel(){
@@ -748,10 +751,38 @@ function updateHUD(){
   else bar.style.background='#ff4444';
 }
 
-function showWin(bonus){
+// Play a soft, throttled gurgle as the liquid spreads through the solved
+// path — ordered by distance from a source so it reads as a flow, not a
+// rattle. Audio only; does not affect gameplay.
+function playFlowGurgle(){
+  if(!window.SFX)return;
+  const cells=[];
+  for(let y=0;y<gridH;y++){
+    for(let x=0;x<gridW;x++){
+      if(!grid[y][x].connected)continue;
+      let dmin=Infinity;
+      for(const s of sources){const dd=Math.abs(s.x-x)+Math.abs(s.y-y);if(dd<dmin)dmin=dd;}
+      cells.push(dmin);
+    }
+  }
+  cells.sort((a,b)=>a-b);
+  const maxTicks=Math.min(cells.length,22); // cap so long paths stay pleasant
+  const step=100; // ms between gurgles (>= ~90ms, never machine-guns)
+  for(let i=0;i<maxTicks;i++){
+    setTimeout(()=>{
+      if(window.SFX)SFX.play('tick',{vol:0.16,rate:0.8+(i/maxTicks)*0.55});
+    },i*step);
+  }
+}
+
+function showWin(bonus,newUnlock){
   hideAllScreens();
   document.getElementById('uiOverlay').classList.add('active');
   document.getElementById('winScreen').classList.add('visible');
+  if(window.SFX){
+    SFX.play('win');
+    if(newUnlock)setTimeout(()=>{if(window.SFX)SFX.play('levelup',{vol:0.5});},260);
+  }
   document.getElementById('winScore').textContent='Score: '+score;
   document.getElementById('winBonus').textContent=bonus>0?('Time bonus: +'+bonus+' | Moves: '+moves):'Moves: '+moves;
 
@@ -774,6 +805,10 @@ function showLose(){
   hideAllScreens();
   document.getElementById('uiOverlay').classList.add('active');
   document.getElementById('loseScreen').classList.add('visible');
+  if(window.SFX){
+    SFX.play('hurt',{vol:0.5});
+    setTimeout(()=>{if(window.SFX)SFX.play('gameover');},180);
+  }
 }
 
 // Input handling
@@ -787,15 +822,23 @@ canvas.addEventListener('click',function(e){
 
   if(gx<0||gx>=gridW||gy<0||gy>=gridH)return;
   const cell=grid[gy][gx];
-  if(cell.locked||isSourceOrDrain(gx,gy))return;
+  if(cell.locked||isSourceOrDrain(gx,gy)){
+    if(window.SFX)SFX.play('error',{vol:0.4});
+    return;
+  }
 
   cell.rot=(cell.rot+1)%4;
   moves++;
+  if(window.SFX)SFX.play('place',{vol:0.55,rate:0.92+Math.random()*0.16});
 
   const solved=checkConnections();
   if(solved&&!flowComplete){
     flowComplete=true;
     playing=false;
+    // Flow reaches the goal: a soft whoosh as liquid starts, then a
+    // throttled gurgle spreading through the connected pipes (audio only).
+    if(window.SFX)SFX.play('whoosh',{vol:0.4});
+    playFlowGurgle();
     const timeBonus=Math.floor(timer*10);
     const moveBonus=Math.max(0,50-moves);
     score=100+timeBonus+moveBonus;
@@ -804,12 +847,14 @@ canvas.addEventListener('click',function(e){
     if(!save.scores[currentLevel]||score>save.scores[currentLevel]){
       save.scores[currentLevel]=score;
     }
+    let newUnlock=false;
     if(currentLevel>=save.maxLevel&&currentLevel<LEVELS.length){
       save.maxLevel=currentLevel+1;
+      newUnlock=true;
     }
     saveSave();
 
-    setTimeout(()=>showWin(timeBonus),800);
+    setTimeout(()=>showWin(timeBonus,newUnlock),800);
   }
 });
 
@@ -826,6 +871,7 @@ window.addEventListener('resize',()=>{
 draw();
 requestAnimationFrame(tick);
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="pipe-flow" data-color="#2288ff"></script>
 </body>
 </html>

@@ -278,6 +278,7 @@ function launchBall(b) {
   b.vx = Math.cos(angle) * b.speed;
   b.vy = Math.sin(angle) * b.speed;
   b.stuck = false;
+  if (window.SFX) SFX.play('whoosh', { vol: 0.5 });
 }
 
 // --- Brick layouts ---
@@ -537,6 +538,18 @@ function activatePower(type) {
 let lasers = [];
 let laserCooldown = 0;
 
+// --- SFX helpers ---
+// Balls can bounce very rapidly (and multiple balls stack). Throttle the
+// bounce cue so rapid hits don't turn into a harsh machine-gun of clicks.
+let _lastBounce = 0;
+function sfxBounce(opts) {
+  if (!window.SFX) return;
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if (now - _lastBounce < 35) return;
+  _lastBounce = now;
+  SFX.play('bounce', opts);
+}
+
 // --- Init ---
 function initGame() {
   level = 0;
@@ -552,11 +565,13 @@ function initGame() {
   lasers = [];
   bricks = levelLayouts(level);
   gameState = 'playing';
+  if (window.SFX) SFX.play('start');
 }
 
 function nextLevel() {
   level++;
-  if (level >= MAX_LEVELS) { gameState = 'win'; return; }
+  if (level >= MAX_LEVELS) { gameState = 'win'; if (window.SFX) SFX.play('win'); return; }
+  if (window.SFX) SFX.play('levelup');
   activePowers = {};
   paddle.w = PADDLE_W_BASE * scale;
   balls = [createBall(true)];
@@ -574,9 +589,11 @@ function loseLife() {
       highScore = score;
       localStorage.setItem('neonBreaker_hi', highScore);
     }
+    if (window.SFX) SFX.play('gameover');
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
     return;
   }
+  if (window.SFX) SFX.play('hurt');
   activePowers = {};
   paddle.w = PADDLE_W_BASE * scale;
   balls = [createBall(true)];
@@ -691,6 +708,7 @@ function update() {
       lasers.push({ x: paddle.x - 8 * scale, y: paddle.y - PADDLE_H * scale / 2, vy: -8 * scale });
       lasers.push({ x: paddle.x + 8 * scale, y: paddle.y - PADDLE_H * scale / 2, vy: -8 * scale });
       laserCooldown = 12;
+      if (window.SFX) SFX.play('shoot', { vol: 0.4 });
     }
   }
 
@@ -708,6 +726,7 @@ function update() {
             spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color, 12);
             spawnPowerup(br.x + br.w / 2, br.y + br.h / 2);
             score += 10 * (1 + combo);
+            if (window.SFX) SFX.play('hit', { vol: 0.85, rate: 1.15 + Math.min(combo, 10) * 0.045, combo: combo });
             combo++; comboTimer = 120;
             bricks.splice(j, 1);
           } else {
@@ -737,9 +756,9 @@ function update() {
     b.y += b.vy;
 
     // Wall bounce
-    if (b.x - b.r < 0) { b.x = b.r; b.vx = Math.abs(b.vx); }
-    if (b.x + b.r > W) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
-    if (b.y - b.r < 0) { b.y = b.r; b.vy = Math.abs(b.vy); }
+    if (b.x - b.r < 0) { b.x = b.r; b.vx = Math.abs(b.vx); sfxBounce({ vol: 0.32, rate: 1.18 }); }
+    if (b.x + b.r > W) { b.x = W - b.r; b.vx = -Math.abs(b.vx); sfxBounce({ vol: 0.32, rate: 1.18 }); }
+    if (b.y - b.r < 0) { b.y = b.r; b.vy = Math.abs(b.vy); sfxBounce({ vol: 0.32, rate: 1.18 }); }
 
     // Bottom - lose ball
     if (b.y - b.r > H) {
@@ -759,6 +778,7 @@ function update() {
       b.vy = Math.sin(angle) * b.speed;
       if (b.vy > -1 * scale) b.vy = -1 * scale;
       b.y = py - b.r;
+      sfxBounce({ vol: 0.62, rate: 0.78 });
 
       if (activePowers.sticky) {
         b.stuck = true;
@@ -787,14 +807,19 @@ function update() {
             spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color, 15);
             spawnPowerup(br.x + br.w / 2, br.y + br.h / 2);
             score += 10 * (1 + combo);
+            if (window.SFX) SFX.play('hit', { vol: 0.85, rate: 1.15 + Math.min(combo, 10) * 0.045, combo: combo });
             combo++; comboTimer = 120;
             bricks.splice(j, 1);
           } else {
+            // Brick took damage but survived: duller, lower "thud".
             br.cracked = true;
             spawnParticles(br.x + br.w / 2, br.y + br.h / 2, br.color, 5);
+            if (window.SFX) SFX.play('hit', { vol: 0.5, rate: 0.78 });
           }
         } else {
+          // Indestructible brick: metallic clink, distinct from a real break.
           spawnParticles(br.x + br.w / 2, br.y + br.h / 2, '#667788', 3);
+          if (window.SFX) SFX.play('bounce', { vol: 0.4, rate: 1.35 });
         }
 
         if (!b.fireball) break;
@@ -814,6 +839,7 @@ function update() {
         p.x + POWERUP_SIZE * scale / 2 >= paddle.x - paddle.w / 2 && p.x - POWERUP_SIZE * scale / 2 <= paddle.x + paddle.w / 2) {
       activatePower(p.type);
       spawnParticles(p.x, p.y, p.type.color, 10);
+      if (window.SFX) SFX.play('powerup');
       powerups.splice(i, 1);
     }
   }
@@ -1135,6 +1161,7 @@ function loop() {
 loop();
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="neon-breaker" data-color="#00ffcc"></script>
 </body>
 </html>

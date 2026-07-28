@@ -314,6 +314,9 @@
         alpha: 1, life: 120
       });
       currentBlock = null;
+      // Block missed entirely and topples away
+      if (window.SFX) SFX.play('error', { vol: 0.6 });
+      if (window.SFX) SFX.play('explode', { vol: 0.7 });
       gameOver();
       return;
     }
@@ -332,6 +335,10 @@
       score += 10 + comboBonus;
       flashScreen = 1.0;
 
+      // Dead-on seat, then a bright coin whose pitch climbs with the perfect streak
+      if (window.SFX) SFX.play('place', { vol: 0.45, rate: 1.06 });
+      if (window.SFX) SFX.play('coin', { vol: 0.6, combo: combo });
+
       // Big particle burst for perfect
       spawnParticles(prev.x + prev.width / 2, blockY(currentBlock.index), 40, currentBlock.color);
     } else {
@@ -339,6 +346,10 @@
       finalW = overlapWidth;
       combo = 0;
       score += 10;
+
+      // Block seats with a soft tactile thunk; the sliced overhang gives a short low tick
+      if (window.SFX) SFX.play('place', { vol: 0.5, rate: 0.9 });
+      if (window.SFX) SFX.play('tick', { vol: 0.4, rate: 0.85 });
 
       // Trimmed piece(s) fall off
       if (cx < px) {
@@ -376,6 +387,12 @@
       flashTimer: isPerfect ? 1.0 : 0
     });
 
+    // Milestone height flourish every 10 blocks
+    const height = tower.length - 1;
+    if (height > 0 && height % 10 === 0) {
+      if (window.SFX) SFX.play('levelup', { vol: 0.7 });
+    }
+
     // Update high score
     if (score > highScore) {
       highScore = score;
@@ -395,6 +412,7 @@
 
   function gameOver() {
     state = 'gameover';
+    if (window.SFX) SFX.play('gameover', { vol: 0.7 });
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
   }
 
@@ -797,10 +815,12 @@
     if (e) e.preventDefault();
 
     if (state === 'waiting') {
+      if (window.SFX) SFX.play('start');
       initGame();
       return;
     }
     if (state === 'gameover') {
+      if (window.SFX) SFX.play('click');
       state = 'waiting';
       return;
     }
@@ -834,6 +854,7 @@
 
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="tower-stack" data-color="#ff2288"></script>
 </body>
 </html>

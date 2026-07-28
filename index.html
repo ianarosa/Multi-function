@@ -749,43 +749,101 @@
   const vBullets = [];
   let vSpiral = 0;
   let vRingTimer = 0;
+  // tiny neon dancer that actively weaves through the barrage
+  const vPlayer = { x: 160, y: 115, vx: 0, vy: 0, focus: 0 };
+  const vTrail = [];
 
   function updateVoid(dt, t) {
+    const W = voidCvs.width, H = voidCvs.height;
     vSpiral += dt * 1.2;
     vRingTimer -= dt;
-    const W = voidCvs.width, H = voidCvs.height;
 
-    // spawn spiral bullets
-    if (vBullets.length < 80) {
+    // spawn spiral bullets (bloom from upper core, like the real spiral pattern)
+    if (vBullets.length < 70) {
       for (let i = 0; i < 3; i++) {
         const a = vSpiral + (i / 3) * Math.PI * 2;
         vBullets.push({
-          x: W / 2, y: H * 0.3,
-          vx: Math.cos(a) * 55, vy: Math.sin(a) * 55,
+          x: W / 2, y: H * 0.24,
+          vx: Math.cos(a) * 52, vy: Math.sin(a) * 52,
           color: ['#f44','#4ff','#fa0','#c6f','#f0f'][Math.floor(Math.random()*5)],
           r: 3 + Math.random() * 2, life: 0
         });
       }
     }
 
-    // spawn ring burst
+    // spawn ring burst (the red radial rings from the game)
     if (vRingTimer <= 0) {
       vRingTimer = 1.8;
       const cx = W * (0.2 + Math.random() * 0.6);
-      const cy = H * (0.1 + Math.random() * 0.4);
+      const cy = H * (0.1 + Math.random() * 0.35);
       for (let i = 0; i < 10; i++) {
         const a = (i / 10) * Math.PI * 2;
-        vBullets.push({ x: cx, y: cy, vx: Math.cos(a)*45, vy: Math.sin(a)*45, color: '#f44', r: 4, life: 0 });
+        vBullets.push({ x: cx, y: cy, vx: Math.cos(a)*44, vy: Math.sin(a)*44, color: '#f44', r: 4, life: 0 });
       }
     }
 
+    // advance + cull bullets
     for (let i = vBullets.length - 1; i >= 0; i--) {
       const b = vBullets[i];
       b.x += b.vx * dt; b.y += b.vy * dt; b.life += dt;
-      if (b.life > 2.2 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) {
+      if (b.life > 2.4 || b.x < -20 || b.x > W + 20 || b.y < -20 || b.y > H + 20) {
         vBullets.splice(i, 1);
       }
     }
+
+    // ── dodge AI: steer away from nearby bullets, hardest when they're closing in ──
+    const R = 46;               // awareness radius
+    const margin = 16;
+    let fx = 0, fy = 0, threat = 0;
+    for (const b of vBullets) {
+      const dx = vPlayer.x - b.x, dy = vPlayer.y - b.y;
+      const d = Math.hypot(dx, dy) || 0.001;
+      if (d < R) {
+        const w = (R - d) / R;                                   // proximity 0..1
+        const approaching = (-dx * b.vx - dy * b.vy) > 0 ? 1 : 0.35; // heading toward us?
+        const f = (w * w) * (1 + approaching * 1.4) * 260;
+        fx += (dx / d) * f;
+        fy += (dy / d) * f;
+        threat = Math.max(threat, w * (0.5 + approaching * 0.5));
+      }
+    }
+    // keep off the walls
+    fx += Math.max(0, margin - vPlayer.x) * 12;
+    fx -= Math.max(0, vPlayer.x - (W - margin)) * 12;
+    fy += Math.max(0, margin - vPlayer.y) * 12;
+    fy -= Math.max(0, vPlayer.y - (H - margin)) * 12;
+    // drift back to a home hover when the field is calm
+    const calm = 1 - Math.min(1, threat);
+    fx += (W * 0.5 - vPlayer.x) * 0.8 * calm;
+    fy += (H * 0.6 - vPlayer.y) * 0.8 * calm;
+
+    // integrate with damping + speed cap (player easily outpaces bullets)
+    vPlayer.vx = (vPlayer.vx + fx * dt) * 0.86;
+    vPlayer.vy = (vPlayer.vy + fy * dt) * 0.86;
+    const maxSp = 230, sp = Math.hypot(vPlayer.vx, vPlayer.vy);
+    if (sp > maxSp) { vPlayer.vx = vPlayer.vx / sp * maxSp; vPlayer.vy = vPlayer.vy / sp * maxSp; }
+    vPlayer.x += vPlayer.vx * dt;
+    vPlayer.y += vPlayer.vy * dt;
+
+    // guaranteed non-overlap: shove core out to a clean gap if anything got too close
+    const safe = 12;
+    for (const b of vBullets) {
+      const dx = vPlayer.x - b.x, dy = vPlayer.y - b.y;
+      const d = Math.hypot(dx, dy);
+      const min = b.r + safe;
+      if (d < min && d > 0.001) {
+        vPlayer.x = b.x + dx / d * min;
+        vPlayer.y = b.y + dy / d * min;
+      }
+    }
+    vPlayer.x = Math.max(10, Math.min(W - 10, vPlayer.x));
+    vPlayer.y = Math.max(12, Math.min(H - 10, vPlayer.y));
+
+    // focus glow ramps up under pressure
+    vPlayer.focus += (Math.min(1, threat) - vPlayer.focus) * Math.min(1, dt * 8);
+
+    vTrail.push({ x: vPlayer.x, y: vPlayer.y });
+    if (vTrail.length > 14) vTrail.shift();
   }
 
   function drawVoid(t) {
@@ -803,7 +861,7 @@
     vCtx.globalAlpha = 1;
 
     for (const b of vBullets) {
-      const fade = Math.min(1, (2.2 - b.life) / 0.4);
+      const fade = Math.min(1, (2.4 - b.life) / 0.4);
       vCtx.globalAlpha = fade * 0.85;
       vCtx.fillStyle = b.color;
       vCtx.shadowColor = b.color;
@@ -815,17 +873,57 @@
     vCtx.shadowBlur = 0;
     vCtx.globalAlpha = 1;
 
-    // player ship (animated hover)
-    const shipX = W / 2 + Math.sin(t * 0.0012) * 18;
-    const shipY = H * 0.72 + Math.sin(t * 0.0008) * 6;
-    vCtx.fillStyle = '#fff';
-    vCtx.shadowColor = '#8af';
+    const foc = vPlayer.focus;
+
+    // motion trail (weaves behind the dancer)
+    for (let i = 0; i < vTrail.length; i++) {
+      const p = vTrail[i], a = i / vTrail.length;
+      vCtx.globalAlpha = a * 0.5;
+      vCtx.fillStyle = foc > 0.5 ? '#4ff' : '#8af';
+      vCtx.beginPath();
+      vCtx.arc(p.x, p.y, a * 3 + 0.5, 0, Math.PI * 2);
+      vCtx.fill();
+    }
+    vCtx.globalAlpha = 1;
+
+    const shipX = vPlayer.x, shipY = vPlayer.y;
+
+    // focus aura when threading tight gaps
+    if (foc > 0.05) {
+      vCtx.globalAlpha = foc * 0.5;
+      vCtx.strokeStyle = '#4ff';
+      vCtx.lineWidth = 1;
+      vCtx.shadowColor = '#4ff';
+      vCtx.shadowBlur = 10;
+      vCtx.beginPath();
+      vCtx.arc(shipX, shipY, 9 + Math.sin(t * 0.01) * 1.5, 0, Math.PI * 2);
+      vCtx.stroke();
+      vCtx.shadowBlur = 0;
+      vCtx.globalAlpha = 1;
+    }
+
+    // player ship (triangle), banks with horizontal motion
+    vCtx.save();
+    vCtx.translate(shipX, shipY);
+    vCtx.rotate(Math.max(-0.5, Math.min(0.5, vPlayer.vx * 0.006)));
+    vCtx.fillStyle = foc > 0.5 ? '#cff' : '#fff';
+    vCtx.shadowColor = foc > 0.5 ? '#4ff' : '#8af';
     vCtx.shadowBlur = 14;
     vCtx.beginPath();
-    vCtx.moveTo(shipX, shipY - 11);
-    vCtx.lineTo(shipX - 8, shipY + 9);
-    vCtx.lineTo(shipX + 8, shipY + 9);
+    vCtx.moveTo(0, -9);
+    vCtx.lineTo(-7, 8);
+    vCtx.lineTo(7, 8);
     vCtx.closePath();
+    vCtx.fill();
+    vCtx.shadowBlur = 0;
+    vCtx.restore();
+
+    // tiny magenta hitbox core
+    vCtx.fillStyle = '#f0f';
+    vCtx.shadowColor = '#f0f';
+    vCtx.shadowBlur = 6;
+    vCtx.beginPath();
+    vCtx.arc(shipX, shipY, 2 + foc * 0.8, 0, Math.PI * 2);
     vCtx.fill();
     vCtx.shadowBlur = 0;
   }
@@ -1339,74 +1437,126 @@
 
   function initSnakePreview() {
     snakeBody.length = 0;
-    for (let i = 5; i >= 0; i--) snakeBody.push({ x: 3 + i, y: 5 });
+    for (let i = 5; i >= 0; i--) snakeBody.push({ x: 3 + i, y: 6 });
     snakeDir = { x: 1, y: 0 };
-    snakeFood = { x: 12, y: 5 };
+    snakeFood = { x: 13, y: 6 };
   }
   initSnakePreview();
 
   function drawSnakePreview(dt, t) {
     const W = snakeCvs.width, H = snakeCvs.height;
-    const cellW = W / 20, cellH = H / 12;
+    const SN_COLS = 20, SN_ROWS = 12;
+    const cellW = W / SN_COLS, cellH = H / SN_ROWS;
 
+    // Background — deep neon-green black (matches real game #020d02)
     snCtx.fillStyle = '#020d02';
     snCtx.fillRect(0, 0, W, H);
 
-    // Grid
-    snCtx.strokeStyle = 'rgba(0,255,100,0.04)';
+    // Subtle grid lines
+    snCtx.strokeStyle = 'rgba(0,255,102,0.04)';
     snCtx.lineWidth = 0.5;
-    for (let x = 0; x < W; x += cellW) { snCtx.beginPath(); snCtx.moveTo(x, 0); snCtx.lineTo(x, H); snCtx.stroke(); }
-    for (let y = 0; y < H; y += cellH) { snCtx.beginPath(); snCtx.moveTo(0, y); snCtx.lineTo(W, y); snCtx.stroke(); }
+    for (let x = 0; x <= W + 0.5; x += cellW) { snCtx.beginPath(); snCtx.moveTo(x, 0); snCtx.lineTo(x, H); snCtx.stroke(); }
+    for (let y = 0; y <= H + 0.5; y += cellH) { snCtx.beginPath(); snCtx.moveTo(0, y); snCtx.lineTo(W, y); snCtx.stroke(); }
 
-    // Move snake
+    // Move snake (self-playing food-seeking AI)
     snakeTick += dt;
-    if (snakeTick > 0.15) {
+    if (snakeTick > 0.14) {
       snakeTick = 0;
       const head = snakeBody[0];
-      // Simple AI: steer toward food
       if (snakeFood) {
-        if (Math.random() < 0.7) {
+        if (Math.random() < 0.75) {
           const dx = snakeFood.x - head.x, dy = snakeFood.y - head.y;
-          if (Math.abs(dx) > Math.abs(dy)) snakeDir = { x: dx > 0 ? 1 : -1, y: 0 };
-          else snakeDir = { x: 0, y: dy > 0 ? 1 : -1 };
+          // Prefer the larger axis, but don't reverse straight back onto the neck
+          if (Math.abs(dx) > Math.abs(dy) && dx !== 0 && snakeDir.x === 0) snakeDir = { x: dx > 0 ? 1 : -1, y: 0 };
+          else if (dy !== 0 && snakeDir.y === 0) snakeDir = { x: 0, y: dy > 0 ? 1 : -1 };
+          else if (dx !== 0 && snakeDir.x === 0) snakeDir = { x: dx > 0 ? 1 : -1, y: 0 };
         }
       }
-      const nx = ((head.x + snakeDir.x) % 20 + 20) % 20;
-      const ny = ((head.y + snakeDir.y) % 12 + 12) % 12;
+      const nx = ((head.x + snakeDir.x) % SN_COLS + SN_COLS) % SN_COLS;
+      const ny = ((head.y + snakeDir.y) % SN_ROWS + SN_ROWS) % SN_ROWS;
       snakeBody.unshift({ x: nx, y: ny });
       if (snakeFood && nx === snakeFood.x && ny === snakeFood.y) {
-        snakeFood = { x: Math.floor(Math.random() * 18) + 1, y: Math.floor(Math.random() * 10) + 1 };
+        snakeFood = { x: Math.floor(Math.random() * (SN_COLS - 2)) + 1, y: Math.floor(Math.random() * (SN_ROWS - 2)) + 1 };
       } else {
         snakeBody.pop();
       }
-      if (snakeBody.length > 15) snakeBody.pop();
+      if (snakeBody.length > 13) snakeBody.pop();
     }
 
-    // Draw food
+    // ── Food — glowing green orb with halo + bright core (matches real game) ──
     if (snakeFood) {
-      const pulse = Math.sin(t * 0.004) * 3 + 6;
+      const fx = snakeFood.x * cellW + cellW / 2;
+      const fy = snakeFood.y * cellH + cellH / 2;
+      const pulse = 0.7 + 0.3 * Math.sin(t * 0.005);
+      const radius = (Math.min(cellW, cellH) / 2 - 1.5) * pulse;
+
+      // Outer halo
       snCtx.shadowColor = '#00ff66';
-      snCtx.shadowBlur = pulse + 8;
+      snCtx.shadowBlur = 18 * pulse;
+      snCtx.globalAlpha = 0.3 * pulse;
       snCtx.fillStyle = '#00ff66';
-      snCtx.beginPath();
-      snCtx.arc(snakeFood.x * cellW + cellW / 2, snakeFood.y * cellH + cellH / 2, pulse, 0, Math.PI * 2);
-      snCtx.fill();
+      snCtx.beginPath(); snCtx.arc(fx, fy, radius + 3, 0, Math.PI * 2); snCtx.fill();
+      snCtx.globalAlpha = 1;
+
+      // Bright core
+      snCtx.shadowBlur = 12;
+      snCtx.fillStyle = '#0f0';
+      snCtx.beginPath(); snCtx.arc(fx, fy, radius, 0, Math.PI * 2); snCtx.fill();
       snCtx.shadowBlur = 0;
+
+      // Inner white highlight
+      snCtx.fillStyle = 'rgba(255,255,255,0.6)';
+      snCtx.beginPath(); snCtx.arc(fx - radius * 0.3, fy - radius * 0.3, radius * 0.3, 0, Math.PI * 2); snCtx.fill();
     }
 
-    // Draw snake
+    // ── Snake — neon rounded segments, gradient bright→dim, glowing head with eyes ──
     for (let i = snakeBody.length - 1; i >= 0; i--) {
       const s = snakeBody[i];
-      const brightness = 1 - (i / snakeBody.length) * 0.6;
-      const g = Math.floor(255 * brightness);
-      snCtx.shadowColor = `rgb(0,${g},${Math.floor(g * 0.4)})`;
-      snCtx.shadowBlur = i === 0 ? 14 : 6;
-      snCtx.fillStyle = `rgb(0,${g},${Math.floor(g * 0.4)})`;
-      snCtx.beginPath();
-      snCtx.roundRect(s.x * cellW + 1, s.y * cellH + 1, cellW - 2, cellH - 2, 3);
-      snCtx.fill();
+      const px = s.x * cellW + 1;
+      const py = s.y * cellH + 1;
+      const w = cellW - 2, h = cellH - 2;
+
+      if (i === 0) {
+        // Head — brightest, biggest glow, white outline
+        snCtx.shadowColor = '#00ff66';
+        snCtx.shadowBlur = 16;
+        snCtx.fillStyle = '#00ff66';
+        snCtx.beginPath(); snCtx.roundRect(px - 1, py - 1, w + 2, h + 2, 4); snCtx.fill();
+        snCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+        snCtx.lineWidth = 1.2;
+        snCtx.beginPath(); snCtx.roundRect(px - 1, py - 1, w + 2, h + 2, 4); snCtx.stroke();
+        snCtx.shadowBlur = 0;
+
+        // Eyes — dark, offset toward travel direction
+        const cx = px + w / 2, cy = py + h / 2;
+        const ex = snakeDir.x, ey = snakeDir.y;
+        snCtx.fillStyle = '#020d02';
+        const off = Math.min(w, h) * 0.18;
+        const ecx = cx + ex * off, ecy = cy + ey * off;
+        const rEye = Math.max(1.4, Math.min(w, h) * 0.11);
+        if (ex !== 0) {
+          snCtx.beginPath(); snCtx.arc(ecx, ecy - off, rEye, 0, Math.PI * 2); snCtx.fill();
+          snCtx.beginPath(); snCtx.arc(ecx, ecy + off, rEye, 0, Math.PI * 2); snCtx.fill();
+        } else {
+          snCtx.beginPath(); snCtx.arc(ecx - off, ecy, rEye, 0, Math.PI * 2); snCtx.fill();
+          snCtx.beginPath(); snCtx.arc(ecx + off, ecy, rEye, 0, Math.PI * 2); snCtx.fill();
+        }
+      } else {
+        // Body — green gradient dimming toward the tail, bright neon border
+        const frac = 1 - (i / snakeBody.length) * 0.4;
+        const g = Math.round(255 * frac);
+        snCtx.shadowColor = '#00ff66';
+        snCtx.shadowBlur = 10 * frac;
+        snCtx.fillStyle = `rgb(0,${g},${Math.round(g * 0.45)})`;
+        snCtx.beginPath(); snCtx.roundRect(px, py, w, h, 3); snCtx.fill();
+        snCtx.strokeStyle = `rgba(0,255,102,${0.5 * frac})`;
+        snCtx.lineWidth = 1.2;
+        snCtx.beginPath(); snCtx.roundRect(px, py, w, h, 3); snCtx.stroke();
+        snCtx.shadowBlur = 0;
+      }
     }
     snCtx.shadowBlur = 0;
+    snCtx.globalAlpha = 1;
   }
 
   // ── Asteroid Blitz card preview ─────────────────────────────
@@ -1424,7 +1574,10 @@
   const AST_STARS = Array.from({ length: 40 }, () => ({
     x: Math.random(), y: Math.random(), a: 0.2 + Math.random() * 0.5
   }));
-  const AST_ROCKS = Array.from({ length: 6 }, () => {
+
+  // Rock factory — jagged polygon like the real game. Positions/velocities are
+  // in pixels so bullets (also pixels) can collide with them reliably.
+  function astMakeRock(x, y, size) {
     const pts = [];
     const n = 7 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
@@ -1432,20 +1585,54 @@
       const r = 0.7 + Math.random() * 0.3;
       pts.push({ a, r });
     }
+    const ang = Math.random() * Math.PI * 2;
+    const spd = (18 + Math.random() * 22) * (30 / (size + 10));
     return {
-      x: Math.random(), y: Math.random(),
-      vx: (Math.random() - 0.5) * 30,
-      vy: (Math.random() - 0.5) * 20,
+      x, y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
       rot: Math.random() * Math.PI * 2,
       rotV: (Math.random() - 0.5) * 1.5,
-      size: 12 + Math.random() * 18,
+      size,
       pts
     };
+  }
+  // Spawn a fresh large rock somewhere off/near an edge so the scene stays full.
+  function astSpawnEdgeRock() {
+    const W = astCvs.width || 320, H = astCvs.height || 190;
+    const edge = Math.floor(Math.random() * 4);
+    let x, y;
+    if (edge === 0) { x = -20; y = Math.random() * H; }
+    else if (edge === 1) { x = W + 20; y = Math.random() * H; }
+    else if (edge === 2) { x = Math.random() * W; y = -20; }
+    else { x = Math.random() * W; y = H + 20; }
+    return astMakeRock(x, y, 20 + Math.random() * 12);
+  }
+
+  const AST_ROCKS = Array.from({ length: 6 }, () => {
+    const W = astCvs.width || 320, H = astCvs.height || 190;
+    return astMakeRock(Math.random() * W, Math.random() * H, 12 + Math.random() * 18);
   });
 
   let astShipAngle = 0;
   let astBullets = [];
   let astFireTimer = 0;
+  let astParticles = [];
+
+  function astBurst(x, y, big) {
+    const cnt = big ? 16 : 9;
+    for (let i = 0; i < cnt; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const spd = (30 + Math.random() * 90) * (big ? 1.2 : 1);
+      const c = Math.random() < 0.34 ? '#ffaa33' : (Math.random() < 0.5 ? '#ff6600' : '#ff4444');
+      astParticles.push({
+        x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+        life: 0, max: 0.45 + Math.random() * 0.4,
+        r: 0.8 + Math.random() * 2.2, c
+      });
+    }
+    if (astParticles.length > 90) astParticles.splice(0, astParticles.length - 90);
+  }
 
   function drawAsteroidPreview(dt, t) {
     const W = astCvs.width, H = astCvs.height;
@@ -1461,11 +1648,23 @@
     }
     aCtx.globalAlpha = 1;
 
-    // Ship
-    astShipAngle += dt * 0.6;
-    const sx = W * 0.5 + Math.sin(t * 0.0008) * W * 0.08;
-    const sy = H * 0.5 + Math.cos(t * 0.0011) * H * 0.12;
-    const sa = Math.sin(t * 0.0006) * 0.8;
+    // Self-playing ship: gentle bob + auto-aim at the nearest rock.
+    const sx = W * 0.5 + Math.sin(t * 0.0008) * W * 0.1;
+    const sy = H * 0.5 + Math.cos(t * 0.0011) * H * 0.14;
+
+    let target = null, best = Infinity;
+    for (const rk of AST_ROCKS) {
+      const d = (rk.x - sx) * (rk.x - sx) + (rk.y - sy) * (rk.y - sy);
+      if (d < best) { best = d; target = rk; }
+    }
+    if (target) {
+      const want = Math.atan2(target.y - sy, target.x - sx);
+      let diff = want - astShipAngle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      astShipAngle += diff * Math.min(1, dt * 6);
+    }
+    const sa = astShipAngle;
 
     aCtx.save();
     aCtx.translate(sx, sy);
@@ -1495,32 +1694,26 @@
     aCtx.shadowBlur = 0;
     aCtx.restore();
 
-    // Bullets
+    // Fire along the aim direction so shots actually reach the rocks.
     astFireTimer += dt;
-    if (astFireTimer > 0.4) {
+    if (astFireTimer > 0.32 && astBullets.length < 10) {
       astFireTimer = 0;
-      astBullets.push({ x: sx + Math.cos(sa) * 14, y: sy + Math.sin(sa) * 14, vx: Math.cos(sa) * 180, vy: Math.sin(sa) * 180, life: 0 });
-    }
-    for (let i = astBullets.length - 1; i >= 0; i--) {
-      const b = astBullets[i];
-      b.x += b.vx * dt; b.y += b.vy * dt; b.life += dt;
-      aCtx.shadowColor = '#ff4444'; aCtx.shadowBlur = 6;
-      aCtx.fillStyle = '#fff';
-      aCtx.fillRect(b.x - 2, b.y - 1, 4, 2);
-      aCtx.shadowBlur = 0;
-      if (b.life > 0.8 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) astBullets.splice(i, 1);
+      astBullets.push({
+        x: sx + Math.cos(sa) * 14, y: sy + Math.sin(sa) * 14,
+        vx: Math.cos(sa) * 240, vy: Math.sin(sa) * 240, life: 0
+      });
     }
 
-    // Asteroids
+    // Move + draw asteroids (pixel space, wrap around edges).
     for (const rock of AST_ROCKS) {
-      rock.x += rock.vx * dt / W;
-      rock.y += rock.vy * dt / H;
+      rock.x += rock.vx * dt;
+      rock.y += rock.vy * dt;
       rock.rot += rock.rotV * dt;
-      rock.x = ((rock.x % 1) + 1) % 1;
-      rock.y = ((rock.y % 1) + 1) % 1;
+      if (rock.x < -30) rock.x = W + 30; else if (rock.x > W + 30) rock.x = -30;
+      if (rock.y < -30) rock.y = H + 30; else if (rock.y > H + 30) rock.y = -30;
 
       aCtx.save();
-      aCtx.translate(rock.x * W, rock.y * H);
+      aCtx.translate(rock.x, rock.y);
       aCtx.rotate(rock.rot);
       aCtx.shadowColor = '#ff4444';
       aCtx.shadowBlur = 6;
@@ -1540,6 +1733,61 @@
       aCtx.shadowBlur = 0;
       aCtx.restore();
     }
+
+    // Bullets: move, draw, and COLLIDE with asteroids.
+    for (let i = astBullets.length - 1; i >= 0; i--) {
+      const b = astBullets[i];
+      b.x += b.vx * dt; b.y += b.vy * dt; b.life += dt;
+
+      // Collision test against every rock.
+      let hit = false;
+      for (let r = AST_ROCKS.length - 1; r >= 0; r--) {
+        const rock = AST_ROCKS[r];
+        const dx = b.x - rock.x, dy = b.y - rock.y;
+        if (dx * dx + dy * dy < rock.size * rock.size) {
+          hit = true;
+          astBurst(rock.x, rock.y, rock.size > 16);
+          AST_ROCKS.splice(r, 1);
+          // Split big rocks into two smaller shards; small rocks vanish.
+          if (rock.size > 15 && AST_ROCKS.length < 8) {
+            AST_ROCKS.push(astMakeRock(rock.x, rock.y, rock.size * 0.55));
+            AST_ROCKS.push(astMakeRock(rock.x, rock.y, rock.size * 0.55));
+          }
+          // Keep the field populated.
+          if (AST_ROCKS.length < 5) AST_ROCKS.push(astSpawnEdgeRock());
+          break;
+        }
+      }
+
+      if (hit) { astBullets.splice(i, 1); continue; }
+
+      aCtx.shadowColor = '#ff4444'; aCtx.shadowBlur = 6;
+      aCtx.fillStyle = '#fff';
+      aCtx.fillRect(b.x - 2, b.y - 1, 4, 2);
+      aCtx.shadowBlur = 0;
+      if (b.life > 1.2 || b.x < -10 || b.x > W + 10 || b.y < -10 || b.y > H + 10) astBullets.splice(i, 1);
+    }
+
+    // Explosion particles.
+    for (let i = astParticles.length - 1; i >= 0; i--) {
+      const p = astParticles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.94; p.vy *= 0.94;
+      p.life += dt;
+      const k = 1 - p.life / p.max;
+      if (k <= 0) { astParticles.splice(i, 1); continue; }
+      aCtx.globalAlpha = k;
+      aCtx.shadowColor = p.c; aCtx.shadowBlur = 6;
+      aCtx.fillStyle = p.c;
+      aCtx.beginPath();
+      aCtx.arc(p.x, p.y, p.r * k, 0, Math.PI * 2);
+      aCtx.fill();
+    }
+    aCtx.globalAlpha = 1;
+    aCtx.shadowBlur = 0;
+
+    // Safety: if everything got cleared, reseed a couple of rocks.
+    if (AST_ROCKS.length < 4) AST_ROCKS.push(astSpawnEdgeRock());
   }
 
   // ── Memory Matrix card preview ──────────────────────────────
@@ -1643,116 +1891,250 @@
   resizeTower();
   window.addEventListener('resize', resizeTower);
 
-  const TWR_COLORS = ['#ff2288','#ff6644','#ffaa22','#44ff88','#22aaff','#aa44ff','#ff44aa','#44ffdd'];
-  const twrStack = [];
-  let twrMoving = { x: 0, w: 0.5, dir: 1 };
-  let twrDropTimer = 0;
+  // Faithful to the real game's NEON_PALETTE (tower-stack/index.html)
+  const TWR_COLORS = [
+    '#ff2288','#ff0066','#ff44aa','#ee00ff','#aa00ff',
+    '#6600ff','#0044ff','#00aaff','#00ffcc','#00ff66',
+    '#aaff00','#ffcc00','#ff8800','#ff4400','#ff0044'
+  ];
+  const twrStack = [];                       // { x, w, color, flash }  (x,w are 0..1 fractions of W)
+  let twrMoving = null;                       // { x, w, dir, color }  (null while a reset flash plays)
+  let twrDropTimer = 0;                       // free-running phase accumulator
   let twrInit = false;
+
+  // ── added state ──
+  let twrCam = 0, twrCamTarget = 0;           // camera scroll (px), rises as tower grows
+  let twrTargetX = 0.5;                       // planned landing x for the moving block
+  const twrFall = [];                         // sliced-off overhang pieces raining down
+  let twrFlash = 0;                           // brief pink flash on a perfect (aligned) drop
+  let twrResetT = 0;                          // reset-transition flash timer (1 -> 0)
+  let twrResetArmed = false;                  // ensures a single rebuild mid-flash
 
   function drawTowerPreview(dt, t) {
     const W = twrCvs.width, H = twrCvs.height;
     const ms = t * 0.001;
+    const BH = 16, DEP = 5, GROUND = 14;      // block height, 3D depth, ground margin
+    const SPEED = 0.6;                         // moving-block sweep speed (fraction/sec)
 
-    if (!twrInit) {
+    // screen top-edge Y of stack block index i (0 = base)
+    const yTop = (i) => H - GROUND + twrCam - (i + 1) * BH;
+
+    function reinit() {
       twrStack.length = 0;
-      twrStack.push({ x: 0.25, w: 0.5, color: TWR_COLORS[0] });
-      twrMoving = { x: 0, w: 0.5, dir: 1 };
-      twrInit = true;
+      twrStack.push({ x: 0.30, w: 0.40, color: TWR_COLORS[0], flash: 0 });
+      twrFall.length = 0;
+      twrCam = 0; twrCamTarget = 0;
+      twrFlash = 0;
+      spawn();
     }
 
-    // Bg gradient
-    const hueShift = twrStack.length * 8;
-    tCtx.fillStyle = '#0d0208';
+    function spawn() {
+      const prev = twrStack[twrStack.length - 1];
+      const w = prev.w;
+      const dir = (twrStack.length % 2 === 0) ? 1 : -1;
+      const perfect = Math.random() < 0.55;
+      let off = perfect ? 0 : (0.015 + Math.random() * 0.045) * (Math.random() < 0.5 ? -1 : 1);
+      twrTargetX = Math.max(0, Math.min(1 - w, prev.x + off));
+      twrMoving = {
+        x: dir > 0 ? -w : 1,
+        w,
+        dir,
+        color: TWR_COLORS[twrStack.length % TWR_COLORS.length]
+      };
+    }
+
+    function drop() {
+      const prev = twrStack[twrStack.length - 1];
+      const m = twrStack.length;                 // moving block's row index
+      const cx = twrMoving.x, cw = twrMoving.w, col = twrMoving.color;
+      const oL = Math.max(cx, prev.x);
+      const oR = Math.min(cx + cw, prev.x + prev.w);
+      const ow = oR - oL;
+      const py = yTop(m);
+
+      if (ow <= 0) {                             // safety: total miss -> restart
+        twrMoving = null; twrResetT = 1; twrResetArmed = true; return;
+      }
+
+      // slice off overhang -> falling pieces
+      if (cx < prev.x) {
+        twrFall.push({ x: cx, w: prev.x - cx, y: py, vy: 0, vx: -0.05 - Math.random() * 0.05,
+                       rot: 0, vr: -0.6 - Math.random(), color: col, alpha: 1 });
+      }
+      if (cx + cw > prev.x + prev.w) {
+        twrFall.push({ x: prev.x + prev.w, w: (cx + cw) - (prev.x + prev.w), y: py, vy: 0,
+                       vx: 0.05 + Math.random() * 0.05, rot: 0, vr: 0.6 + Math.random(),
+                       color: col, alpha: 1 });
+      }
+
+      const perfect = Math.abs(cx - prev.x) < 0.006;
+      twrStack.push({ x: oL, w: ow, color: col, flash: perfect ? 1 : 0 });
+      if (perfect) twrFlash = 1;
+
+      // graceful loop: rebuild when tall, or when the tower has whittled too thin
+      if (twrStack.length >= 12 || ow < 0.09) {
+        twrMoving = null; twrResetT = 1; twrResetArmed = true;
+      } else {
+        spawn();
+      }
+    }
+
+    if (!twrInit) { reinit(); twrInit = true; }
+
+    twrDropTimer += dt;
+
+    // ── update: camera ──
+    const mIdx = twrStack.length;              // index the moving block would occupy
+    twrCamTarget = Math.max(0, (mIdx + 1) * BH - (H * 0.58 - GROUND));
+    twrCam += (twrCamTarget - twrCam) * Math.min(1, dt * 6);
+
+    // ── update: reset transition ──
+    if (twrResetT > 0) {
+      twrResetT -= dt * 2.2;
+      if (twrResetArmed && twrResetT <= 0.5) { reinit(); twrResetArmed = false; }
+      if (twrResetT < 0) twrResetT = 0;
+    }
+
+    // ── update: moving block sweep + auto-drop ──
+    if (twrMoving) {
+      twrMoving.x += twrMoving.dir * SPEED * dt;
+      let landed = false;
+      if (twrMoving.dir > 0 && twrMoving.x >= twrTargetX) { twrMoving.x = twrTargetX; landed = true; }
+      else if (twrMoving.dir < 0 && twrMoving.x <= twrTargetX) { twrMoving.x = twrTargetX; landed = true; }
+      else if (twrMoving.x < -twrMoving.w - 0.25 || twrMoving.x > 1.25) { twrMoving.x = twrTargetX; landed = true; }
+      if (landed) drop();
+    }
+
+    // ── update: falling overhang + flashes ──
+    for (let i = twrFall.length - 1; i >= 0; i--) {
+      const f = twrFall[i];
+      f.vy += 620 * dt;
+      f.y += f.vy * dt;
+      f.x += f.vx * dt;
+      f.rot += f.vr * dt;
+      f.alpha -= dt * 1.4;
+      if (f.alpha <= 0 || f.y > H + 40) twrFall.splice(i, 1);
+    }
+    if (twrFlash > 0) twrFlash = Math.max(0, twrFlash - dt * 2);
+    for (let i = 0; i < twrStack.length; i++) {
+      if (twrStack[i].flash > 0) twrStack[i].flash = Math.max(0, twrStack[i].flash - dt * 1.6);
+    }
+
+    // ── draw: background gradient (matches real hsl scheme) ──
+    const hue = 270 + twrStack.length * 3;
+    const grad = tCtx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, `hsl(${hue % 360}, 30%, 4%)`);
+    grad.addColorStop(0.5, '#0d0208');
+    grad.addColorStop(1, `hsl(${(hue + 40) % 360}, 20%, 6%)`);
+    tCtx.fillStyle = grad;
     tCtx.fillRect(0, 0, W, H);
 
-    // Grid lines
-    tCtx.strokeStyle = 'rgba(255,34,136,0.04)';
+    // faint parallax grid
+    tCtx.strokeStyle = 'rgba(255,34,136,0.05)';
     tCtx.lineWidth = 0.5;
-    for (let y = 0; y < H; y += 20) { tCtx.beginPath(); tCtx.moveTo(0, y); tCtx.lineTo(W, y); tCtx.stroke(); }
+    const gy0 = -((twrCam * 0.3) % 20);
+    for (let y = gy0; y < H; y += 20) { tCtx.beginPath(); tCtx.moveTo(0, y); tCtx.lineTo(W, y); tCtx.stroke(); }
+    for (let x = 0; x < W; x += 26) { tCtx.beginPath(); tCtx.moveTo(x, 0); tCtx.lineTo(x, H); tCtx.stroke(); }
 
-    // Move block
-    twrMoving.x += twrMoving.dir * dt * 0.6;
-    if (twrMoving.x + twrMoving.w > 1) { twrMoving.dir = -1; }
-    if (twrMoving.x < 0) { twrMoving.dir = 1; }
-
-    // Auto-drop
-    twrDropTimer += dt;
-    if (twrDropTimer > 1.2) {
-      twrDropTimer = 0;
-      const prev = twrStack[twrStack.length - 1];
-      const overlapStart = Math.max(twrMoving.x, prev.x);
-      const overlapEnd = Math.min(twrMoving.x + twrMoving.w, prev.x + prev.w);
-      if (overlapEnd > overlapStart) {
-        const nw = overlapEnd - overlapStart;
-        twrStack.push({ x: overlapStart, w: nw, color: TWR_COLORS[twrStack.length % TWR_COLORS.length] });
-        twrMoving = { x: 0, w: nw, dir: 1 };
-      }
-      if (twrStack.length > 8) {
-        twrStack.splice(0, twrStack.length - 6);
-        twrMoving = { x: 0, w: 0.5, dir: 1 };
-        twrStack.length = 0;
-        twrStack.push({ x: 0.25, w: 0.5, color: TWR_COLORS[0] });
-      }
+    // ground line + glow (only while low enough to see)
+    const groundScreenY = H - GROUND + twrCam;
+    if (groundScreenY < H + 30) {
+      tCtx.fillStyle = 'rgba(255,34,136,0.07)';
+      tCtx.fillRect(0, groundScreenY, W, H - groundScreenY + 30);
+      tCtx.strokeStyle = 'rgba(255,34,136,0.35)';
+      tCtx.lineWidth = 1.5;
+      tCtx.beginPath(); tCtx.moveTo(0, groundScreenY); tCtx.lineTo(W, groundScreenY); tCtx.stroke();
     }
 
-    const blockH = 18;
-    const depth = 6;
-    const baseY = H - 16;
+    // ── 3D block helper ──
+    function block3d(x, y, w, h, color, alpha, glow, hi) {
+      // top face (lighter)
+      tCtx.globalAlpha = alpha * 0.6;
+      tCtx.fillStyle = color;
+      tCtx.beginPath();
+      tCtx.moveTo(x, y); tCtx.lineTo(x + DEP, y - DEP);
+      tCtx.lineTo(x + w + DEP, y - DEP); tCtx.lineTo(x + w, y);
+      tCtx.fill();
+      // right face (darker)
+      tCtx.globalAlpha = alpha * 0.32;
+      tCtx.beginPath();
+      tCtx.moveTo(x + w, y); tCtx.lineTo(x + w + DEP, y - DEP);
+      tCtx.lineTo(x + w + DEP, y + h - DEP); tCtx.lineTo(x + w, y + h);
+      tCtx.fill();
+      // front face
+      tCtx.globalAlpha = alpha;
+      if (glow) { tCtx.shadowColor = color; tCtx.shadowBlur = glow; }
+      tCtx.fillStyle = color;
+      tCtx.fillRect(x, y, w, h);
+      tCtx.shadowBlur = 0;
+      // perfect-drop white highlight
+      if (hi > 0) { tCtx.globalAlpha = alpha * hi * 0.55; tCtx.fillStyle = '#ffffff'; tCtx.fillRect(x, y, w, h); }
+      // border
+      tCtx.globalAlpha = alpha * 0.5;
+      tCtx.strokeStyle = '#ffffff'; tCtx.lineWidth = 1;
+      tCtx.strokeRect(x, y, w, h);
+      tCtx.globalAlpha = 1;
+    }
 
-    // Draw stacked blocks
+    // ── draw: stacked blocks ──
     for (let i = 0; i < twrStack.length; i++) {
       const b = twrStack[i];
-      const bx = b.x * W, bw = b.w * W;
-      const by = baseY - (i + 1) * blockH;
-
-      // Front face
-      tCtx.fillStyle = b.color;
-      tCtx.shadowColor = b.color;
-      tCtx.shadowBlur = 6;
-      tCtx.fillRect(bx, by, bw, blockH);
-      // Top face
-      tCtx.fillStyle = b.color + 'aa';
-      tCtx.beginPath();
-      tCtx.moveTo(bx, by);
-      tCtx.lineTo(bx + depth, by - depth);
-      tCtx.lineTo(bx + bw + depth, by - depth);
-      tCtx.lineTo(bx + bw, by);
-      tCtx.fill();
-      // Right face
-      tCtx.fillStyle = b.color + '66';
-      tCtx.beginPath();
-      tCtx.moveTo(bx + bw, by);
-      tCtx.lineTo(bx + bw + depth, by - depth);
-      tCtx.lineTo(bx + bw + depth, by + blockH - depth);
-      tCtx.lineTo(bx + bw, by + blockH);
-      tCtx.fill();
-      tCtx.shadowBlur = 0;
+      const by = yTop(i);
+      if (by > H + 20 || by + BH < -20) continue;
+      block3d(b.x * W, by, b.w * W, BH, b.color, 1, b.flash > 0 ? 14 : 0, b.flash);
     }
 
-    // Draw moving block
-    const mi = twrStack.length;
-    const mx = twrMoving.x * W, mw = twrMoving.w * W;
-    const my = baseY - (mi + 1) * blockH;
-    const mc = TWR_COLORS[mi % TWR_COLORS.length];
-    const pulse = Math.sin(ms * 4) * 0.15 + 0.85;
+    // ── draw: moving block (pulsing glow) ──
+    if (twrMoving) {
+      const my = yTop(twrStack.length);
+      const pulse = 0.85 + Math.sin(ms * 5) * 0.15;
+      block3d(twrMoving.x * W, my, twrMoving.w * W, BH, twrMoving.color, pulse, 12, 0);
+      // drop-guide legs down to the current tower top
+      const topY = yTop(twrStack.length - 1);
+      tCtx.globalAlpha = 0.10;
+      tCtx.strokeStyle = twrMoving.color;
+      tCtx.lineWidth = 1;
+      tCtx.setLineDash([3, 5]);
+      tCtx.beginPath();
+      tCtx.moveTo(twrMoving.x * W, my + BH); tCtx.lineTo(twrMoving.x * W, topY);
+      tCtx.moveTo((twrMoving.x + twrMoving.w) * W, my + BH); tCtx.lineTo((twrMoving.x + twrMoving.w) * W, topY);
+      tCtx.stroke();
+      tCtx.setLineDash([]);
+      tCtx.globalAlpha = 1;
+    }
 
-    tCtx.globalAlpha = pulse;
-    tCtx.shadowColor = mc;
-    tCtx.shadowBlur = 10;
-    tCtx.fillStyle = mc;
-    tCtx.fillRect(mx, my, mw, blockH);
-    tCtx.fillStyle = mc + 'aa';
-    tCtx.beginPath();
-    tCtx.moveTo(mx, my); tCtx.lineTo(mx + depth, my - depth);
-    tCtx.lineTo(mx + mw + depth, my - depth); tCtx.lineTo(mx + mw, my);
-    tCtx.fill();
-    tCtx.fillStyle = mc + '66';
-    tCtx.beginPath();
-    tCtx.moveTo(mx + mw, my); tCtx.lineTo(mx + mw + depth, my - depth);
-    tCtx.lineTo(mx + mw + depth, my + blockH - depth); tCtx.lineTo(mx + mw, my + blockH);
-    tCtx.fill();
-    tCtx.shadowBlur = 0;
+    // ── draw: falling overhang pieces ──
+    for (let i = 0; i < twrFall.length; i++) {
+      const f = twrFall[i];
+      const fw = f.w * W;
+      tCtx.save();
+      tCtx.translate(f.x * W + fw / 2, f.y + BH / 2);
+      tCtx.rotate(f.rot);
+      tCtx.globalAlpha = Math.max(0, f.alpha);
+      tCtx.fillStyle = f.color;
+      tCtx.fillRect(-fw / 2, -BH / 2, fw, BH);
+      tCtx.globalAlpha = Math.max(0, f.alpha) * 0.4;
+      tCtx.strokeStyle = '#ffffff'; tCtx.lineWidth = 1;
+      tCtx.strokeRect(-fw / 2, -BH / 2, fw, BH);
+      tCtx.restore();
+    }
     tCtx.globalAlpha = 1;
+
+    // ── draw: perfect-drop pink flash ──
+    if (twrFlash > 0) {
+      tCtx.globalAlpha = twrFlash * 0.14;
+      tCtx.fillStyle = '#ff2288';
+      tCtx.fillRect(0, 0, W, H);
+      tCtx.globalAlpha = 1;
+    }
+
+    // ── draw: reset-transition flash (masks the rebuild) ──
+    if (twrResetT > 0) {
+      tCtx.globalAlpha = Math.min(1, twrResetT) * 0.85;
+      tCtx.fillStyle = '#ff2288';
+      tCtx.fillRect(0, 0, W, H);
+      tCtx.globalAlpha = 1;
+    }
   }
 
   // ── Rhythm Pulse card preview ────────────────────────────────
@@ -2179,7 +2561,8 @@
   // Mirrors the actual game: a grid-based hopper (Crossy-Road style) where the
   // player bounces upward across grass / road / water / rail lanes. Vertical
   // scroll conveys the "altitude record" chase; cars and the pink locomotive
-  // are the hazards.
+  // are the hazards. The camera tracks the hopper (like the real game) so it
+  // stays framed instead of climbing off the top of the card.
   const pjCvs = document.getElementById('cv-jumper');
   const pjCtx = pjCvs ? pjCvs.getContext('2d') : null;
   let pjW, pjH;
@@ -2189,6 +2572,7 @@
 
   const PJ_COLS = 8;
   // Fixed lane script so the preview always shows one of each hazard type.
+  // Every hazard lane is flanked by grass, so the hopper always rests safely.
   // type: 'grass' | 'road' | 'water' | 'track'
   const PJ_LANES = [
     { type: 'grass', decor: [1, 6] },
@@ -2201,30 +2585,88 @@
     { type: 'road',  dir: -1, cars: [1.0, 5.5], speed: 2.2 },
     { type: 'grass', decor: [4] }
   ];
-  // player hops upward through lane indices 1, 2, 3, ... cycling when offscreen
-  const pjPlayer = { laneFrom: 0, laneTo: 1, colFrom: 3, colTo: 3, hopT: 1, dir: 'up' };
-  let pjHopDelay = 0.25;    // pause between hops
-  let pjCamRow = -1.2;      // world row at bottom edge (float)
-  function pjPickHop() {
-    // Always climb to next lane; pick a column that survives (avoid a car directly on it)
-    const next = pjPlayer.laneTo + 1;
-    const lane = PJ_LANES[next % PJ_LANES.length];
-    let target = pjPlayer.colTo;
-    // Nudge sideways occasionally to feel alive
-    if (Math.random() < 0.45) target += (Math.random() < 0.5 ? -1 : 1);
-    target = Math.max(0, Math.min(PJ_COLS - 1, target));
-    // For water lanes, snap to a log column
-    if (lane.type === 'water') {
-      const log = lane.logs[Math.floor(Math.random() * lane.logs.length)];
-      target = Math.round(log.x + log.len / 2);
-      target = Math.max(0, Math.min(PJ_COLS - 1, target));
+  // player hops upward through lane indices, cycling seamlessly (period = PJ_LANES.length)
+  const pjPlayer = { laneFrom: 0, laneTo: 0, colFrom: 3, colTo: 3, hopT: 1, dir: 'up' };
+  let pjHopDelay = 0.35;    // pause between hops
+  let pjCamRow = -1.2;      // world row at bottom edge (float), follows the player
+
+  function pjLaneRef(row) {
+    return PJ_LANES[((row % PJ_LANES.length) + PJ_LANES.length) % PJ_LANES.length];
+  }
+
+  // Live column position (0..PJ_COLS) of each car on a road lane at time `ms`.
+  function pjCarCenters(lane, ms) {
+    const out = [];
+    for (let i = 0; i < lane.cars.length; i++) {
+      out.push(((lane.cars[i] + ms * lane.speed * lane.dir) % PJ_COLS + PJ_COLS) % PJ_COLS);
     }
+    return out;
+  }
+  // Is column `c` clear of every car centre by at least `minDist` (with wrap)?
+  function pjColClear(centers, c, minDist) {
+    for (const cc of centers) {
+      let d = Math.abs(c - cc);
+      d = Math.min(d, PJ_COLS - d);
+      if (d < minDist) return false;
+    }
+    return true;
+  }
+  // Nearest safe road column to `want` at landing time, or null if none right now.
+  function pjSafeRoadCol(lane, ms, want) {
+    const centers = pjCarCenters(lane, ms + 0.16);   // predict where cars will be on landing
+    let best = null, bestD = 1e9;
+    for (let c = 0; c < PJ_COLS; c++) {
+      if (pjColClear(centers, c, 1.4)) {
+        const d = Math.abs(c - want);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+    }
+    return best;
+  }
+  // Nearest column that sits fully on a drifting log at landing time, or null.
+  function pjLogCol(lane, ms, want) {
+    const tt = ms + 0.16;
+    let best = null, bestD = 1e9;
+    for (const log of lane.logs) {
+      const lx0 = ((log.x + tt * lane.speed * lane.dir) % PJ_COLS + PJ_COLS) % PJ_COLS;
+      const half = log.len / 2;
+      const lo = Math.max(0, Math.ceil(lx0 - half + 0.5));
+      const hi = Math.min(PJ_COLS - 1, Math.floor(lx0 + half - 0.5));
+      for (let c = lo; c <= hi; c++) {
+        const d = Math.abs(c - want);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+    }
+    return best;
+  }
+
+  // Choose the next upward hop. Returns false (and hops nothing) when the next
+  // lane has no safe landing yet, so the hopper simply waits on the grass.
+  function pjPickHop(ms) {
+    const next = pjPlayer.laneTo + 1;
+    const lane = pjLaneRef(next);
+    const want = pjPlayer.colTo;
+    let target = null;
+    if (lane.type === 'grass') {
+      // wander sideways occasionally to feel alive
+      target = want + (Math.random() < 0.5 ? (Math.random() < 0.5 ? -1 : 1) : 0);
+      target = Math.max(0, Math.min(PJ_COLS - 1, target));
+    } else if (lane.type === 'road') {
+      target = pjSafeRoadCol(lane, ms, want);
+    } else if (lane.type === 'water') {
+      target = pjLogCol(lane, ms, want);
+    } else if (lane.type === 'track') {
+      const cyc = ms % 6;                       // train zooms through during 2.5..3.8
+      target = (cyc > 2.2 && cyc < 4.0) ? null : want;  // wait out the locomotive
+    }
+    if (target === null || target === undefined) return false;
     pjPlayer.colFrom = pjPlayer.colTo;
     pjPlayer.laneFrom = pjPlayer.laneTo;
     pjPlayer.colTo = target;
     pjPlayer.laneTo = next;
     pjPlayer.dir = target > pjPlayer.colFrom ? 'right' : target < pjPlayer.colFrom ? 'left' : 'up';
     pjPlayer.hopT = 0;
+    return true;
   }
 
   function pjLaneY(row) {
@@ -2239,44 +2681,77 @@
     const tile = pjH / 4.5;
     const colW = pjW / PJ_COLS;
 
-    // sky
-    pjCtx.fillStyle = '#050510';
-    pjCtx.fillRect(0, 0, pjW, pjH);
-
-    // camera slowly scrolls up to convey altitude chase
-    pjCamRow += dt * 0.25;
-    // Reset / recycle when player has climbed far
-    if (pjPlayer.laneTo > PJ_LANES.length - 1) {
+    // ── advance the hopper ──────────────────────────────────────
+    // Recycle world by one full lane period once the hopper climbs past it, so
+    // laneTo/colTo stay bounded and the (modulo) lane pattern is seamless.
+    if (pjPlayer.hopT >= 1 && pjPlayer.laneTo >= PJ_LANES.length) {
       const shift = PJ_LANES.length;
       pjPlayer.laneFrom -= shift;
       pjPlayer.laneTo -= shift;
       pjCamRow -= shift;
     }
 
-    // draw visible lanes
+    if (pjPlayer.hopT >= 1) {
+      // ride a log if resting on water (keeps the sprite on the drifting log)
+      const cur = pjLaneRef(pjPlayer.laneTo);
+      if (cur.type === 'water') {
+        pjPlayer.colTo = Math.max(0, Math.min(PJ_COLS - 1, pjPlayer.colTo + cur.speed * cur.dir * dt));
+        pjPlayer.colFrom = pjPlayer.colTo;
+      }
+      pjHopDelay -= dt;
+      if (pjHopDelay <= 0) {
+        pjPickHop(ms);        // may fail (waiting to cross) — retry next tick
+        pjHopDelay = 0.06;
+      }
+    } else {
+      pjPlayer.hopT = Math.min(1, pjPlayer.hopT + dt * 7);
+      if (pjPlayer.hopT >= 1) {
+        // just landed — rest a beat on grass, otherwise cross straight through
+        const landed = pjLaneRef(pjPlayer.laneTo);
+        pjHopDelay = landed.type === 'grass' ? (0.3 + Math.random() * 0.35) : 0.06;
+      }
+    }
+
+    // interpolated hopper position
+    const e = 1 - (1 - pjPlayer.hopT) * (1 - pjPlayer.hopT);
+    const col = pjPlayer.colFrom + (pjPlayer.colTo - pjPlayer.colFrom) * e;
+    const row = pjPlayer.laneFrom + (pjPlayer.laneTo - pjPlayer.laneFrom) * e;
+
+    // camera follows the hopper (keeps it framed ~40% up the card)
+    const desiredCam = row - 1.4;
+    pjCamRow += (desiredCam - pjCamRow) * Math.min(1, dt * 5);
+
+    const sx = col * colW + colW / 2;
+    const sy = pjLaneY(row) + tile / 2;
+    const hopLift = pjPlayer.hopT < 1 ? Math.sin(pjPlayer.hopT * Math.PI) * 8 : 0;
+
+    // ── sky ─────────────────────────────────────────────────────
+    pjCtx.fillStyle = '#050510';
+    pjCtx.fillRect(0, 0, pjW, pjH);
+
+    // ── draw visible lanes ──────────────────────────────────────
     const firstRow = Math.floor(pjCamRow) - 1;
     const lastRow = firstRow + 6;
     for (let r = firstRow; r <= lastRow; r++) {
-      const lane = PJ_LANES[((r % PJ_LANES.length) + PJ_LANES.length) % PJ_LANES.length];
+      const lane = pjLaneRef(r);
       const y = pjLaneY(r);
       if (lane.type === 'grass') {
-        pjCtx.fillStyle = r % 2 === 0 ? '#2e9640' : '#267835';
+        pjCtx.fillStyle = ((r % 2) + 2) % 2 === 0 ? '#2e9640' : '#267835';
         pjCtx.fillRect(0, y, pjW, tile);
         // tiny bushes/flowers
-        pjCtx.fillStyle = '#1f7a37';
-        for (const col of lane.decor) {
-          const cx = col * colW + colW / 2;
+        for (const c of lane.decor) {
+          const cx = c * colW + colW / 2;
+          pjCtx.fillStyle = '#1f7a37';
           pjCtx.fillRect(cx - 5, y + tile / 2 - 3, 10, 6);
           pjCtx.fillStyle = '#ffdd55';
           pjCtx.fillRect(cx - 1, y + tile / 2 - 1, 2, 2);
-          pjCtx.fillStyle = '#1f7a37';
         }
       } else if (lane.type === 'road') {
         pjCtx.fillStyle = '#2a2a32';
         pjCtx.fillRect(0, y, pjW, tile);
         pjCtx.fillStyle = '#ffcc44';
         for (let x = 0; x < pjW; x += 14) pjCtx.fillRect(x, y + tile / 2 - 1, 7, 1.5);
-        // cars — animate by hashing row into time
+        // cars
         for (let i = 0; i < lane.cars.length; i++) {
           const cx0 = ((lane.cars[i] + ms * lane.speed * lane.dir) % PJ_COLS + PJ_COLS) % PJ_COLS;
           const cx = cx0 * colW;
@@ -2325,7 +2800,7 @@
         pjCtx.fillStyle = '#b8b8c8';
         pjCtx.fillRect(0, y + 7, pjW, 2);
         pjCtx.fillRect(0, y + tile - 9, pjW, 2);
-        // Train runs on a cycle: 4s idle/warn, then a zoom across
+        // Train runs on a cycle: idle/warn, then a zoom across
         const cyc = (ms % 6);
         if (cyc > 2 && cyc < 2.5) {
           // warn flash
@@ -2357,30 +2832,13 @@
       }
     }
 
-    // advance hop
-    if (pjPlayer.hopT >= 1) {
-      pjHopDelay -= dt;
-      if (pjHopDelay <= 0) {
-        pjPickHop();
-        pjHopDelay = 0.22 + Math.random() * 0.15;
-      }
-    } else {
-      pjPlayer.hopT = Math.min(1, pjPlayer.hopT + dt * 7);
-    }
-    const e = 1 - (1 - pjPlayer.hopT) * (1 - pjPlayer.hopT);
-    const col = pjPlayer.colFrom + (pjPlayer.colTo - pjPlayer.colFrom) * e;
-    const row = pjPlayer.laneFrom + (pjPlayer.laneTo - pjPlayer.laneFrom) * e;
-    const sx = col * colW + colW / 2;
-    const sy = pjLaneY(row) + tile / 2;
-    const hopLift = pjPlayer.hopT < 1 ? Math.sin(pjPlayer.hopT * Math.PI) * 8 : 0;
-
-    // altitude meter (rising bar on the left) — conveys "altitude record" chase
+    // ── altitude meter (rising bar on the left) — "altitude record" chase ──
     pjCtx.fillStyle = 'rgba(0,0,0,0.5)';
     pjCtx.fillRect(4, 6, 5, pjH - 12);
     pjCtx.strokeStyle = 'rgba(255,51,136,0.35)';
     pjCtx.lineWidth = 1;
     pjCtx.strokeRect(4.5, 6.5, 4, pjH - 13);
-    const climb = Math.min(1, pjPlayer.laneTo / PJ_LANES.length);
+    const climb = (ms * 0.12) % 1;
     pjCtx.fillStyle = '#ff3388';
     pjCtx.fillRect(4, 6 + (pjH - 12) * (1 - climb), 5, (pjH - 12) * climb);
     // up arrow at top
@@ -2392,13 +2850,13 @@
     pjCtx.closePath();
     pjCtx.fill();
 
-    // shadow under player
+    // ── shadow under player ─────────────────────────────────────
     pjCtx.fillStyle = 'rgba(0,0,0,0.35)';
     pjCtx.beginPath();
     pjCtx.ellipse(sx, sy + 10, 7, 2.2, 0, 0, Math.PI * 2);
     pjCtx.fill();
 
-    // hot-pink pixel character (matches game: head + body + legs + directional eyes)
+    // ── hot-pink pixel character (head + body + legs + directional eyes) ──
     const sz = Math.min(22, tile * 0.55);
     const x0 = Math.floor(sx - sz / 2);
     const y0 = Math.floor(sy - sz / 2 - hopLift);
@@ -2844,10 +3302,35 @@
 
   const RV_ENEMIES = [];
   let rvSpawnTimer = 0;
+  // Real bullets + explosion particles so shots actually collide & blow up.
+  const RV_BULLETS = [];
+  const RV_PARTS = [];
+  let rvFireTimer = 0;
+  let rvPX = 0;           // player x (persists so auto-aim can steer smoothly)
+  let rvPXInit = false;
+
+  function rvSpawnBurst(x, y) {
+    // Short explosion: warm particle burst (matches game palette #ffcc33/#ff6622).
+    const n = 9;
+    for (let i = 0; i < n && RV_PARTS.length < 60; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 30 + Math.random() * 70;
+      RV_PARTS.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life: 0.32 + Math.random() * 0.22,
+        max: 0.54,
+        color: Math.random() < 0.5 ? '#ffcc33' : '#ff6622',
+        size: 1.5 + Math.random() * 2,
+      });
+    }
+  }
 
   function drawRiverPreview(dt, t) {
     const W = riverCvs.width, H = riverCvs.height;
     const ms = t * 0.001;
+    if (!rvPXInit) { rvPX = W / 2; rvPXInit = true; }
 
     // Dark background
     rvCtx.fillStyle = '#0a1a0a';
@@ -2856,16 +3339,23 @@
     // River banks (left and right)
     const bankW = W * 0.18 + Math.sin(ms * 0.8) * W * 0.04;
     const rightBankW = W * 0.18 + Math.sin(ms * 0.8 + 1.5) * W * 0.04;
+    const riverL = bankW;
+    const riverR = W - rightBankW;
 
     // Left bank (green)
     rvCtx.fillStyle = '#3a5528';
     rvCtx.fillRect(0, 0, bankW, H);
     // Right bank
-    rvCtx.fillRect(W - rightBankW, 0, rightBankW, H);
+    rvCtx.fillRect(riverR, 0, rightBankW, H);
 
     // River (water) -- between banks
     rvCtx.fillStyle = '#1a4488';
-    rvCtx.fillRect(bankW, 0, W - bankW - rightBankW, H);
+    rvCtx.fillRect(bankW, 0, riverR - bankW, H);
+
+    // Brown bank edges (match real game)
+    rvCtx.fillStyle = '#6b4a1f';
+    rvCtx.fillRect(bankW - 3, 0, 3, H);
+    rvCtx.fillRect(riverR, 0, 3, H);
 
     // Water ripple lines scrolling down
     rvCtx.strokeStyle = 'rgba(100,180,255,0.18)';
@@ -2874,25 +3364,25 @@
       const y = ((i * 38 + ms * 40) % (H + 20));
       rvCtx.beginPath();
       rvCtx.moveTo(bankW + 8, y);
-      rvCtx.lineTo(W - rightBankW - 8, y);
+      rvCtx.lineTo(riverR - 8, y);
       rvCtx.stroke();
     }
 
-    // Spawn enemies
+    // Spawn enemies (cap the count so the scene stays readable)
     rvSpawnTimer -= dt;
-    if (rvSpawnTimer <= 0) {
-      rvSpawnTimer = 0.9 + Math.random() * 0.6;
+    if (rvSpawnTimer <= 0 && RV_ENEMIES.length < 7) {
+      rvSpawnTimer = 0.7 + Math.random() * 0.5;
       RV_ENEMIES.push({
-        x: bankW + 10 + Math.random() * (W - bankW - rightBankW - 20),
+        x: riverL + 12 + Math.random() * (riverR - riverL - 24),
         y: -12,
-        type: Math.random() < 0.3 ? 'fuel' : 'ship'
+        type: Math.random() < 0.28 ? 'fuel' : 'ship'
       });
     }
 
     // Update & draw enemies
     for (let i = RV_ENEMIES.length - 1; i >= 0; i--) {
       const e = RV_ENEMIES[i];
-      e.y += 50 * dt;
+      e.y += 46 * dt;
       if (e.y > H + 20) { RV_ENEMIES.splice(i, 1); continue; }
 
       if (e.type === 'fuel') {
@@ -2919,12 +3409,71 @@
       }
     }
 
-    // Player plane (bottom, fixed position with subtle sway)
-    const px = W / 2 + Math.sin(ms * 1.8) * (W * 0.12);
+    // Self-playing pilot: auto-aim toward the lowest ship enemy, else sway.
+    let target = null, bestY = -Infinity;
+    for (const e of RV_ENEMIES) {
+      if (e.type === 'ship' && e.y > bestY) { bestY = e.y; target = e; }
+    }
     const py = H * 0.82;
+    const desiredX = target
+      ? target.x
+      : W / 2 + Math.sin(ms * 1.8) * (W * 0.12);
+    // Ease toward the target and clamp inside the river channel.
+    rvPX += (desiredX - rvPX) * Math.min(1, dt * 6);
+    rvPX = Math.max(riverL + 10, Math.min(riverR - 10, rvPX));
+    const px = rvPX;
+
+    // Fire real bullets on a cadence (capped).
+    rvFireTimer -= dt;
+    if (rvFireTimer <= 0 && RV_BULLETS.length < 10) {
+      rvFireTimer = 0.22;
+      RV_BULLETS.push({ x: px, y: py - 16 });
+    }
+
+    // Update bullets + collide with enemies (destroy + explode).
+    for (let i = RV_BULLETS.length - 1; i >= 0; i--) {
+      const b = RV_BULLETS[i];
+      b.y -= 220 * dt;
+      if (b.y < -8) { RV_BULLETS.splice(i, 1); continue; }
+
+      let hit = false;
+      for (let j = RV_ENEMIES.length - 1; j >= 0; j--) {
+        const e = RV_ENEMIES[j];
+        if (Math.abs(b.x - e.x) < 8 && Math.abs(b.y - e.y) < 8) {
+          rvSpawnBurst(e.x, e.y);   // explosion where the enemy was
+          RV_ENEMIES.splice(j, 1);  // remove the destroyed enemy
+          hit = true;
+          break;
+        }
+      }
+      if (hit) { RV_BULLETS.splice(i, 1); continue; }
+
+      // Draw the tracer bullet
+      rvCtx.fillStyle = '#fff';
+      rvCtx.shadowColor = '#44ff66';
+      rvCtx.shadowBlur = 6;
+      rvCtx.fillRect(b.x - 1, b.y - 3, 2, 6);
+      rvCtx.shadowBlur = 0;
+    }
+
+    // Update & draw explosion particles.
+    for (let i = RV_PARTS.length - 1; i >= 0; i--) {
+      const p = RV_PARTS[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= (1 - dt * 2);
+      p.vy *= (1 - dt * 2);
+      p.life -= dt;
+      if (p.life <= 0) { RV_PARTS.splice(i, 1); continue; }
+      rvCtx.globalAlpha = Math.max(0, p.life / p.max);
+      rvCtx.fillStyle = p.color;
+      rvCtx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    rvCtx.globalAlpha = 1;
+
+    // Player plane (bottom, follows auto-aim)
     rvCtx.save();
     rvCtx.translate(px, py);
-
     // Plane body (triangle pointing up)
     rvCtx.fillStyle = '#44ff66';
     rvCtx.shadowColor = '#44ff66';
@@ -2939,15 +3488,6 @@
     rvCtx.fillRect(-12, -2, 24, 4);
     rvCtx.shadowBlur = 0;
     rvCtx.restore();
-
-    // Muzzle flash / bullets
-    const bulletY = ((ms * 200) % 120);
-    rvCtx.fillStyle = '#fff';
-    rvCtx.shadowColor = '#44ff66';
-    rvCtx.shadowBlur = 6;
-    rvCtx.fillRect(px - 1, py - 16 - bulletY, 2, 6);
-    rvCtx.fillRect(px - 1, py - 16 - (bulletY + 60) % 120, 2, 6);
-    rvCtx.shadowBlur = 0;
   }
 
   // ── Neon Runner card preview ──────────────────────────────────
@@ -3442,5 +3982,6 @@
   });
 })();
 </script>
+<script src="/sfx.js"></script>
 </body>
 </html>

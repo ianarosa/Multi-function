@@ -442,6 +442,8 @@
   let hero, platforms, coins, enemies, particles, floats, shots;
   let scrollX, worldCursor, groundY, score, coinCount;
   let shake, flash, flashCol, maxProgress, bonusScore, nextHeal;
+  let coinCombo = 0, coinComboT = 0;   // coin pickup streak → rising SFX pitch
+  let lastLandSfx = 0;                  // throttle for the soft landing tick
   let state = 'select';
   let lastT = null;
   let best; try { best = +(localStorage.getItem('nr_best') || 0); } catch (e) { best = 0; }
@@ -469,10 +471,12 @@
   function doJump() {
     if (state !== 'playing') return;
     if (hero.jumps > 0) {
-      hero.vy = hero.jumps === hero.maxJumps ? JUMP_V : DBL_V;
+      const first = hero.jumps === hero.maxJumps;
+      hero.vy = first ? JUMP_V : DBL_V;
       hero.jumps--;
       hero.onGround = false;
       jumpPuff();
+      if (window.SFX) SFX.play('jump', { vol: 0.4, rate: first ? 1 : 1.25 });   // double-jump a touch higher
     }
   }
 
@@ -771,6 +775,7 @@
     const sx = e.x + e.w / 2 - scrollX;
     burst(sx, e.cy, '#ff5a5f', 16, 130);
     floatText(sx, e.cy - e.h / 2, '+' + e.reward, '#ff5a5f');
+    if (window.SFX) SFX.play('bounce', { vol: 0.5, rate: 1.05 });   // springy stomp pop
   }
 
   // ── Particles / floats ──────────────────────────────────────────
@@ -856,6 +861,7 @@
     if (levelSpec) buildLevel(levelSpec); else seedWorld();
 
     score = 0; coinCount = 0; maxProgress = 0; bonusScore = 0; elapsed = 0;
+    coinCombo = 0; coinComboT = 0;
     scrollX = 0;
     shake = 0; flash = 0; flashCol = '#ff5a5f'; nextHeal = HEAL_STEP;
     hero = {
@@ -865,6 +871,7 @@
     };
     held.left = held.right = false;
     state = 'playing';
+    if (window.SFX) SFX.play('start');
     lastT = performance.now();
     try { localStorage.setItem('nr_sel_mode', mode); localStorage.setItem('nr_sel_danger', String(dangerIdx)); } catch (e) {}
     syncUI();
@@ -885,6 +892,7 @@
     flash = Math.max(flash, 0.6); flashCol = '#ff2b30';
     burst(heroScreenX() + HW / 2, hero.y + HH / 2, '#ff5a5f', 14, 130);
     floatText(heroScreenX() + HW / 2, hero.y - 8, '-1', '#ff5a5f');
+    if (window.SFX) SFX.play('hurt');
   }
 
   function die(cause) {
@@ -897,6 +905,10 @@
     hero.dead = true;
     state = 'gameover';
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: fin } }));
+    if (window.SFX) {
+      SFX.play('explode', { vol: 0.6 });                          // death impact
+      setTimeout(() => { if (window.SFX) SFX.play('gameover'); }, 170);   // then the lose sting
+    }
     showPostGame();
   }
 
@@ -917,6 +929,7 @@
     flash = 0.8; flashCol = '#12ffe8'; shake = 10;
     state = 'levelcomplete';
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: fin } }));
+    if (window.SFX) SFX.play('win');
     showPostGame();
   }
 
@@ -954,10 +967,12 @@
 
     // invulnerability window ticks down; regen a heart at score milestones
     if (hero.inv > 0) hero.inv = Math.max(0, hero.inv - dt);
+    if (coinComboT > 0) { coinComboT -= dt; if (coinComboT <= 0) coinCombo = 0; }
     if (baseScore() >= nextHeal) {
       if (hero.hp < maxHp) {
         hero.hp++;
         floatText(heroScreenX() + HW / 2, hero.y - 12, '+1 HEART', '#ff8f92');
+        if (window.SFX) SFX.play('powerup');
       }
       nextHeal += HEAL_STEP;
     }
@@ -977,7 +992,14 @@
     for (const p of platforms) {
       if (cx < p.x || cx > p.x + p.w) continue;
       if (hero.vy >= 0 && prevBottom <= p.y + 2 && hero.y + HH >= p.y) {
-        if (!wasGround && hero.vy > 4) { hero.squash = Math.min(1, hero.vy / 15); landPuff(); }  // impact squash + dust
+        if (!wasGround && hero.vy > 4) {
+          hero.squash = Math.min(1, hero.vy / 15); landPuff();  // impact squash + dust
+          const nowMs = performance.now();
+          if (window.SFX && nowMs - lastLandSfx > 90) {         // throttle rapid re-lands
+            lastLandSfx = nowMs;
+            SFX.play('tick', { vol: 0.18 + Math.min(0.14, hero.vy / 90), rate: 0.9 });  // soft footfall
+          }
+        }
         hero.y = p.y - HH; hero.vy = 0; hero.onGround = true;
         hero.jumps = hero.maxJumps; break;
       }
@@ -1001,8 +1023,10 @@
       const dcx = c.x - (hero.wx + HW / 2), dcy = c.y - (hero.y + HH / 2);
       if (dcx * dcx + dcy * dcy < COIN_PICK * COIN_PICK) {
         c.taken = true; coinCount++;
+        coinCombo = coinComboT > 0 ? coinCombo + 1 : 1; coinComboT = 1.1;
         burst(c.x - scrollX, c.y, '#ffd24a', 10, 90);
         floatText(c.x - scrollX, c.y - 8, '+' + COIN_VAL, '#ffd24a');
+        if (window.SFX) SFX.play('coin', { combo: coinCombo });
       }
     }
 
@@ -1807,13 +1831,13 @@
   }
 
   function clampCard(i) { return Math.max(0, Math.min(MODES.length - 1, i)); }
-  function setCard(i) { selCard = clampCard(i); renderCarousel(); }
+  function setCard(i) { i = clampCard(i); const ch = i !== selCard; selCard = i; renderCarousel(); if (ch && window.SFX) SFX.play('click'); }
   function cardStep(dir) { setCard(selCard + dir); }
-  function setDanger(i) { selDanger = Math.max(0, Math.min(DANGERS.length - 1, i)); renderDanger(); }
+  function setDanger(i) { i = Math.max(0, Math.min(DANGERS.length - 1, i)); const ch = i !== selDanger; selDanger = i; renderDanger(); if (ch && window.SFX) SFX.play('click'); }
   function dangerStep(dir) { setDanger(selDanger + dir); }
   function doStart() { startGame(MODES[selCard].id, selDanger); }
   function retry() { startGame(gameMode, dangerIdx); }
-  function backToSelect() { theme = DEFAULT_THEME; finishFlag = null; finite = false; state = 'select'; syncUI(); }
+  function backToSelect() { if (window.SFX) SFX.play('click'); theme = DEFAULT_THEME; finishFlag = null; finite = false; state = 'select'; syncUI(); }
 
   function showPostGame() {
     const win = state === 'levelcomplete';
@@ -1871,6 +1895,7 @@
   });
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="platformer" data-color="#ff5a5f"></script>
 </body>
 </html>

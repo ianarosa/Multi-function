@@ -425,6 +425,8 @@
   window.__lbCurrentScore = function() { return score; };
   let goalFlash = 0;   // seconds remaining for goal flash effect
   let lastT = performance.now();
+  let ballControlled = false;  // true while dribbling; used to sound a single "first touch"
+  let touchCd = 0;             // throttle so re-gaining control can't spam the touch cue
 
   // ── Input helpers ─────────────────────────────────────────────
   function getInputVec() {
@@ -464,6 +466,7 @@
   // ── Update ────────────────────────────────────────────────────
   function update(dt) {
     goalFlash = Math.max(0, goalFlash - dt);
+    touchCd = Math.max(0, touchCd - dt);
 
     // --- Player movement ---
     const inp = getInputVec();
@@ -486,6 +489,11 @@
       const playerCy = player.y + player.h / 2;
       if (Math.hypot(ball.x - playerCx, ball.y - playerCy) < SHOOT_RANGE) {
         player.shootCooldown = SHOOT_COOLDOWN;
+        // Punchy kick: airy 'shoot' whoosh layered over a low 'hit' thump of boot-on-ball
+        if (window.SFX) {
+          SFX.play('shoot', { vol: 0.85, rate: 0.95 + Math.random() * 0.12 });
+          SFX.play('hit',   { vol: 0.5,  rate: 0.8 });
+        }
         const goalCx = goal.x + goal.w / 2;
         const goalCy = goal.y + goal.h / 2;
         const tx = goalCx - ball.x, ty = goalCy - ball.y;
@@ -506,7 +514,15 @@
     const playerCy = player.y + player.h / 2;
     const distToBall = Math.hypot(ball.x - playerCx, ball.y - playerCy);
 
-    if (inp.mag > 0.08 && distToBall < CONTROL_RANGE && player.shootCooldown <= 0) {
+    const controlling = inp.mag > 0.08 && distToBall < CONTROL_RANGE && player.shootCooldown <= 0;
+    if (!controlling) ballControlled = false;
+    if (controlling) {
+      // Soft "first touch" the moment the ball comes under control (throttled)
+      if (!ballControlled && touchCd <= 0) {
+        if (window.SFX) SFX.play('place', { vol: 0.28, rate: 1.15 });
+        touchCd = 0.2;
+      }
+      ballControlled = true;
       const footDist = player.w / 2 + ball.r + 3;
       const footX = playerCx + inp.x * footDist;
       const footY = playerCy + inp.y * footDist;
@@ -539,10 +555,11 @@
     ball.vy *= friction;
     ball.spin += (ball.vx + ball.vy) * 0.04;
 
-    if (ball.x - ball.r < 0)      { ball.x = ball.r;          ball.vx *= -0.55; }
-    if (ball.x + ball.r > WIDTH)   { ball.x = WIDTH - ball.r;  ball.vx *= -0.55; }
-    if (ball.y - ball.r < 0)       { ball.y = ball.r;          ball.vy *= -0.55; }
-    if (ball.y + ball.r > HEIGHT)  { ball.y = HEIGHT - ball.r; ball.vy *= -0.55; }
+    const WALL_BOUNCE_MIN = 1.5;   // only sound meaningful impacts, not resting jitter
+    if (ball.x - ball.r < 0)      { if (window.SFX && Math.abs(ball.vx) > WALL_BOUNCE_MIN) SFX.play('bounce', { vol: 0.55, rate: 0.9 }); ball.x = ball.r;          ball.vx *= -0.55; }
+    if (ball.x + ball.r > WIDTH)   { if (window.SFX && Math.abs(ball.vx) > WALL_BOUNCE_MIN) SFX.play('bounce', { vol: 0.55, rate: 0.9 }); ball.x = WIDTH - ball.r;  ball.vx *= -0.55; }
+    if (ball.y - ball.r < 0)       { if (window.SFX && Math.abs(ball.vy) > WALL_BOUNCE_MIN) SFX.play('bounce', { vol: 0.55, rate: 0.9 }); ball.y = ball.r;          ball.vy *= -0.55; }
+    if (ball.y + ball.r > HEIGHT)  { if (window.SFX && Math.abs(ball.vy) > WALL_BOUNCE_MIN) SFX.play('bounce', { vol: 0.55, rate: 0.9 }); ball.y = HEIGHT - ball.r; ball.vy *= -0.55; }
 
     // --- Goalkeeper AI (delayed reaction) ---
     gk.reactionTimer -= dt;
@@ -558,6 +575,8 @@
     // Guard ball.vx > 0: only bounce when ball is actually moving toward the goal,
     // then eject from overlap so multi-frame velocity compounding can't happen.
     if (ball.vx > 0 && rectCircle(gk.x, gk.y, gk.w, gk.h, ball.x, ball.y, ball.r)) {
+      // Keeper save: solid block thump so a denied shot reads clearly
+      if (window.SFX) SFX.play('hit', { vol: 0.85, rate: 0.9 });
       ball.x = gk.x - ball.r - 1;
       ball.vx = -(Math.abs(ball.vx) * 0.9 + 3);
       const dy = ball.y - (gk.y + gk.h / 2);
@@ -571,6 +590,13 @@
         ball.y >= goal.y + ball.r &&
         ball.y <= goal.y + goal.h - ball.r) {
       score++;
+      // GOAL! — the big moment: celebratory fanfare + coin sparkle, with a
+      // louder levelup flourish on every 5th goal as a scoring milestone.
+      if (window.SFX) {
+        SFX.play('win',  { vol: 1.0 });
+        SFX.play('coin', { vol: 0.7, combo: 1 });
+        if (score % 5 === 0) SFX.play('levelup', { vol: 0.8 });
+      }
       goalFlash = 1.2;
       resetBall();
     }
@@ -703,6 +729,16 @@
 
   requestAnimationFrame(loop);
 
+  // ── Kickoff whistle on first interaction (also the audio-unlock gesture) ──
+  let kickedOff = false;
+  function kickoff() {
+    if (kickedOff) return;
+    kickedOff = true;
+    if (window.SFX) SFX.play('start');
+  }
+  window.addEventListener('pointerdown', kickoff);
+  window.addEventListener('keydown', kickoff);
+
   // ── Fullscreen ────────────────────────────────────────────────
   (function() {
     const btn = document.getElementById('fs-btn');
@@ -714,6 +750,7 @@
       exitIcon.style.display  = inFs ? '' : 'none';
     });
     btn.addEventListener('click', function() {
+      if (window.SFX) SFX.play('click');
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen({ navigationUI: 'hide' })
           .then(function() {
@@ -726,6 +763,7 @@
     });
   })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="football" data-color="#c8f03c"></script>
 </body>
 </html>

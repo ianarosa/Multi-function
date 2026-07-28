@@ -496,6 +496,7 @@ html,body{
 // ---- Fullscreen ----
 const fsBtn=document.getElementById('fs-btn');
 fsBtn.onclick=()=>{
+  if(window.SFX)SFX.play('click',{vol:0.4});
   if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 };
@@ -708,6 +709,8 @@ let currentBooks=[];
 let dragIdx=-1;
 let dragBook=null;
 let touchId=null;
+let lastHoverTarget=-1;
+let lastMoveSfxT=0;
 
 // Load progress
 const saved=localStorage.getItem('bookshelf-escape-progress');
@@ -831,8 +834,10 @@ function lighten(hex,pct){
 function onDragStart(e){
   e.preventDefault();
   dragIdx=parseInt(e.target.closest('.book').dataset.idx);
+  lastHoverTarget=-1;
   const el=e.target.closest('.book');
   el.classList.add('dragging');
+  if(window.SFX)SFX.play('click',{vol:0.35,rate:1.1});
   document.addEventListener('mousemove',onDragMove);
   document.addEventListener('mouseup',onDragEnd);
 }
@@ -851,6 +856,18 @@ function onDragMove(e){
     }else{
       tel.classList.add('drop-target-right');
     }
+    hoverMoveCue(target);
+  }
+}
+
+// Soft, throttled cue when dragging over a new gap (not every pixel)
+function hoverMoveCue(target){
+  if(target===lastHoverTarget)return;
+  lastHoverTarget=target;
+  const now=performance.now();
+  if(window.SFX&&now-lastMoveSfxT>110){
+    lastMoveSfxT=now;
+    SFX.play('move',{vol:0.2,rate:1.0});
   }
 }
 
@@ -889,6 +906,7 @@ function moveBook(fromIdx,toIdx,clientX){
 
   const book=currentBooks.splice(fromIdx,1)[0];
   currentBooks.splice(insertIdx,0,book);
+  if(window.SFX)SFX.play('place',{vol:0.5});
   renderBooks();
   checkOrder();
 }
@@ -901,7 +919,9 @@ function onTouchStart(e){
   touchId=t.identifier;
   const el=e.target.closest('.book');
   dragIdx=parseInt(el.dataset.idx);
+  lastHoverTarget=-1;
   el.classList.add('dragging');
+  if(window.SFX)SFX.play('click',{vol:0.35,rate:1.1});
 
   // Show ghost
   ghost.style.display='flex';
@@ -932,6 +952,7 @@ function onTouchMove(e){
         }else{
           tel.classList.add('drop-target-right');
         }
+        hoverMoveCue(target);
       }
     }
   }
@@ -968,6 +989,7 @@ function checkOrder(){
   const isCorrect=currentBooks.every((b,i)=>b===correct[i]);
   if(isCorrect){
     codeHintEl.textContent=levels[currentLevel].codeHint;
+    if(window.SFX)SFX.play('match',{vol:0.8});
     // Highlight correct books
     shelf.querySelectorAll('.book').forEach(el=>el.classList.add('correct-pos'));
   }
@@ -986,6 +1008,7 @@ function submitCode(){
     stopTimer();
     showLevelComplete();
   }else{
+    if(window.SFX)SFX.play('error',{vol:0.5});
     feedbackEl.textContent='Wrong code. Try again!';
     feedbackEl.className='feedback-wrong';
     // Re-trigger animation
@@ -997,6 +1020,7 @@ function submitCode(){
 
 // ---- Hints ----
 hintBtn.addEventListener('click',()=>{
+  if(window.SFX)SFX.play('click',{vol:0.4});
   hintText.textContent=levels[currentLevel].hint;
   hintPopup.style.display='block';
   hintOverlay.style.display='block';
@@ -1004,6 +1028,7 @@ hintBtn.addEventListener('click',()=>{
 hintClose.addEventListener('click',closeHint);
 hintOverlay.addEventListener('click',closeHint);
 function closeHint(){
+  if(window.SFX)SFX.play('click',{vol:0.3});
   hintPopup.style.display='none';
   hintOverlay.style.display='none';
 }
@@ -1013,20 +1038,24 @@ function showLevelComplete(){
   runTotal+=timerSec;
   spawnCelebration();
   if(currentLevel>=levels.length-1){
+    if(window.SFX)SFX.play('win');
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: Math.max(0, 9999 - runTotal) } }));
     winScreen.style.display='flex';
     return;
   }
+  if(window.SFX)SFX.play('levelup');
   lcMsg.textContent='Solved in '+timerEl.textContent+' — '+levels[currentLevel].ruleDesc;
   levelComplete.style.display='flex';
 }
 
 nextBtn.addEventListener('click',()=>{
+  if(window.SFX)SFX.play('start');
   levelComplete.style.display='none';
   loadLevel(currentLevel+1);
 });
 
 replayBtn.addEventListener('click',()=>{
+  if(window.SFX)SFX.play('start');
   winScreen.style.display='none';
   localStorage.removeItem('bookshelf-escape-progress');
   loadLevel(0);
@@ -1083,6 +1112,7 @@ loadLevel(currentLevel);
 
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="bookshelf-escape" data-color="#ff9944"></script>
 </body>
 </html>

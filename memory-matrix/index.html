@@ -327,6 +327,18 @@ function getWatchDuration(r){
   return Math.max(600, 1800 - r*80);
 }
 
+// ─── PER-TILE MUSICAL PITCH ─────────────────────────────────
+// Each grid cell gets a distinct, musical rate so patterns sound like a melody.
+// Left→right ascends the scale; bottom→top raises the octave. Same cell always
+// echoes the same note, so a player's taps replay the tune they just watched.
+const TILE_SCALE=[1.0,1.122,1.26,1.335,1.498,1.682];
+function tileRate(idx){
+  const col=idx%gridSize;
+  const row=Math.floor(idx/gridSize);
+  const octave=(gridSize-1-row);
+  return 0.8*TILE_SCALE[col%TILE_SCALE.length]*Math.pow(1.14,octave);
+}
+
 // ─── START ROUND ────────────────────────────────────────────
 function startRound(){
   gridSize=getGridSize(round);
@@ -349,6 +361,16 @@ function startRound(){
   watchTimer=0;
   fadePhase=0;
   fadeAlpha=0;
+
+  // Melodic reveal: play each pattern cell's own pitch as the sequence flashes
+  if(window.SFX){
+    const step=Math.min(140,Math.max(70,watchDuration/pattern.length));
+    pattern.forEach((idx,i)=>{
+      setTimeout(()=>{
+        if(state===STATE.WATCH && window.SFX) SFX.play('tick',{rate:tileRate(idx),vol:0.45});
+      },250+i*step);
+    });
+  }
 }
 
 function startGame(){
@@ -396,6 +418,7 @@ function handleInput(e){
     // Check start button
     const bx=W/2, by=H*0.62, bw=200, bh=50;
     if(pos.x>=bx-bw/2 && pos.x<=bx+bw/2 && pos.y>=by-bh/2 && pos.y<=by+bh/2){
+      if(window.SFX) SFX.play('start');
       startGame();
     }
     return;
@@ -404,6 +427,7 @@ function handleInput(e){
   if(state===STATE.GAMEOVER){
     const bx=W/2, by=H*0.66, bw=200, bh=50;
     if(pos.x>=bx-bw/2 && pos.x<=bx+bw/2 && pos.y>=by-bh/2 && pos.y<=by+bh/2){
+      if(window.SFX) SFX.play('start');
       startGame();
     }
     return;
@@ -417,10 +441,13 @@ function handleInput(e){
 
     if(pattern.includes(idx)){
       cellStates[idx]=1; // correct
+      // Echo this cell's own note — a correct recall replays the watched melody
+      if(window.SFX) SFX.play('coin',{rate:tileRate(idx),vol:0.55});
     }else{
       cellStates[idx]=-1; // wrong
       lives--;
       combo=0;
+      if(window.SFX) SFX.play('error',{vol:0.5});
       // Show result immediately on wrong
       checkResult();
       return;
@@ -456,6 +483,7 @@ function checkResult(){
     // Particles!
     spawnParticles(W/2,H/2,ACCENT,40);
     if(combo>1) spawnParticles(W/2,H/2,GREEN,20);
+    if(window.SFX) SFX.play('levelup',{combo:combo});
   }else{
     combo=0;
     // Partial credit
@@ -847,6 +875,7 @@ function loop(time){
     if(resultTimer>=resultDuration){
       if(lives<=0){
         state=STATE.GAMEOVER;
+        if(window.SFX) SFX.play('gameover');
         window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
       }else{
         round++;
@@ -864,6 +893,7 @@ function loop(time){
 
 requestAnimationFrame(loop);
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="memory-matrix" data-color="#00aaff"></script>
 </body>
 </html>

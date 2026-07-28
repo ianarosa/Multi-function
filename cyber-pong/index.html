@@ -297,6 +297,16 @@
   const ctx = cvs.getContext('2d');
   const W = 620, H = 400;
 
+  // ── Sound helpers (all guarded; throttle keeps fast rallies from machine-gunning) ──
+  function sfx(name, opts) { if (window.SFX) SFX.play(name, opts); }
+  let _lastWallHit = 0;
+  function wallBounceSfx() {
+    const now = performance.now();
+    if (now - _lastWallHit < 55) return;   // light throttle for rapid wall bounces
+    _lastWallHit = now;
+    sfx('bounce', { vol: 0.35, rate: 1.2 });  // lighter + higher than a paddle hit
+  }
+
   // ── Retina scaling: sharp text on high-DPR displays ──
   let currentDpr = 1;
   function applyDpr() {
@@ -478,6 +488,7 @@
   }
 
   function startGame() {
+    sfx('start');
     effects  = {};
     pl.h     = PH_BASE;
     pl.y     = H/2 - PH_BASE/2;
@@ -525,6 +536,7 @@
   }
 
   function collectPU(pu) {
+    sfx('powerup');
     burst(pu.x, pu.y, pu.color, 18);
     floats.push({ x: pu.x, y: pu.y - 10, text: pu.label, color: pu.color, life: 1.2 });
     if (pu.id === 'wide') {
@@ -675,8 +687,8 @@
       ball.x += sx; ball.y += sy;
 
       // Wall bounce
-      if (ball.y - BR < 0)  { ball.y = BR;      ball.vy =  Math.abs(ball.vy); burst(ball.x, 0, '#0df', 5); }
-      if (ball.y + BR > H)  { ball.y = H - BR;  ball.vy = -Math.abs(ball.vy); burst(ball.x, H, '#0df', 5); }
+      if (ball.y - BR < 0)  { ball.y = BR;      ball.vy =  Math.abs(ball.vy); burst(ball.x, 0, '#0df', 5); wallBounceSfx(); }
+      if (ball.y + BR > H)  { ball.y = H - BR;  ball.vy = -Math.abs(ball.vy); burst(ball.x, H, '#0df', 5); wallBounceSfx(); }
 
       // Player paddle (swept: ball moving left and crossed paddle's right edge this step)
       if (ball.vx < 0) {
@@ -691,8 +703,11 @@
           ball.x  = plRight + BR;
           rally++;
           currentRallyHits++;
+          const prevMult = mult;
           mult = 1 + Math.floor(rally / 2);
           burst(ball.x, ball.y, '#0df', 10);
+          sfx('bounce', { vol: 0.6, rate: 0.9, combo: rally }); // solid paddle thock, rises with rally
+          if (mult > prevMult) sfx('tick', { vol: 0.28, rate: 1.5 }); // soft speed-up milestone
           // Power-up collection check happens below each frame
         }
       }
@@ -709,6 +724,7 @@
           ball.vy =  spd * Math.sin(ang);
           ball.x  = aiLeft - BR;
           burst(ball.x, ball.y, '#f06', 10);
+          sfx('bounce', { vol: 0.55, rate: 0.82 }); // opponent paddle: solid, darker than player
           // After AI hits, roll for next-rally miss chance
         }
       }
@@ -728,6 +744,7 @@
         score += earned;
         if (score > highScore) { highScore = score; try { localStorage.setItem('cp_hs', highScore); } catch(e) {} }
         floats.push({ x: W/2, y: H/2 - 20, text: `+${earned}`, color: '#0df', life: 1 });
+        sfx('score', { vol: 0.7 });   // player banks a point
         recordRally(true);
         rally = 0; mult = 1;
         ball = makeBall(-1); // serve toward player
@@ -739,6 +756,7 @@
         if (effects.shield) {
           effects.shield--;
           if (effects.shield <= 0) delete effects.shield;
+          sfx('whoosh', { vol: 0.7 });   // GUARD absorbs the miss
           burst(pl.x + pl.w, pl.y + pl.h/2, '#c0f', 20);
           floats.push({ x: W/2, y: H/2, text: 'SAVED!', color: '#c0f', life: 1.2 });
           ball = makeBall(1);
@@ -750,8 +768,10 @@
           rally = 0; mult = 1;
           if (lives <= 0) {
             state = 'gameover';
+            sfx('gameover');   // last life lost — match over
             window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: score } }));
           } else {
+            sfx('hurt', { vol: 0.7, rate: 0.85 });   // opponent scores, life lost (low/heavy)
             ball = makeBall(1);
             pl.h = PH_BASE; delete effects.wide;
             ai.missThisRally = Math.random() < aiParams.missProb;
@@ -976,6 +996,7 @@
   function hideDiffMenu() { diffMenu.classList.remove('visible'); }
   diffMenu.querySelectorAll('.diff-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      sfx('click');   // difficulty menu selection
       difficulty = btn.dataset.diff;
       try { localStorage.setItem('cp_diff', difficulty); } catch(e) {}
       applyDifficulty(difficulty);
@@ -1014,6 +1035,7 @@
   });
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="cyber-pong" data-color="#00ddff"></script>
 </body>
 </html>

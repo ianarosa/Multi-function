@@ -717,6 +717,7 @@
     if (state.money < cost) return;
     state.money -= cost;
     state.levels[u.id] = lvl + 1;
+    if (window.SFX) SFX.play('powerup');
     if (u.id === 'target') state.streak = 0; // reset progress when goal length changes
     if (u.id === 'auto' && lvl === 0) restartAuto();
     else if (u.id === 'auto') restartAuto();
@@ -747,6 +748,16 @@
   let rolling = false;
   let onCooldown = false;
   let cdBar = null;
+
+  // Auto-roll can fire rapidly; throttle its cues so they don't machine-gun.
+  let lastAutoSfxAt = 0;
+  function autoSfx(name, opts) {
+    if (!window.SFX) return;
+    const t = performance.now();
+    if (t - lastAutoSfxAt < 550) return;
+    lastAutoSfxAt = t;
+    SFX.play(name, opts);
+  }
 
   // Create cooldown bar element inside roll button
   (function initCdBar() {
@@ -784,10 +795,16 @@
     return 1 + Math.floor(Math.random() * 5);
   }
 
-  function doRoll() {
+  function doRoll(auto) {
     if (rolling || onCooldown) return;
     rolling = true;
     rollBtn.disabled = true;
+
+    // Roll press + the throw — only manual so auto-grind isn't a click/whoosh loop.
+    if (!auto && window.SFX) {
+      SFX.play('click', { vol: 0.5 });
+      SFX.play('whoosh', { vol: 0.7 });
+    }
 
     const count = diceCount(state.levels.multi);
     // animate dice shaking
@@ -799,16 +816,22 @@
       setDice(Array.from({ length: count }, () => 1 + Math.floor(Math.random() * 6)));
       for (const d of diceArea.children) d.classList.add('rolling');
       ticks++;
+      // A couple of quick bounces as the dice tumble (manual only, NOT one per frame).
+      if (!auto && window.SFX && (ticks === 2 || ticks === 4)) {
+        SFX.play('bounce', { vol: 0.4, rate: 1.1 + Math.random() * 0.3 });
+      }
       if (ticks >= 5) {
         clearInterval(spinTimer);
-        finalizeRoll(count);
+        finalizeRoll(count, auto);
       }
     }, 70);
   }
 
-  function finalizeRoll(count) {
+  function finalizeRoll(count, auto) {
     const results = Array.from({ length: count }, () => rollValue());
     setDice(results);
+    // Dice settle and land (manual only; auto-grind keeps just its result cue).
+    if (!auto && window.SFX) SFX.play('place', { vol: 0.6 });
     const hasSix = results.includes(6);
     const target = targetLen(state.levels.target);
     const mult = payoutMul(state.levels.payout);
@@ -835,14 +858,21 @@
         msgEl.textContent = `★ JACKPOT! +${formatNum(prize)} ★`;
         state.streak = 0;
         floatFromDice(`+${formatNum(prize)}`, '#ffd24a');
+        // Big moment — always sound, even mid auto-grind.
+        if (window.SFX) SFX.play('win', { combo: target });
       } else {
         msgEl.className = 'message win';
         msgEl.textContent = `Six! ${state.streak} / ${target}`;
+        // Rising pitch as the streak climbs toward the jackpot.
+        if (auto) autoSfx('coin', { combo: state.streak });
+        else if (window.SFX) SFX.play('coin', { combo: state.streak });
       }
     } else {
       if (state.streak > 0) {
         msgEl.className = 'message';
         msgEl.textContent = `Streak broken at ${state.streak}`;
+        if (auto) autoSfx('error', { vol: 0.55 });
+        else if (window.SFX) SFX.play('error', { vol: 0.55 });
       } else {
         msgEl.className = 'message';
         msgEl.textContent = 'No six — try again';
@@ -871,13 +901,14 @@
     if (lvl === 0) return;
     const delay = autoDelay(lvl) * 1000;
     autoTimer = setInterval(() => {
-      if (!rolling && !onCooldown) doRoll();
+      if (!rolling && !onCooldown) doRoll(true);
     }, Math.max(120, delay));
   }
 
   // ── Init ──────────────────────────────────────────────────────
-  rollBtn.addEventListener('click', doRoll);
+  rollBtn.addEventListener('click', () => doRoll(false));
   resetBtn.addEventListener('click', () => {
+    if (window.SFX) SFX.play('click');
     if (!confirm('Reset all progress?')) return;
     state.money = 0;
     state.best = 0;
@@ -889,12 +920,13 @@
     setDice([1]);
     msgEl.className = 'message';
     msgEl.textContent = 'Press ROLL to begin';
+    if (window.SFX) SFX.play('start');
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
-      if (!rolling && !onCooldown) doRoll();
+      if (!rolling && !onCooldown) doRoll(false);
     }
   });
 
@@ -903,6 +935,7 @@
   restartAuto();
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="dice-roll" data-color="#ffd24a"></script>
 </body>
 </html>

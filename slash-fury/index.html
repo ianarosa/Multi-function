@@ -167,6 +167,7 @@
 <script>
 // --- Fullscreen ---
 document.getElementById('fs-btn').addEventListener('click', () => {
+  if (window.SFX) SFX.play('click');
   if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 });
@@ -223,6 +224,7 @@ let totalTime = 0;
 let dragging = false;
 let dragPoints = [];
 let slashLines = []; // stored slash segments for collision
+let lastWhoosh = 0;  // throttle for blade-swing whoosh sfx
 
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
@@ -255,6 +257,13 @@ function moveDrag(p) {
     const a = dragPoints[dragPoints.length - 2];
     const b = dragPoints[dragPoints.length - 1];
     slashTrail.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, life: 1 });
+    // Blade-swing whoosh — throttled, and only on a fast enough swing so it feels like a real slash
+    const swing = Math.hypot(b.x - a.x, b.y - a.y);
+    if (swing > 26 && now - lastWhoosh > 110) {
+      lastWhoosh = now;
+      const s = Math.min(swing / 90, 1);
+      if (window.SFX) SFX.play('whoosh', { vol: 0.28 + s * 0.22, rate: 1.05 + s * 0.25 });
+    }
     checkSlashHit(a, b);
   }
 }
@@ -294,6 +303,7 @@ function checkSlashHit(a, b) {
     }
     if (obj.type === TYPES.FREEZE) {
       freezeTimer = 3;
+      if (window.SFX) SFX.play('powerup', { vol: 0.85, rate: 0.85 });
       spawnFreezeParticles(obj);
       removeObject(obj);
       continue;
@@ -308,9 +318,15 @@ function slashObject(obj) {
   comboMultiplier = Math.min(combo, 8);
   frenzyComboCount++;
 
+  // Slice sound — punchy, slightly lower rate for weight; pitch rises with the combo streak
+  if (window.SFX) SFX.play('hit', { vol: 0.9, rate: 0.92, combo: comboMultiplier });
+  // Combo milestone flourish
+  if (combo > 1 && combo % 10 === 0 && window.SFX) SFX.play('coin', { vol: 0.75, combo: comboMultiplier });
+
   if (frenzyComboCount >= 15 && frenzyTimer <= 0) {
     frenzyTimer = 4;
     frenzyComboCount = 0;
+    if (window.SFX) SFX.play('powerup', { vol: 0.95, rate: 1.15 });
   }
 
   const pts = obj.type.points * comboMultiplier;
@@ -351,6 +367,8 @@ function hitBomb(obj) {
   lives--;
   screenFlash = 0.5;
   combo = 0; comboTimer = 0; comboMultiplier = 1;
+  // Weighty blast plus a hurt sting for the lost life
+  if (window.SFX) { SFX.play('explode', { vol: 1.0, rate: 0.82 }); SFX.play('hurt', { vol: 0.7, rate: 0.9 }); }
 
   // Explosion particles
   for (let i = 0; i < 20; i++) {
@@ -422,6 +440,7 @@ function spawnObject() {
 
 // --- Game flow ---
 function startGame() {
+  if (window.SFX) SFX.play('start', { vol: 0.9 });
   state = 'playing';
   score = 0; lives = MAX_LIVES; combo = 0; comboTimer = 0; comboMultiplier = 1;
   frenzyTimer = 0; frenzyComboCount = 0; freezeTimer = 0;
@@ -431,6 +450,7 @@ function startGame() {
 }
 
 function gameOver() {
+  if (window.SFX) SFX.play('gameover', { vol: 0.95, rate: 0.9 });
   state = 'gameover';
   if (score > highScore) {
     highScore = score;
@@ -856,6 +876,8 @@ function loop(timestamp) {
       if (obj.y > H + 50 && obj.vy > 0) {
         if (!obj.slashed && obj.type !== TYPES.BOMB) {
           lives--;
+          // Missed a good target: whiff plus a hurt sting for the lost life
+          if (window.SFX) { SFX.play('error', { vol: 0.5, rate: 0.95 }); SFX.play('hurt', { vol: 0.55, rate: 0.9 }); }
           if (lives <= 0) { gameOver(); break; }
         }
         objects.splice(i, 1);
@@ -952,6 +974,7 @@ function loop(timestamp) {
 
 requestAnimationFrame(loop);
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="slash-fury" data-color="#ff6622"></script>
 </body>
 </html>

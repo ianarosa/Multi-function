@@ -506,6 +506,7 @@
 
   // Fullscreen
   fsBtn.addEventListener('click', () => {
+    if (window.SFX) SFX.play('click');
     const el = document.documentElement;
     if (!document.fullscreenElement) {
       (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen).call(el);
@@ -537,6 +538,7 @@
     difficulty: 0,
     respawnCooldown: 0,
     riverSegLen: 24,
+    nextMilestone: 1000,
   };
 
   function resetGame() {
@@ -557,6 +559,7 @@
     state.invul = 1.5;
     state.difficulty = 0;
     state.respawnCooldown = 0;
+    state.nextMilestone = 1000;
 
     state.player = {
       x: LOGICAL_W / 2,
@@ -614,6 +617,7 @@
     fuelBox.style.display = 'block';
     state.running = true;
     lastT = performance.now();
+    if (window.SFX) SFX.play('start');
   }
   function endGame() {
     state.running = false;
@@ -622,6 +626,7 @@
       localStorage.setItem(HI_KEY, String(hiScore));
     }
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: state.score } }));
+    if (window.SFX) SFX.play('gameover');
     finalScore.textContent = state.score;
     hiEnd.textContent = hiScore;
     hiStart.textContent = hiScore;
@@ -894,7 +899,16 @@
           e.alive = false;
           b.y = -999;
           explode(e.x, e.y);
+          if (window.SFX) {
+            // Scale pitch/volume by enemy size: bigger = lower & louder.
+            const sz = Math.max(0, Math.min(1, (e.w - 18) / 4));
+            SFX.play('explode', { vol: 0.45 + sz * 0.2, rate: 1.2 - sz * 0.4 });
+          }
           state.score += e.score;
+          if (state.score >= state.nextMilestone) {
+            state.nextMilestone += 1000;
+            if (window.SFX) SFX.play('levelup');
+          }
         }
       }
       // Petrol stations are friendly refuel points — bullets pass through harmlessly.
@@ -927,6 +941,7 @@
       if (!f.alive) continue;
       if (Math.abs(f.x - p.x) < (f.w + p.w)/2 - 2 && Math.abs(f.y - p.y) < (f.h + p.h)/2 - 2) {
         state.fuel = Math.min(1, state.fuel + dt * 0.9); // refuel while over
+        if (!f.pinged) { f.pinged = true; if (window.SFX) SFX.play('coin'); }
       }
     }
 
@@ -956,6 +971,8 @@
   function fireBullet() {
     const p = state.player;
     state.bullets.push({ x: p.x, y: p.y - p.h/2 - 4, w: 3, h: 8, enemy: false });
+    // Fire rate is already gated by state.fireCooldown; keep the cue light and lively.
+    if (window.SFX) SFX.play('shoot', { vol: 0.35, rate: 0.96 + Math.random() * 0.08 });
   }
 
   function killPlayer() {
@@ -963,6 +980,8 @@
     const p = state.player;
     explode(p.x, p.y);
     spawnParticles(p.x, p.y, '#44ff66', 10, 80);
+    // Player crash/death: big, low-pitched explosion (gameover cue follows in endGame).
+    if (window.SFX) SFX.play('explode', { vol: 0.95, rate: 0.7 });
     state.lives -= 1;
     renderLives();
     if (state.lives <= 0) {
@@ -1216,6 +1235,7 @@
   requestAnimationFrame(loop);
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="river-run" data-color="#44ff66"></script>
 </body>
 </html>

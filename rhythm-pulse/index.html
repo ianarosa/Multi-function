@@ -229,6 +229,7 @@ const retryBtn = document.getElementById('retry-btn');
 
 /* ── Fullscreen ── */
 fsBtn.addEventListener('click', () => {
+  if(window.SFX) SFX.play('click', {vol: 0.5});
   if(!document.fullscreenElement){
     document.documentElement.requestFullscreen().catch(()=>{});
   } else {
@@ -427,12 +428,23 @@ function hitLane(laneIdx){
     if(grade === 'PERFECT'){
       health = Math.min(HEALTH_MAX, health + HEALTH_PERFECT_REGEN);
       emitParticles(laneX(laneIdx), hitZoneY(), '#ffd700', 30);
+      // Bright, on-beat note that climbs with the combo streak
+      if(window.SFX) SFX.play('coin', {combo: combo, rate: 1.16, vol: 1});
     } else if(grade === 'GREAT'){
       health = Math.min(HEALTH_MAX, health + HEALTH_GREAT_REGEN);
       emitParticles(laneX(laneIdx), hitZoneY(), '#aa44ff', 16);
+      if(window.SFX) SFX.play('coin', {combo: combo, rate: 1.0, vol: 0.9});
     } else {
       health = Math.min(HEALTH_MAX, health + HEALTH_GOOD_REGEN);
       emitParticles(laneX(laneIdx), hitZoneY(), '#4488ff', 8);
+      // Softer, lower note for a loose (GOOD) hit — coin honors the combo pitch-climb
+      // (the 'match' voice ignores combo), so the streak keeps rising even on GOODs
+      if(window.SFX) SFX.play('coin', {combo: combo, rate: 0.86, vol: 0.72});
+    }
+
+    // Combo milestone flourish (layered over the hit note, fires once per step)
+    if(combo > 0 && combo % 10 === 0){
+      if(window.SFX) SFX.play('powerup', {vol: 0.8});
     }
 
     showGrade(laneIdx, grade);
@@ -539,6 +551,7 @@ function startGame(){
   patternQueue = []; nextBeatTime = beatInterval * PREROLL_BEATS;
   beatsSpawned = 0; consecutiveMisses = 0;
   running = true;
+  if(window.SFX) SFX.play('start');
   startScreen.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
   mobileLanes.classList.add('active');
@@ -549,6 +562,7 @@ function startGame(){
 
 function endGame(){
   running = false;
+  if(window.SFX) SFX.play('gameover');
   if(score > highScore){
     highScore = score;
     localStorage.setItem('rhythmPulseHigh', highScore);
@@ -600,9 +614,15 @@ function loop(ts){
       // Check for miss (passed the zone)
       if(!b.missed && gameTime > b.arrivalTime + MISS_MS){
         b.missed = true;
+        const brokeStreak = combo >= 5;   // did this miss snap a real combo?
         combo = 0;
         consecutiveMisses++;
         health -= HEALTH_MISS_PENALTY;
+        if(window.SFX){
+          // Streak break gets a low, heavier thud; a plain miss just buzzes modestly
+          if(brokeStreak) SFX.play('hurt', {vol: 0.6, rate: 0.8});
+          else SFX.play('error', {vol: 0.6});
+        }
         showGrade(b.lane, 'MISS');
         updateUI();
       }
@@ -788,6 +808,7 @@ if(highScore > 0){
 
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="rhythm-pulse" data-color="#aa44ff"></script>
 </body>
 </html>

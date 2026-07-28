@@ -189,7 +189,7 @@
 </div>
 <canvas id="gameCanvas" width="800" height="380"></canvas>
 <button id="fly-btn">HOLD TO FLY</button>
-<p id="hint">Space / hold button · dodge the pillars · survive</p>
+<p id="hint">Space / hold button · dodge the neon hazards · survive</p>
 
 <script>
 (() => {
@@ -218,16 +218,22 @@
   fit(); window.addEventListener('resize', fit);
 
   // ── Constants ──────────────────────────────────────────────────
-  const GRAVITY  = 0.36;
-  const THRUST   = -0.64;
-  const MAX_VY   = 8.5;
+  // Vertical feel: capped terminal velocity so rise/fall stay readable,
+  // gravity + thrust tuned down proportionally to keep it responsive.
+  const GRAVITY  = 0.30;
+  const THRUST   = -0.55;
+  const MAX_VY   = 6.0;   // terminal vertical speed (was 8.5 — gentler now)
+  const AIR_DRAG = 0.045; // light drag so vy eases into the cap instead of slamming it
   const SHIP_X   = 130;
   const SHIP_W   = 30;
   const SHIP_H   = 16;
   const HIT_PAD  = 3;
-  const PILLAR_W = 22;
+  const BLOCK_W  = 30;    // solid block/pillar width
+  const SPIKE_FIELD = 46; // horizontal width of a spike row
+  const SPIKE_W  = 18;    // nominal single-spike base width
+  const SAW_CLR  = SHIP_H / 2 + 22;  // clear lane kept between band and saw edge
   const BASE_SPD = 4.2;
-  const MAX_SPD  = 8.6;   // cap prevents tunnelling through pillars
+  const MAX_SPD  = 8.4;   // cap prevents tunnelling through obstacles
   const LVL_DIST = 6000;  // scrollX units per level-up
 
   // ── Pre-generated stars (parallax layers) ─────────────────────
@@ -240,12 +246,17 @@
   }));
 
   // ── State ─────────────────────────────────────────────────────
-  let ship, gates, particles, floats;
-  let scrollX, nextGateX, speed, score, level;
+  let ship, obstacles, particles, floats;
+  let scrollX, nextObX, speed, score, level;
+  let band, bandStart, bandTarget, seg;   // spawner: safe-lane y + active segment (motif or transition)
+  let prevBlock;                          // last block pillar in the current motif run (for terrain fill)
   let flash, flashColor;
+  let coinAt;                             // next score value that triggers a soft coin blip
   let state = 'menu';
   let lastT = null;
   let thrusting = false;
+  let lastThrustSfx = 0;   // throttle stamp so held thrust doesn't machine-gun the cue
+  let coinStreak = 0;      // rising streak → coin pitch climbs via SFX combo
   let highScore; try { highScore = +(localStorage.getItem('sd_hs') || 0); } catch(e) { highScore = 0; }
 
   // ── Input ─────────────────────────────────────────────────────
@@ -277,48 +288,169 @@
   flyBtn.addEventListener('touchend',   e => { e.preventDefault(); if (e.touches.length === 0) thrusting = false; });
 
   // ── Level config ───────────────────────────────────────────────
+  // Because vertical speed is now capped lower, gaps are wider and spacing
+  // longer so the corridor stays traversable; difficulty ramps by tightening
+  // both and by introducing spikes then sawblades at higher levels.
   function lvlCfg(lvl) {
     const t = Math.min(lvl - 1, 13);
     return {
-      speed:    Math.min(BASE_SPD + t * 0.53, MAX_SPD),
-      gapH:     Math.max(186 - t * 11, 78),
-      interval: Math.max(290 - t * 12, 138),
-      moveFrac: lvl >= 5 ? Math.min((lvl - 5) * 0.13, 0.7) : 0,
-      moveSpdMx: 0.7 + Math.min((lvl - 5) * 0.08, 0.55) * (lvl >= 5 ? 1 : 0),
+      speed:    Math.min(BASE_SPD + t * 0.5, MAX_SPD),
+      gapH:     Math.max(212 - t * 9.5, 104),
+      interval: Math.max(360 - t * 13, 186),
+      spikeChance: lvl >= 2 ? Math.min(0.28 + (lvl - 2) * 0.02, 0.48) : 0.16,
+      sawChance:   lvl >= 3 ? Math.min(0.16 + (lvl - 3) * 0.035, 0.40) : 0,
+      // Breather "transition" segments between motifs. They shorten (fewer
+      // guides, tighter spacing) and are allowed a bigger elevation change as
+      // the level rises, so the ramp of difficulty holds while pacing stays
+      // rhythmic (motif → breather → motif).
+      transSteps: Math.max(7 - Math.floor(t / 2.5), 3),
+      transStep:  Math.max(150 - t * 3, 116),
+      transRise:  Math.min(70 + t * 5, 135),
     };
   }
 
-  // ── Gate helpers ───────────────────────────────────────────────
-  function makeGate(x) {
+  // ── Pattern-based spawner ──────────────────────────────────────
+  // The track is built from alternating SEGMENTS: an intense hazard "motif" (a
+  // short run of one hazard type at a steady safe-lane height) followed by a
+  // calm "transition" breather. The safe lane `band` holds flat through a
+  // motif and does all of its climbing/diving DURING the transition, easing
+  // smoothly from the motif's exit height to the next motif's entry height —
+  // so the required path reads as a flat run, a gentle ramp, a flat run, …
+  function resetSpawner() {
+    band = bandStart = bandTarget = H / 2;
+    prevBlock = null;
+    // Gentle intro: a flat block corridor dead-centre.
+    seg = { kind: 'motif', type: 'block', remaining: 3, sawSide: 1 };
+  }
+
+  function clampBand(y, gapH) {
+    const top = H * 0.09 + gapH / 2;
+    const bot = H * 0.91 - gapH / 2;
+    return Math.max(top, Math.min(bot, y));
+  }
+
+  function startMotif() {
     const cfg = lvlCfg(level);
-    const gapH  = cfg.gapH + (Math.random() * 22 - 11);
-    const margin = H * 0.07;
-    const gapY  = margin + Math.random() * (H - margin * 2 - gapH);
-    const moving = Math.random() < cfg.moveFrac;
-    return {
-      x, gapY, gapH,
-      moving,
-      dir:  Math.random() < 0.5 ? 1 : -1,
-      mspd: 0.5 + Math.random() * cfg.moveSpdMx,
+    const r = Math.random();
+    const type = r < cfg.sawChance ? 'saw'
+               : r < cfg.sawChance + cfg.spikeChance ? 'spike'
+               : 'block';
+    seg = {
+      kind: 'motif', type,
+      remaining: type === 'saw' ? 3 + Math.floor(Math.random() * 3)
+                                 : 2 + Math.floor(Math.random() * 3),
+      sawSide: Math.random() < 0.5 ? 1 : -1,
     };
+  }
+
+  function startTransition() {
+    const cfg = lvlCfg(level);
+    bandStart  = band;
+    bandTarget = clampBand(band + (Math.random() * 2 - 1) * cfg.transRise, cfg.gapH);
+    seg = { kind: 'transition', remaining: cfg.transSteps, total: cfg.transSteps, i: 0 };
+  }
+
+  function nextSegment() {
+    prevBlock = null;   // terrain fill only connects pillars WITHIN one motif run
+    if (seg && seg.kind === 'motif') startTransition();
+    else                             startMotif();
+  }
+
+  function makeObstacle(x) {
+    const cfg = lvlCfg(level);
+    const gapH = cfg.gapH + (Math.random() * 20 - 10);
+    if (seg.type === 'saw') {
+      // Sawblades line a clear central lane, poking in from alternating sides.
+      const side = seg.sawSide; seg.sawSide *= -1;
+      const r  = 18 + Math.random() * 8 + Math.min(level * 0.5, 6);
+      const cy = Math.max(r + 6, Math.min(H - r - 6, band + side * (SAW_CLR + r)));
+      return { type: 'saw', x, w: r * 2, cx: x + r, cy, r,
+               spin: Math.random() * Math.PI * 2, sdir: side };
+    }
+    const gapY = band - gapH / 2;
+    if (seg.type === 'spike')
+      return { type: 'spikes', x, w: SPIKE_FIELD, gapY, gapH };
+    return { type: 'block', x, w: BLOCK_W, gapY, gapH };
+  }
+
+  // Connecting terrain that fills the empty span between two consecutive block
+  // pillars of the same motif, turning isolated pillars into continuous
+  // Geometry-Dash-style ground. It is built as a row of castellated neon
+  // columns rising from floor & ceiling. FAIRNESS: the corridor it leaves is
+  // the UNION of both neighbour pillars' gaps (so it is never tighter than
+  // either pillar) and is then inset FURTHER from the lane by a positive,
+  // per-column amount — the pillars stay the tightest pinch and the fill is
+  // always strictly shallower. Each column carries its own exact AABB, so
+  // collision matches precisely what is drawn.
+  function makeFill(prev, cur) {
+    const x0 = prev.x + prev.w;   // right edge of the previous pillar
+    const x1 = cur.x;             // left edge of the current pillar
+    const span = x1 - x0;
+    const cols = [];
+    if (span >= 14) {
+      // Baseline corridor = union of both pillar gaps (widest of the two edges).
+      const gapTop = Math.min(prev.gapY, cur.gapY);                             // ceiling edge (higher = wider)
+      const gapBot = Math.max(prev.gapY + prev.gapH, cur.gapY + cur.gapH);      // floor edge  (lower  = wider)
+      const n  = Math.max(2, Math.round(span / 28));
+      const cw = span / n;
+      for (let i = 0; i < n; i++) {
+        const cx = x0 + i * cw;
+        const h1 = hash01(Math.round(cx) * 0.7);
+        const h2 = hash01(Math.round(cx) * 0.7 + 19.3);
+        // Positive inset (>=9px) keeps every column strictly clear of the
+        // pinch, varied up to +20px for a castellated skyline.
+        const top = gapTop - (9 + h1 * 20);   // ceiling terrain lower edge
+        const bot = gapBot + (9 + h2 * 20);   // floor terrain upper edge
+        cols.push({ x: cx, w: cw + 0.5, top, bot });
+      }
+    }
+    return { type: 'fill', x: x0, w: span, cols };
+  }
+
+  // A transition emits decorative "guide" pieces that trace the smoothly-eased
+  // safe lane (smoothstep from bandStart → bandTarget). They carry no hitbox —
+  // the breather is always a clear, generous corridor.
+  function makeGuide(x, step) {
+    const s  = t => t * t * (3 - 2 * t);   // smoothstep ease
+    const y0 = bandStart + (bandTarget - bandStart) * s(seg.i / seg.total);
+    const y1 = bandStart + (bandTarget - bandStart) * s((seg.i + 1) / seg.total);
+    band = y1;   // hand the next motif its entry height
+    return { type: 'guide', x, w: step, y: y0, y2: y1 };
   }
 
   function spawnAhead() {
-    const cfg = lvlCfg(level);
-    while (nextGateX < scrollX + W + 520) {
-      gates.push(makeGate(nextGateX));
-      nextGateX += cfg.interval + (Math.random() * 28 - 14);
+    while (nextObX < scrollX + W + 540) {
+      if (!seg || seg.remaining <= 0) nextSegment();
+      const cfg = lvlCfg(level);
+      if (seg.kind === 'transition') {
+        const step = cfg.transStep;
+        obstacles.push(makeGuide(nextObX, step));
+        seg.i++; seg.remaining--;
+        nextObX += step;
+      } else {
+        const ob = makeObstacle(nextObX);
+        obstacles.push(ob);
+        // Fill the empty space between this pillar and the previous one in the
+        // same block-motif run with connecting GD terrain.
+        if (ob.type === 'block' && prevBlock) obstacles.push(makeFill(prevBlock, ob));
+        prevBlock = ob.type === 'block' ? ob : null;
+        seg.remaining--;
+        nextObX += cfg.interval + (Math.random() * 30 - 15);
+      }
     }
   }
 
   // ── Game init ──────────────────────────────────────────────────
   function startGame() {
     level = 1; scrollX = 0; score = 0;
+    coinAt = 10; coinStreak = 0; lastThrustSfx = 0;
     flash = 0; flashColor = '#f44';
+    if (window.SFX) SFX.play('start');
     speed = lvlCfg(1).speed;
-    ship = { y: H / 2, vy: 0, trail: [] };
-    gates = []; particles = []; floats = [];
-    nextGateX = W + 200;
+    ship = { y: H / 2, vy: 0, tilt: 0, trail: [] };
+    obstacles = []; particles = []; floats = [];
+    nextObX = W + 260;
+    resetSpawner();
     spawnAhead();
     state = 'playing';
     lastT = performance.now();
@@ -379,9 +511,16 @@
     burst(SHIP_X, ship.y, '#b400ff', 28);
     burst(SHIP_X, ship.y, '#ff4433', 20);
     flash = 1.0; flashColor = '#ff3322';
+    // Punchy death: a big explode now, then a gameover sting as the wreck settles.
+    if (window.SFX) SFX.play('explode', { vol: 1.0 });
     state = 'dead';
     if (deathTimer) clearTimeout(deathTimer);
-    deathTimer = setTimeout(() => { if (state === 'dead') state = 'gameover'; }, 900);
+    deathTimer = setTimeout(() => {
+      if (state === 'dead') {
+        state = 'gameover';
+        if (window.SFX) SFX.play('gameover', { vol: 0.7 });
+      }
+    }, 900);
   }
 
   // ── Update ─────────────────────────────────────────────────────
@@ -395,11 +534,31 @@
 
     flash = Math.max(0, flash - dt * 2.2);
 
-    // Physics
+    // Physics — semi-implicit Euler, dt-normalised so it's framerate-robust.
+    // A light air-drag term lets vertical speed glide into terminal velocity
+    // rather than hitting the hard cap as a step; the cap still governs the top
+    // speed (the ~29%-gentler MAX_VY is preserved), it just arrives smoothly.
     const thrust = thrusting || keys[' '] || keys['ArrowUp'] || keys['w'];
-    ship.vy += (thrust ? THRUST : GRAVITY) * dt * 60;
+    // Subtle thrust whoosh — throttled to ~140ms so holding thrust doesn't
+    // machine-gun the cue; fires on the initial press and steadily while held.
+    if (thrust) {
+      const now = performance.now();
+      if (now - lastThrustSfx > 140) {
+        lastThrustSfx = now;
+        if (window.SFX) SFX.play('jump', { vol: 0.3, rate: 1.18 });
+      }
+    }
+    const f = dt * 60;
+    ship.vy += (thrust ? THRUST : GRAVITY) * f;
+    ship.vy -= ship.vy * AIR_DRAG * f;
     ship.vy  = Math.max(-MAX_VY, Math.min(MAX_VY, ship.vy));
-    ship.y  += ship.vy * dt * 60;
+    ship.y  += ship.vy * f;
+
+    // Ship pitch — nose pitches up moderately when rising, and nose-dives
+    // steeply (near-vertical) when falling fast. Asymmetric: wider downward.
+    const nv = ship.vy / MAX_VY;                         // -1 (full climb) .. 1 (full dive)
+    const targetTilt = nv < 0 ? nv * 0.55 : nv * 1.45;   // ~-31° up · up to ~83° nose-dive
+    ship.tilt += (targetTilt - ship.tilt) * (1 - Math.exp(-dt * 10));  // framerate-robust ease
 
     // Engine trail (every other frame roughly)
     if (Math.random() < 0.75) engineTrail();
@@ -412,6 +571,13 @@
     scrollX += speed * dt * 60;
     score = Math.floor(scrollX / 50);
 
+    // Soft, sparse coin blip as the score ticks up (quiet — the action is fast).
+    if (score >= coinAt) {
+      coinAt = score + 10;
+      coinStreak++;
+      if (window.SFX) SFX.play('coin', { vol: 0.32, combo: Math.min(coinStreak, 8) });
+    }
+
     // Level up
     const newLvl = Math.min(Math.floor(scrollX / LVL_DIST) + 1, 20);
     if (newLvl > level) {
@@ -420,19 +586,16 @@
       flash = 0.8; flashColor = '#00ff80';
       floats.push({ x: W / 2, y: H / 2 - 28, text: `LEVEL  ${level}`, col: '#00ff80', life: 2.2, sz: 54 });
       burst(SHIP_X, ship.y, '#00ff80', 22);
+      if (window.SFX) SFX.play('levelup', { vol: 0.8 });
     }
 
-    // Spawn / update gates
+    // Spawn / update obstacles
     spawnAhead();
-    for (const g of gates) {
-      if (!g.moving) continue;
-      g.gapY += g.dir * g.mspd * dt * 60;
-      const margin = H * 0.06;
-      if (g.gapY < margin)                  { g.gapY = margin;                  g.dir =  1; }
-      if (g.gapY + g.gapH > H - margin)     { g.gapY = H - margin - g.gapH;    g.dir = -1; }
+    for (const o of obstacles) {
+      if (o.type === 'saw') o.spin += o.sdir * 4.4 * dt;  // spinning blade
     }
-    for (let i = gates.length - 1; i >= 0; i--) {
-      if (gates[i].x - scrollX < -PILLAR_W - 10) gates.splice(i, 1);
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      if (obstacles[i].x - scrollX < -obstacles[i].w - 20) obstacles.splice(i, 1);
     }
 
     // Ceiling / floor
@@ -440,16 +603,42 @@
       die(); return;
     }
 
-    // Pillar collision
+    // Obstacle collision — matches drawn geometry per hazard type
     const hx1 = SHIP_X - SHIP_W / 2 + HIT_PAD;
     const hx2 = SHIP_X + SHIP_W / 2 - HIT_PAD;
     const hy1 = ship.y  - SHIP_H / 2 + HIT_PAD;
     const hy2 = ship.y  + SHIP_H / 2 - HIT_PAD;
 
-    for (const g of gates) {
-      const gxS = g.x - scrollX;
-      if (hx2 <= gxS || hx1 >= gxS + PILLAR_W) continue;
-      if (hy1 < g.gapY || hy2 > g.gapY + g.gapH) { die(); return; }
+    for (const o of obstacles) {
+      if (o.type === 'guide') continue;   // breather guides are decorative, never lethal
+      if (o.type === 'saw') {
+        // circle (sawblade) vs ship hitbox
+        const scx = o.cx - scrollX;
+        const cxp = Math.max(hx1, Math.min(scx,  hx2));
+        const cyp = Math.max(hy1, Math.min(o.cy, hy2));
+        const dx = scx - cxp, dy = o.cy - cyp;
+        const rr = o.r * 0.86;
+        if (dx * dx + dy * dy < rr * rr) { die(); return; }
+        continue;
+      }
+      if (o.type === 'fill') {
+        // Per-column AABB — matches exactly what drawFill renders. Each column
+        // leaves a strictly wider corridor than the neighbour pillars, so the
+        // safe lane is never pinched by the fill.
+        for (const c of o.cols) {
+          const cx = c.x - scrollX;
+          if (hx2 <= cx || hx1 >= cx + c.w) continue;
+          if (hy1 < c.top || hy2 > c.bot) { die(); return; }
+        }
+        continue;
+      }
+      const ox = o.x - scrollX;
+      if (hx2 <= ox || hx1 >= ox + o.w) continue;
+      if (o.type === 'block') {
+        if (hy1 < o.gapY || hy2 > o.gapY + o.gapH) { die(); return; }
+      } else { // spikes — test ship against the triangular silhouette
+        if (spikeHit(o, ox, hx1, hx2, hy1, hy2)) { die(); return; }
+      }
     }
 
     tickParticles(dt); tickFloats(dt);
@@ -486,51 +675,228 @@
     ctx.globalAlpha = 1;
   }
 
-  function drawPillar(x, y, w, h) {
-    if (h <= 0) return;
-    glow('#ff2200', 16);
-    ctx.fillStyle = '#6a0010';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#bb1020';
-    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-    glow('#ff5533', 8);
-    ctx.strokeStyle = '#ff4422';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-    // Depth stripes
-    ctx.strokeStyle = 'rgba(255,100,80,0.18)';
-    ctx.lineWidth = 1;
-    for (let ly = y + 14; ly < y + h - 3; ly += 14) {
-      ctx.beginPath(); ctx.moveTo(x + 3, ly); ctx.lineTo(x + w - 3, ly); ctx.stroke();
+  // Spike silhouette: fraction 0..1 across a single triangle (1 = apex tip).
+  function spikeFrac(o, localX) {
+    const nS = Math.max(2, Math.round(o.w / SPIKE_W));
+    const sw = o.w / nS;
+    const l  = ((localX % sw) + sw) % sw;
+    return 1 - (2 * Math.abs(l - sw / 2) / sw);
+  }
+
+  // Ship vs spike-field collision — sample the triangular boundary top & bottom.
+  function spikeHit(o, ox, hx1, hx2, hy1, hy2) {
+    const floorTop = o.gapY + o.gapH;
+    for (let sx = hx1; sx <= hx2; sx += 3) {
+      const lx = sx - ox;
+      if (lx < 0 || lx > o.w) continue;
+      const f = spikeFrac(o, lx);
+      if (hy1 < Math.max(6, o.gapY * f)) return true;                        // ceiling spikes
+      if (hy2 > Math.min(H - 6, floorTop + (H - floorTop) * (1 - f))) return true; // floor spikes
     }
+    return false;
+  }
+
+  // Gap telegraph guide (dashed green centre line).
+  function drawGapGuide(cx, gapY, gapH) {
+    glow('#00ff80', 4);
+    ctx.strokeStyle = 'rgba(0,255,128,0.14)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 6]);
+    ctx.beginPath();
+    ctx.moveTo(cx, gapY + 4);
+    ctx.lineTo(cx, gapY + gapH - 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
     noGlow();
   }
 
-  function drawGates() {
-    for (const g of gates) {
-      const gxS = g.x - scrollX;
-      if (gxS > W + PILLAR_W || gxS < -PILLAR_W - 2) continue;
-      drawPillar(gxS, 0, PILLAR_W, g.gapY);
-      drawPillar(gxS, g.gapY + g.gapH, PILLAR_W, H - (g.gapY + g.gapH));
-      // Gap guide line
-      glow('#00ff80', 4);
-      ctx.strokeStyle = 'rgba(0,255,128,0.14)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 6]);
+  // Solid neon block/pillar segment.
+  function drawSolid(x, y, w, h) {
+    if (h <= 0) return;
+    glow('#b400ff', 16);
+    ctx.fillStyle = '#1b0730';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#b400ff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    noGlow();
+    ctx.strokeStyle = 'rgba(180,0,255,0.22)';
+    ctx.lineWidth = 1;
+    for (let ly = y + 16; ly < y + h - 4; ly += 16) {
+      ctx.beginPath(); ctx.moveTo(x + 3, ly); ctx.lineTo(x + w - 3, ly); ctx.stroke();
+    }
+  }
+
+  function drawBlock(x, w, gapY, gapH) {
+    drawSolid(x, 0, w, gapY);
+    drawSolid(x, gapY + gapH, w, H - (gapY + gapH));
+    drawGapGuide(x + w / 2, gapY, gapH);
+  }
+
+  // Connecting GD terrain between two pillars — castellated neon columns from
+  // ceiling & floor, same palette/outlines/grid lines as the pillars. Each
+  // column fades in at its own screen-x so it never pops in.
+  function drawFill(o) {
+    for (const c of o.cols) {
+      const sx = c.x - scrollX;
+      if (sx > W + c.w + 4 || sx < -c.w - 4) continue;
+      ctx.globalAlpha = entryFade(sx);
+      if (c.top > 0) drawSolid(sx, 0, c.w, c.top);        // ceiling stack
+      if (c.bot < H) drawSolid(sx, c.bot, c.w, H - c.bot); // floor stack
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSpikes(x, w, gapY, gapH) {
+    const floorTop = gapY + gapH;
+    const nS = Math.max(2, Math.round(w / SPIKE_W));
+    const sw = w / nS;
+    glow('#ff3366', 14);
+    ctx.fillStyle = '#37091c';
+    ctx.strokeStyle = '#ff5e8a';
+    ctx.lineWidth = 1.6;
+    // mounting rails
+    ctx.fillRect(x, 0, w, 6);
+    ctx.fillRect(x, H - 6, w, 6);
+    for (let i = 0; i < nS; i++) {
+      const bx = x + i * sw, cx = bx + sw / 2;
+      // ceiling spike (points down)
       ctx.beginPath();
-      ctx.moveTo(gxS + PILLAR_W / 2, g.gapY + 4);
-      ctx.lineTo(gxS + PILLAR_W / 2, g.gapY + g.gapH - 4);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      noGlow();
+      ctx.moveTo(bx, 6); ctx.lineTo(bx + sw, 6); ctx.lineTo(cx, gapY);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // floor spike (points up)
+      ctx.beginPath();
+      ctx.moveTo(bx, H - 6); ctx.lineTo(bx + sw, H - 6); ctx.lineTo(cx, floorTop);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    noGlow();
+    drawGapGuide(x + w / 2, gapY, gapH);
+  }
+
+  function drawSaw(cx, cy, r, spin) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(spin);
+    glow('#ff3366', 14);
+    ctx.beginPath();
+    const teeth = 10;
+    for (let i = 0; i < teeth * 2; i++) {
+      const ang = (i / (teeth * 2)) * Math.PI * 2;
+      const rr  = i % 2 === 0 ? r : r * 0.72;
+      const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#2a0a14';
+    ctx.fill();
+    ctx.strokeStyle = '#ff5e8a';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    noGlow();
+    // cyan hub
+    glow('#00ffee', 10);
+    ctx.strokeStyle = '#00ffee';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.34, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2); ctx.stroke();
+    noGlow();
+    ctx.restore();
+  }
+
+  // Deterministic per-column hash (stable in world space, so the terrain
+  // skyline doesn't flicker/shimmer as the track scrolls).
+  function hash01(n) {
+    const s = Math.sin(n * 12.9898) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  // Calm breather guide: a generous safe corridor tracing the eased safe lane,
+  // now packed with Geometry-Dash-style neon terrain that fills the dead space
+  // near the floor & ceiling (and horizontally between columns) so the segment
+  // reads as a dense connected block structure rather than a near-empty
+  // corridor. The blocks are DECORATIVE — guides carry no hitbox — and they are
+  // held a generous clearance clear of the eased safe lane, which keeps its
+  // bright dashed telegraph in wide-open space.
+  function drawGuide(ox, o) {
+    const x2 = ox + o.w, y0 = o.y, y1 = o.y2;
+    const ch = 94;   // generous corridor half-height (blocks never enter this)
+
+    // ── GD terrain fill: castellated neon columns from floor & ceiling ──
+    // Columns live on a GLOBAL world grid so they tile seamlessly across
+    // adjacent guide pieces (no per-piece seams). Each column stops a varied
+    // distance short of the lane, giving a stepped skyline instead of a flat
+    // wall while guaranteeing the safe corridor stays clearly clear.
+    const P = 30, colW = 22;                     // grid pitch + column width
+    const m0 = Math.floor((o.x - P) / P);
+    const m1 = Math.floor((o.x + o.w) / P);
+    for (let m = m0; m <= m1; m++) {
+      const cxW = m * P + P / 2;                 // column centre, world space
+      if (cxW < o.x || cxW >= x2 + scrollX) continue;
+      const sL    = (cxW - colW / 2) - scrollX;  // screen-space left edge
+      const laneY = y0 + (y1 - y0) * ((cxW - scrollX) - ox) / o.w;  // eased lane at column
+      // Inner (lane-facing) edges: kept >= ch + a small margin from the lane,
+      // varied per column so the terrain surface is jagged, not flat.
+      const innerTop = laneY - ch - (3 + hash01(m * 1.7) * 22);
+      const innerBot = laneY + ch + (3 + hash01(m * 1.7 + 41.3) * 22);
+      const topH = innerTop - 6;
+      const botH = (H - 6) - innerBot;
+      if (topH >= 10) drawSolid(sL, 6, colW, topH);           // ceiling stack
+      if (botH >= 10) drawSolid(sL, innerBot, colW, botH);    // floor stack
+    }
+
+    // faint corridor edges (mint) — drawn over the terrain to frame the lane
+    ctx.strokeStyle = 'rgba(0,255,150,0.10)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox, y0 - ch); ctx.lineTo(x2, y1 - ch); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox, y0 + ch); ctx.lineTo(x2, y1 + ch); ctx.stroke();
+    // bright dashed centre guide line
+    glow('#00ffaa', 6);
+    ctx.strokeStyle = 'rgba(0,255,160,0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([11, 8]);
+    ctx.beginPath(); ctx.moveTo(ox, y0); ctx.lineTo(x2, y1); ctx.stroke();
+    ctx.setLineDash([]);
+    // travel-direction chevron at the segment midpoint
+    const mx = ox + o.w / 2, my = (y0 + y1) / 2;
+    ctx.beginPath();
+    ctx.moveTo(mx - 7, my - 6); ctx.lineTo(mx + 5, my); ctx.lineTo(mx - 7, my + 6);
+    ctx.stroke();
+    noGlow();
+  }
+
+  // Entry fade: obstacles ease in (alpha 0→1) as they slide past the right
+  // edge, so nothing pops into existence. They're fully opaque long before
+  // reaching the ship, so this never masks a hazard.
+  function entryFade(sx) {
+    const start = W + 30, end = W - 60;
+    return Math.max(0, Math.min(1, (start - sx) / (start - end)));
+  }
+
+  function drawObstacles() {
+    for (const o of obstacles) {
+      if (o.type === 'saw') {
+        const scx = o.cx - scrollX;
+        if (scx > W + o.r + 40 || scx < -o.r - 40) continue;
+        ctx.globalAlpha = entryFade(scx - o.r);
+        drawSaw(scx, o.cy, o.r, o.spin);
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (o.type === 'fill') { drawFill(o); continue; }  // fades per-column internally
+      const ox = o.x - scrollX;
+      if (ox > W + o.w + 4 || ox < -o.w - 4) continue;
+      ctx.globalAlpha = entryFade(ox);
+      if      (o.type === 'guide') drawGuide(ox, o);
+      else if (o.type === 'block') drawBlock(ox, o.w, o.gapY, o.gapH);
+      else                         drawSpikes(ox, o.w, o.gapY, o.gapH);
+      ctx.globalAlpha = 1;
     }
   }
 
   function drawShip() {
-    const tilt = Math.max(-0.5, Math.min(0.5, ship.vy * 0.055));
     ctx.save();
     ctx.translate(SHIP_X, ship.y);
-    ctx.rotate(tilt);
+    ctx.rotate(ship.tilt);
 
     const hw = SHIP_W / 2;  // 15
     const hh = SHIP_H / 2;  // 8
@@ -649,7 +1015,7 @@
     ctx.beginPath(); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
     noGlow();
 
-    drawGates();
+    drawObstacles();
 
     // Ship ghost trail
     for (let i = 0; i < ship.trail.length; i++) {
@@ -705,7 +1071,7 @@
       ctx.font = '13px Barlow';
       if (state === 'menu') {
         ctx.fillText('Hold SPACE or the button below to thrust upward', W / 2, H / 2 + 2);
-        ctx.fillText('Dodge the red pillars · levels get faster and tighter', W / 2, H / 2 + 22);
+        ctx.fillText('Dodge blocks, spikes & sawblades · levels get faster and tighter', W / 2, H / 2 + 22);
       } else {
         ctx.fillText(`SCORE  ${score}    ·    BEST  ${highScore}`, W / 2, H / 2 + 2);
         ctx.fillText(`REACHED LEVEL  ${level}`, W / 2, H / 2 + 22);
@@ -720,11 +1086,12 @@
   }
 
   // ── Safe init (so draw() never touches undefined on menu) ──────
-  ship = { y: H / 2, vy: 0, trail: [] };
-  gates = []; particles = []; floats = [];
-  scrollX = 0; nextGateX = W + 200;
+  ship = { y: H / 2, vy: 0, tilt: 0, trail: [] };
+  obstacles = []; particles = []; floats = [];
+  scrollX = 0; nextObX = W + 260;
   speed = BASE_SPD; score = 0; level = 1;
   flash = 0; flashColor = '#f44';
+  resetSpawner();
 
   // ── Loop ───────────────────────────────────────────────────────
   function loop(t) {
@@ -761,6 +1128,7 @@
   });
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="stellar-dash" data-color="#cc44ff"></script>
 </body>
 </html>

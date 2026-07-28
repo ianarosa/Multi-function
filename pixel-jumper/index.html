@@ -305,6 +305,8 @@
       cameraRow: 0,       // world row at the bottom of the screen (float)
       score: 0,
       furthestRow: 0,
+      combo: 0,
+      beatBest: false,
       alive: true,
       gameOver: false,
       deathCause: '',
@@ -471,6 +473,11 @@
     p.hopProgress = 0;
     p.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'up' : 'down';
     state.started = true;
+    // Hop: vary pitch slightly for life; forward hops read a touch brighter.
+    if (window.SFX) {
+      const rate = (dy > 0 ? 1.12 : 1.0) + (Math.random() * 0.12 - 0.06);
+      SFX.play('jump', { vol: 0.4, rate });
+    }
   }
 
   window.addEventListener('keydown', (e) => {
@@ -479,7 +486,7 @@
     else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { tryHop(-1, 0); e.preventDefault(); }
     else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { tryHop(1, 0); e.preventDefault(); }
     else if (e.key === 'Enter' || e.key === ' ') {
-      if (state.gameOver) { initGame(); e.preventDefault(); }
+      if (state.gameOver) { if (window.SFX) SFX.play('start'); initGame(); e.preventDefault(); }
     }
   }, { passive: false });
 
@@ -535,12 +542,14 @@
 
   function restart(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (window.SFX) SFX.play('start');
     initGame();
   }
   retryBtn.addEventListener('click', restart);
   retryBtn.addEventListener('touchend', restart, { passive: false });
 
   fsBtn.addEventListener('click', () => {
+    if (window.SFX) SFX.play('click', { vol: 0.4 });
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.();
     } else {
@@ -611,11 +620,34 @@
         p.row = p.targetRow;
         // Settle on the tile
         p.onLog = null;
+        let advanced = false;
+        let newMilestone = false;
+        let newBest = false;
         if (p.row > state.furthestRow) {
+          const prevMilestone = Math.floor(state.furthestRow / 10);
           state.score += (p.row - state.furthestRow);
           state.furthestRow = p.row;
+          advanced = true;
+          state.combo++;
+          newMilestone = Math.floor(state.furthestRow / 10) > prevMilestone;
+          if (!state.beatBest && highScore > 0 && state.score > highScore) {
+            state.beatBest = true;
+            newBest = true;
+          }
+        } else {
+          state.combo = 0;
         }
         checkLanding();
+        // Landing feedback (only if the hop didn't just kill us).
+        if (state.alive && !state.gameOver && window.SFX) {
+          if (newMilestone || newBest) {
+            SFX.play('levelup', { vol: 0.6 });
+          } else if (advanced) {
+            SFX.play('coin', { vol: 0.3, combo: Math.min(state.combo, 12) });
+          } else {
+            SFX.play('tick', { vol: 0.12, rate: 1.35 });
+          }
+        }
       }
     } else {
       // If on a moving platform, move player col with it
@@ -735,6 +767,12 @@
     state.deathCause = cause;
     state.shake = 1;
     state.flash = 1;
+    state.combo = 0;
+    // Death: sharp hit, then the lose sting a beat later.
+    if (window.SFX) {
+      SFX.play('hit', { vol: 0.9 });
+      setTimeout(() => { if (window.SFX) SFX.play('gameover', { vol: 0.8 }); }, 230);
+    }
     if (state.score > highScore) {
       highScore = state.score;
       localStorage.setItem(HI_KEY, String(highScore));
@@ -1137,6 +1175,7 @@
   requestAnimationFrame(loop);
 })();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="pixel-jumper" data-color="#ff3388"></script>
 </body>
 </html>

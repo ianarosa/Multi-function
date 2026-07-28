@@ -359,16 +359,20 @@ function placeMines(safeQ, safeR) {
 }
 
 // ---- Reveal / flood fill ----
+// Returns the number of cells newly revealed by this action (used to pick
+// a single sound cue for the whole cascade rather than one-per-cell).
 function reveal(h) {
-  if (h.revealed || h.flagged) return;
+  if (h.revealed || h.flagged) return 0;
   h.revealed = true;
-  if (h.mine) return;
+  if (h.mine) return 1;
+  let c = 1;
   if (h.count === 0) {
     for (const [nq, nr] of hexNeighbors(h.q, h.r)) {
       const n = hexMap.get(nq+','+nr);
-      if (n && !n.revealed && !n.flagged) reveal(n);
+      if (n && !n.revealed && !n.flagged) c += reveal(n);
     }
   }
+  return c;
 }
 
 // ---- Win/lose checks ----
@@ -590,13 +594,19 @@ function getCanvasPos(e) {
 
 function handleReveal(px, py) {
   if (gameState === 'won' || gameState === 'lost') {
+    if (window.SFX) SFX.play('click', { vol: 0.5 });
     showMenu(); return;
   }
   if (gameState !== 'playing') return;
 
   const [q, r] = pixelToAxial(px, py);
   const h = hexMap.get(q+','+r);
-  if (!h || h.flagged || h.revealed) return;
+  if (!h) return;
+  if (h.flagged || h.revealed) {
+    // Tapping a flagged or already-revealed cell does nothing — gentle nudge
+    if (window.SFX) SFX.play('error', { vol: 0.3 });
+    return;
+  }
 
   if (firstClick) {
     placeMines(q, r);
@@ -605,7 +615,7 @@ function handleReveal(px, py) {
     updateTimer();
   }
 
-  reveal(h);
+  const revealedCount = reveal(h);
 
   if (h.mine) {
     gameState = 'lost';
@@ -618,12 +628,25 @@ function handleReveal(px, py) {
         spawnExplosion(mx, my, '#ff4466', 15);
       }
     }
+    if (window.SFX) { SFX.play('explode', { vol: 0.7 }); SFX.play('gameover', { vol: 0.6 }); }
   } else if (checkWin()) {
     gameState = 'won';
     stopTimer();
     winAnimStart = Date.now();
     saveBestTime();
+    if (window.SFX) SFX.play('win');
     window.dispatchEvent(new CustomEvent('lbGameOver', { detail: { score: Math.max(0, 9999 - Math.round(timerElapsed * 10)) } }));
+  } else {
+    // Safe reveal. Play exactly ONE cue for the whole action so a big flood
+    // never machine-guns. A multi-cell cascade gets a slightly brighter/
+    // higher tick to signal the sweep; a single cell gets a soft crisp click.
+    if (window.SFX) {
+      if (revealedCount >= 4) {
+        SFX.play('tick', { vol: 0.45, rate: 1.18 });
+      } else {
+        SFX.play('click', { vol: 0.4 });
+      }
+    }
   }
 }
 
@@ -631,10 +654,17 @@ function handleFlag(px, py) {
   if (gameState !== 'playing') return;
   const [q, r] = pixelToAxial(px, py);
   const h = hexMap.get(q+','+r);
-  if (!h || h.revealed) return;
+  if (!h) return;
+  if (h.revealed) {
+    // Can't flag an already-revealed cell — gentle nudge
+    if (window.SFX) SFX.play('error', { vol: 0.3 });
+    return;
+  }
   h.flagged = !h.flagged;
   flagCount += h.flagged ? 1 : -1;
   document.getElementById('mine-count').textContent = mineCount - flagCount;
+  // Soft placement tick for both placing and removing a flag
+  if (window.SFX) SFX.play('place', { vol: h.flagged ? 0.5 : 0.4 });
 }
 
 // Mouse events
@@ -756,6 +786,8 @@ function startGame(diff) {
   document.getElementById('mine-count').textContent = mineCount;
   document.getElementById('timer').textContent = '0:00';
 
+  if (window.SFX) SFX.play('start');
+
   buildGrid();
   resize();
   render();
@@ -775,6 +807,7 @@ window.addEventListener('resize', resize);
 resize();
 updateBestTimes();
 </script>
+<script src="/sfx.js"></script>
 <script src="/leaderboard.js" data-game="hex-sweep" data-color="#44ff88"></script>
 </body>
 </html>
